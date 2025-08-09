@@ -1,0 +1,77 @@
+{
+    "stories": {
+        "decision-tree-classifier": {
+            "name": "Basic decision tree classifier",
+            "description": "Learn the basics of the decision tree classifier, from prediction, to classification.",
+            "pages": [
+                {
+                    "component": "context",
+                    "parameters": {
+                        "text": "This is a sample context page. Go next lol."
+                    }
+                },
+                {
+                    "component": "train",
+                    "parameters": {
+                        "trainFeatureName": "decision_tree",
+                        "trainFeatureParameters": {
+                            "presetParams": {}
+                        }
+                    }
+                },
+                {
+                    "component": "predict",
+                    "parameters": {
+                        "predictFeatureName": "decision_tree",
+                        "predictFeatureParameters": {}
+                    }
+                }
+            ]
+        },
+        "decision-tree-depth": {
+            "name": "How does max-depth affect decision trees?",
+            "description": "Learn how limiting tree-depth affects decision trees.",
+            "pages": [
+                {
+                    "component": "context",
+                    "parameters": {
+                        "text": "The next few pages would be a Decision Tree Classifier, trained on the same parameters, except limited to different depths."
+                    }
+                },
+                {
+                    "component": "train",
+                    "parameters": {
+                        "trainFeatureName": "decision_tree",
+                        "trainFeatureParameters": {
+                            "presetParams": {
+                                "max_depth": 4
+                            }
+                        }
+                    }
+                },
+                {
+                    "component": "train",
+                    "parameters": {
+                        "trainFeatureName": "decision_tree",
+                        "trainFeatureParameters": {
+                            "presetParams": {
+                                "max_depth": 2
+                            }
+                        }
+                    }
+                },
+                {
+                    "component": "train",
+                    "parameters": {
+                        "trainFeatureName": "decision_tree",
+                        "trainFeatureParameters": {
+                            "presetParams": {
+                                "max_depth": 3
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    }
+}
