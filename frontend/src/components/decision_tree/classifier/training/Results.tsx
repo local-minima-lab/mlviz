@@ -13,27 +13,27 @@ const Results = ({ treeData }: DecisionTreeProps) => {
 
     return (
         <div>
-            <div className="flex flex-wrap justify-between">
-                <p className="font-lg font-bold">Accuracy</p>
-                <p className="font-base">
+            <div className="flex flex-wrap justify-between tracking-tight">
+                <p className="font-lg font-semibold">Accuracy</p>
+                <p className="font-mono">
                     {roundNumber(treeData.scores.accuracy)}
                 </p>
             </div>
-            <div className="flex flex-wrap justify-between">
-                <p className="font-lg font-bold">Recall</p>
-                <p className="font-base">
+            <div className="flex flex-wrap justify-between tracking-tight">
+                <p className="font-lg font-semibold">Recall</p>
+                <p className="font-mono">
                     {roundNumber(treeData.scores.recall)}
                 </p>
             </div>
-            <div className="flex flex-wrap justify-between">
-                <p className="font-lg font-bold">Precision</p>
-                <p className="font-base">
+            <div className="flex flex-wrap justify-between  tracking-tight">
+                <p className="font-lg font-semibold">Precision</p>
+                <p className="font-mono">
                     {roundNumber(treeData.scores.precision)}
                 </p>
             </div>
-            <div className="flex flex-wrap justify-between">
-                <p className="font-lg font-bold">F1</p>
-                <p className="font-base">{roundNumber(treeData.scores.f1)}</p>
+            <div className="flex flex-wrap justify-between tracking-tight">
+                <p className="font-lg font-semibold">F1</p>
+                <p className="font-mono">{roundNumber(treeData.scores.f1)}</p>
             </div>
         </div>
     );

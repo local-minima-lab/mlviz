@@ -3,7 +3,11 @@ import { useModel } from "@/contexts/ModelContext";
 import type { TrainingParameters } from "@/types/story";
 import React, { useEffect, useState } from "react";
 
-const Feature: React.FC = () => {
+interface FeatureProps {
+    presetPoints: Record<string, any>;
+}
+
+const Feature: React.FC<FeatureProps> = ({ presetPoints }) => {
     const {
         isModelLoading,
         modelError,
@@ -57,7 +61,10 @@ const Feature: React.FC = () => {
     return (
         <>
             {currentModelData ? (
-                <Display treeData={currentModelData} />
+                <Display
+                    treeData={currentModelData}
+                    presetPoints={presetPoints}
+                />
             ) : (
                 <div className="w-full bg-gray-200 p-8 rounded-lg shadow-inner text-center text-gray-600">
                     <p>

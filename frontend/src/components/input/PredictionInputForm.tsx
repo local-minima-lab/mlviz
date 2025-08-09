@@ -57,11 +57,8 @@ const PredictionInputForm: React.FC<PredictionInputFormProps> = ({
     return (
         <form
             onSubmit={handleSubmit}
-            className="p-4 bg-white rounded-lg shadow-inner"
+            className="p-4"
         >
-            <h3 className="text-lg font-bold mb-3 text-gray-700">
-                Predict New Point
-            </h3>
             <div className="space-y-3">
                 {features.length === 0 && (
                     <p className="text-gray-500 text-sm">
@@ -85,18 +82,20 @@ const PredictionInputForm: React.FC<PredictionInputFormProps> = ({
                             name={featureName}
                             value={formPoints[featureName] ?? ""}
                             onChange={handleChange}
-                            className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full p-2 border border-gray-300 bg-gray-50 font-mono rounded-md text-sm focus:ring-blue-500 focus:border-blue-500"
                             step="any" // Allow decimal inputs
                         />
                     </div>
                 ))}
             </div>
-            <button
-                type="submit" // This button will trigger the onSubmit of the form
-                className="mt-4 w-full px-4 py-2 font-semibold"
-            >
-                Predict
-            </button>
+            <div>
+                <button
+                    type="submit"
+                    className="w-full px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 text-gray-700 font-medium rounded-md shadow-sm transition duration-100 hover:shadow-xl my-2"
+                >
+                    Predict
+                </button>
+            </div>
         </form>
     );
 };

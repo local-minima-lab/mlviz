@@ -38,6 +38,7 @@ const AnyInput = ({
             value={displayValue}
             onChange={handleChange}
             placeholder={String(option.default)}
+            className="bg-gray-50 font-mono"
         />
     );
 };

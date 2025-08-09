@@ -23,7 +23,7 @@ const ParameterLabel = ({ option, htmlFor }: ParameterLabelProps) => {
                 {option.name}
             </Label>
             <Tooltip>
-                <TooltipTrigger>
+                <TooltipTrigger asChild>
                     <Info />
                 </TooltipTrigger>
                 <TooltipContent>

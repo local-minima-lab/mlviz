@@ -3,17 +3,17 @@ import React from "react";
 
 interface PredictPageProps {
     predictFeatureName: string;
-    predictParameters: Record<string, any>;
+    predictFeatureParameters: Record<string, any>;
 }
 
 const PredictPage: React.FC<PredictPageProps> = ({
     predictFeatureName,
-    predictParameters,
+    predictFeatureParameters,
 }) => {
     return (
         <PredictComponent
             componentName={predictFeatureName}
-            parameters={predictParameters}
+            parameters={predictFeatureParameters}
         />
     );
 };

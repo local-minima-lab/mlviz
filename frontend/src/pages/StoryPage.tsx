@@ -57,7 +57,7 @@ export const StoryPage: React.FC = () => {
         <div className="h-dvh flex flex-col overflow-hidden">
             <div className="h-[5dvh] flex flex-row justify-between items-center p-2 bg-gray-100">
                 <Button
-                    className="bg-gradient-to-r from-gray-50 to-stone-50 text-gray-800 hover:from-fuchsia-500 hover:to-cyan-500 hover:text-white transition-all duration-100 hover:shadow-2xl size-8"
+                    className="bg-gradient-to-br from-gray-50 to-stone-50 text-gray-800 hover:from-blue-500 hover:to-purple-500 hover:text-white transition-all duration-100 hover:shadow-2xl size-8"
                     size="icon"
                     onClick={handlePrevious}
                     disabled={currentPageIndex === 0}
@@ -70,7 +70,7 @@ export const StoryPage: React.FC = () => {
                 </p>
 
                 <Button
-                    className="bg-gradient-to-r from-gray-50 to-stone-50 text-gray-800 hover:from-fuchsia-500 hover:to-cyan-500 hover:text-white transition-all duration-100 hover:shadow-2xl size-8"
+                    className="bg-gradient-to-br from-gray-50 to-stone-50 text-gray-800 hover:from-blue-500 hover:to-purple-500 hover:text-white transition-all duration-100 hover:shadow-2xl size-8"
                     size="icon"
                     onClick={handleNext}
                     disabled={currentPageIndex === story.pages.length - 1}
@@ -86,10 +86,12 @@ export const StoryPage: React.FC = () => {
             </div>
 
             <div className="h-[5dvh] flex flex-row justify-between items-center p-2 bg-gray-100">
-                <p className="px-4 font-medium text-xs">{story.name}</p>
+                <p className="bg-gradient-to-r from-fuchsia-800 to-cyan-800 bg-clip-text text-transparent px-4 font-bold font-mono text-xs">
+                    story/{storyName}
+                </p>
                 <Link to={"/"}>
                     <Button
-                        className="bg-gradient-to-r from-gray-50 to-stone-50 text-gray-800 hover:from-fuchsia-500 hover:to-cyan-500 hover:text-white transition-all duration-100 hover:shadow-2xl size-8"
+                        className="bg-gradient-to-br from-gray-50 to-stone-50 text-gray-800 hover:from-blue-500 hover:to-purple-500 hover:text-white transition-all duration-100 hover:shadow-2xl size-8"
                         size="icon"
                     >
                         <House />

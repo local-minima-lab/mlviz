@@ -7,7 +7,7 @@
                 {
                     "component": "context",
                     "parameters": {
-                        "text": "This is a sample context page. Go next lol."
+                        "text": "For the Iris dataset, the decision tree algorithm can be used to create a model to predict the class of a flower. First, training the model with default parameters, we get the result as seen (in the next page)."
                     }
                 },
                 {
@@ -20,10 +20,23 @@
                     }
                 },
                 {
+                    "component": "context",
+                    "parameters": {
+                        "text": "Now, let's try predicting a parameter. Try predicting the class of one with [1.2, 3.2, 1.8, 2.4]."
+                    }
+                },
+                {
                     "component": "predict",
                     "parameters": {
                         "predictFeatureName": "decision_tree",
-                        "predictFeatureParameters": {}
+                        "predictFeatureParameters": {
+                            "presetPoints": {
+                                "sepal length (cm)": 1.2,
+                                "sepal width (cm)": 3.2,
+                                "petal length (cm)": 1.8,
+                                "petal width (cm)": 2.4
+                            }
+                        }
                     }
                 }
             ]
@@ -35,7 +48,7 @@
                 {
                     "component": "context",
                     "parameters": {
-                        "text": "The next few pages would be a Decision Tree Classifier, trained on the same parameters, except limited to different depths."
+                        "text": "# Context \n In the next few pages, we will be looking at models with the same parameters, except for max-depth, and see how it affects the model. The first page is one without any parameters."
                     }
                 },
                 {
@@ -43,10 +56,14 @@
                     "parameters": {
                         "trainFeatureName": "decision_tree",
                         "trainFeatureParameters": {
-                            "presetParams": {
-                                "max_depth": 4
-                            }
+                            "presetParams": {}
                         }
+                    }
+                },
+                {
+                    "component": "context",
+                    "parameters": {
+                        "text": "Now, let's try limiting it to a max-depth of 2. Observe the values at the bottom right."
                     }
                 },
                 {
@@ -61,6 +78,12 @@
                     }
                 },
                 {
+                    "component": "context",
+                    "parameters": {
+                        "text": "Notice the drop in accuracy and the other metrics. What about a max-depth of 3?"
+                    }
+                },
+                {
                     "component": "train",
                     "parameters": {
                         "trainFeatureName": "decision_tree",
@@ -69,6 +92,12 @@
                                 "max_depth": 3
                             }
                         }
+                    }
+                },
+                {
+                    "component": "context",
+                    "parameters": {
+                        "text": "The accuracy returns back to normal."
                     }
                 }
             ]

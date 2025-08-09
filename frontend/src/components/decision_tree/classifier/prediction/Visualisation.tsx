@@ -25,16 +25,25 @@ interface ClassDistribution {
 interface DecisionTreePredictVisualizationProps {
     treeData: TrainModelResponse;
     points: Record<string, number>; // The point to predict
+    pathLineColor?: string; // New: Color for path lines and current node border
+    pathFillColor?: string; // New: Base color for node fills on path (opacity applied)
 }
 
 const DecisionTreePredictVisualization: React.FC<
     DecisionTreePredictVisualizationProps
-> = ({ treeData, points }) => {
+> = ({ treeData, points, pathLineColor, pathFillColor }) => {
     const svgRef = useRef<SVGSVGElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [maxDepth, setMaxDepth] = useState<number>(0);
     const [currentDepth, setCurrentDepth] = useState<number>(0);
     const [predictionPath, setPredictionPath] = useState<TreeNode[]>([]);
+
+    // Define default and final path colors
+    const defaultPathLineColor: string = "#ef4444"; // Tailwind's red-500
+    const defaultPathFillColor: string = "#ef4444"; // Tailwind's red-500 (will be used with opacity)
+
+    const finalPathLineColor: string = pathLineColor || defaultPathLineColor;
+    const finalPathFillColor: string = pathFillColor || defaultPathFillColor;
 
     // Dynamic color palette based on available classes
     const colorScale = d3
@@ -234,7 +243,7 @@ const DecisionTreePredictVisualization: React.FC<
             .attr("stroke", (d: d3.HierarchyLink<TransformedNode>) => {
                 const isPathLink =
                     d.source.data.isOnPath && d.target.data.isOnPath;
-                return isPathLink ? "#ef4444" : "#d1d5db";
+                return isPathLink ? finalPathLineColor : "#d1d5db";
             })
             .attr("stroke-width", (d: d3.HierarchyLink<TransformedNode>) => {
                 const isPathLink =
@@ -283,13 +292,14 @@ const DecisionTreePredictVisualization: React.FC<
             .attr("y", -17.5)
             .attr("rx", 6)
             .attr("fill", (d: d3.HierarchyNode<TransformedNode>) => {
-                if (d.data.isCurrentNode) return "#fca5a5";
-                if (d.data.isOnPath) return "#fed7d7";
+                if (d.data.isCurrentNode) return finalPathFillColor;
+                if (d.data.isOnPath) return finalPathFillColor;
                 return "#f8fafc";
             })
+            .attr("opacity", 1)
             .attr("stroke", (d: d3.HierarchyNode<TransformedNode>) => {
-                if (d.data.isCurrentNode) return "#ef4444";
-                if (d.data.isOnPath) return "#f87171";
+                if (d.data.isCurrentNode) return finalPathLineColor;
+                if (d.data.isOnPath) return finalPathLineColor;
                 return "#cbd5e1";
             })
             .attr("stroke-width", (d: d3.HierarchyNode<TransformedNode>) => {
@@ -317,8 +327,13 @@ const DecisionTreePredictVisualization: React.FC<
                     .attr("x", -totalWidth / 2 - 3)
                     .attr("y", -leafHeight / 2 - 3)
                     .attr("rx", 8)
-                    .attr("fill", d.data.isCurrentNode ? "#ef4444" : "#f87171")
-                    .attr("opacity", 0.3);
+                    .attr(
+                        "fill",
+                        d.data.isCurrentNode
+                            ? finalPathLineColor
+                            : finalPathFillColor
+                    )
+                    .attr("opacity", d.data.isCurrentNode ? 0.3 : 0.2);
             }
 
             // Create segments for each class
@@ -483,7 +498,6 @@ const DecisionTreePredictVisualization: React.FC<
                 d.target.parent.children &&
                 d.target.parent.children[0] === d.target) as boolean;
 
-            // Capture the link data for use in the text styling
             const linkData = d;
 
             linkGroup
@@ -501,7 +515,7 @@ const DecisionTreePredictVisualization: React.FC<
                     const isPathLink =
                         linkData.source.data.isOnPath &&
                         linkData.target.data.isOnPath;
-                    return isPathLink ? "#ef4444" : "#6b7280";
+                    return isPathLink ? finalPathLineColor : "#6b7280";
                 })
                 .text(isLeftChild ? "T" : "F");
         });
@@ -520,7 +534,15 @@ const DecisionTreePredictVisualization: React.FC<
         return () => {
             tooltip.remove();
         };
-    }, [treeData, currentDepth, colorScale, predictionPath, points]);
+    }, [
+        treeData,
+        currentDepth,
+        colorScale,
+        predictionPath,
+        points,
+        finalPathLineColor,
+        finalPathFillColor,
+    ]);
 
     const handleDepthChange = (
         e: React.ChangeEvent<HTMLInputElement>
@@ -635,9 +657,7 @@ const DecisionTreePredictVisualization: React.FC<
 
             <div className="p-2 border-t bg-gray-50 text-xs text-gray-600 flex-shrink-0">
                 <p>
-                    <strong>Red path:</strong> Prediction journey •{" "}
-                    <strong>Current node:</strong> Highlighted in red • Use
-                    slider to step through prediction
+                    <strong>Highlighted path:</strong> Prediction journey
                 </p>
             </div>
         </div>

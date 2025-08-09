@@ -270,10 +270,10 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
     const needsScrolling = width > dimensions.width && dimensions.width > 0;
 
     return (
-        <div className="w-full h-full flex flex-col overflow-hidden">
+        <div className="w-full h-full flex flex-col align-start overflow-hidden">
             <div
                 ref={containerRef}
-                className="flex-1 relative min-h-0"
+                className="relative min-h-0"
             >
                 <div
                     ref={scrollContainerRef}
@@ -299,7 +299,7 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
             </div>
 
             {needsScrolling && (
-                <div className="p-2 border-t bg-gray-50 text-xs text-gray-600 flex-shrink-0">
+                <div className="py-2 border-t flex justify-center text-xs text-gray-600 flex-shrink-0">
                     <p>Scroll to view more</p>
                 </div>
             )}

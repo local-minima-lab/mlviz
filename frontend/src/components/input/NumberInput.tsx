@@ -42,6 +42,7 @@ const NumberInput = ({
             min={option.min}
             max={option.max}
             step={option.step || "any"}
+            className="bg-gray-50 font-mono"
         />
     );
 };

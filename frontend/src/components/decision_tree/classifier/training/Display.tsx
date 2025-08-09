@@ -61,7 +61,7 @@ const Display: React.FC<DecisionTreeProps> = ({
 
     return (
         <div className="grid grid-cols-10 gap-2 w-full h-full">
-            <div className="col-span-2 shadow-lg justify-between overflow-auto p-4 bg-gray-50">
+            <div className="col-span-2 shadow-lg justify-between overflow-auto p-4 bg-gradient-to-br from-blue-50 to-purple-50">
                 <ModelOptionsForm
                     optionsConfig={options}
                     params={params}
@@ -74,12 +74,22 @@ const Display: React.FC<DecisionTreeProps> = ({
                 <Visualisation treeData={treeData} />
             </div>
 
-            <div className="col-span-2 shadow-lg flex flex-col justify-items-end overflow-auto p-4 bg-gray-50">
-                <ConfusionMatrix
-                    classes={treeData.classes}
-                    matrix={treeData.matrix}
-                />
-                <DecisionTreeResults treeData={treeData} />
+            <div className="col-span-2 shadow-lg flex flex-col justify-between overflow-auto p-4 bg-gradient-to-br from-blue-50 to-purple-50">
+                <div className="pb-4 border-black">
+                    <p className="text-2xl pb-2 tracking-tighter font-bold text-center">
+                        Confusion Matrix
+                    </p>
+                    <ConfusionMatrix
+                        classes={treeData.classes}
+                        matrix={treeData.matrix}
+                    />
+                </div>
+                <div className="pt-4">
+                    <p className="text-2xl pb-2 tracking-tighter font-bold text-center">
+                        Results
+                    </p>
+                    <DecisionTreeResults treeData={treeData} />
+                </div>
             </div>
         </div>
     );

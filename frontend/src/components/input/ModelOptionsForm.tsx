@@ -36,7 +36,7 @@ ModelOptionsFormProps) => {
                 <button
                     onClick={onTrainModel}
                     disabled={isModelLoading}
-                    className="w-full px-4 py-2 bg-blue-500 font-semibold rounded-md shadow-sm hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-75 transition duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 text-gray-700 font-medium rounded-md shadow-sm transition duration-100 hover:shadow-xl my-2"
                 >
                     {isModelLoading ? "Training..." : "Train Model"}
                 </button>

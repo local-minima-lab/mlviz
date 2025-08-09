@@ -7,13 +7,15 @@ import React, { useEffect, useState } from "react";
 
 interface DecisionTreeProps {
     treeData: TrainModelResponse;
+    presetPoints?: Record<string, number>;
 }
 
-const Display: React.FC<DecisionTreeProps> = ({ treeData }) => {
+const Display: React.FC<DecisionTreeProps> = ({ treeData, presetPoints }) => {
     // State to hold the current input values for prediction (used by Visualization)
+    console.log(presetPoints);
     const [predictionInputPoints, setPredictionInputPoints] = useState<
         Record<string, number>
-    >({});
+    >(presetPoints || {});
 
     const currentFeatures: string[] =
         treeData?.model_metadata?.feature_names || [];
@@ -74,7 +76,7 @@ const Display: React.FC<DecisionTreeProps> = ({ treeData }) => {
 
     return (
         <div className="grid grid-cols-10 gap-2 w-full h-full">
-            <div className="col-span-2 shadow-lg justify-between overflow-auto p-4 bg-gray-50">
+            <div className="col-span-2 shadow-lg justify-between overflow-auto p-4 bg-gradient-to-br from-blue-50 to-purple-50">
                 {/* Prediction Input Form Component */}
                 <PredictionInputForm
                     features={currentFeatures}
@@ -92,6 +94,8 @@ const Display: React.FC<DecisionTreeProps> = ({ treeData }) => {
                 <Visualisation
                     treeData={treeData}
                     points={predictionInputPoints}
+                    pathLineColor="#3b82f6"
+                    pathFillColor="#e0f2fe"
                 />
             </div>
         </div>
