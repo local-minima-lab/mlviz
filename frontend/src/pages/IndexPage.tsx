@@ -1,10 +1,10 @@
 import config from "@/assets/config.json";
 import { Button } from "@/components/ui/button";
-import type { StoryConfig } from "@/types/story";
+import type { Config } from "@/types/story";
 import { Link } from "react-router-dom"; // Import Link
 
 const IndexPage = () => {
-    const storyConfig = config as StoryConfig;
+    const storyConfig = config as Config;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-neutral-100 to-stone-50">

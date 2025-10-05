@@ -1,6 +1,6 @@
 export interface BaseOption {
     name: string;
-    doc: string;
+    description: string;
     default: any;
 }
 

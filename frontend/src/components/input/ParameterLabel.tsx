@@ -27,7 +27,7 @@ const ParameterLabel = ({ option, htmlFor }: ParameterLabelProps) => {
                     <Info />
                 </TooltipTrigger>
                 <TooltipContent>
-                    <p className="text-xs w-80">{option.doc}</p>
+                    <p className="text-xs w-80">{option.description}</p>
                 </TooltipContent>
             </Tooltip>
         </div>

@@ -15,7 +15,7 @@ export default defineConfig({
         proxy: {
             // Proxying requests that start with /api
             "/api": {
-                target: "http://127.0.0.1:5000", // Your Flask backend address
+                target: "http://127.0.0.1:8000", // Your Flask backend address
                 changeOrigin: true, // Needed for virtual hosted sites
                 // rewrite: (path) => path.replace(/^\/api/, ""), // Only if your backend routes were e.g., /dt/train_model and not /api/dt/train_model
             },

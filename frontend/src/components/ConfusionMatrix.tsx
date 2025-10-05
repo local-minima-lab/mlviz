@@ -1,6 +1,7 @@
 import { useResizeObserver } from "@/hooks/useResizeObserver";
 import * as d3 from "d3";
 import React, { useEffect, useRef, useState } from "react";
+import { applyFont } from "./visualisation/config/fonts";
 
 interface TooltipData {
     actual: string;
@@ -12,8 +13,8 @@ interface TooltipData {
 }
 
 interface ConfusionMatrixProps {
-    classes: string[];
-    matrix: number[][];
+    classes?: string[];
+    matrix?: number[][];
     minSize?: number;
     minCellSize?: number;
     aspectRatio?: number;
@@ -22,10 +23,14 @@ interface ConfusionMatrixProps {
 const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
     classes,
     matrix,
-    minSize = 300,
-    minCellSize = 40,
+    minSize = 180,
+    minCellSize = 20,
     aspectRatio = 1,
 }) => {
+    if (!classes || !matrix) {
+        return <></>;
+    }
+
     const svgRef = useRef<SVGSVGElement>(null);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const { ref: containerRef, dimensions } = useResizeObserver();
@@ -46,8 +51,7 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
         const containerHeight = dimensions.height;
         const numClasses = classes.length;
 
-        // Calculate minimum required size based on cell size and margins
-        const margin = { top: 60, right: 40, bottom: 60, left: 60 };
+        const margin = { top: 10, right: 10, bottom: 10, left: 10 };
         const minRequiredWidth =
             numClasses * minCellSize + margin.left + margin.right;
         const minRequiredHeight =
@@ -194,7 +198,8 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
             .attr("dominant-baseline", "middle")
             .attr("fill", (d) => (d.value > maxValue / 2 ? "white" : "black"))
             .attr("font-size", `${cellFontSize}px`)
-            .attr("font-weight", "bold")
+            .call(applyFont.family)
+            .call(applyFont.weight.bold)
             .attr("pointer-events", "none")
             .text((d) => d.value);
 
@@ -210,7 +215,8 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
             .attr("y", numClasses * cellSize + 20)
             .attr("text-anchor", "middle")
             .attr("font-size", `${labelFontSize}px`)
-            .attr("font-weight", "600")
+            .call(applyFont.family)
+            .call(applyFont.weight.medium)
             .text((d) => d.substring(0, 3));
 
         // Add Y axis labels (Actual)
@@ -226,7 +232,8 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
             .attr("text-anchor", "middle")
             .attr("dominant-baseline", "middle")
             .attr("font-size", `${labelFontSize}px`)
-            .attr("font-weight", "600")
+            .call(applyFont.family)
+            .call(applyFont.weight.medium)
             .text((d) => d.substring(0, 3));
 
         // Add axis titles
@@ -235,7 +242,8 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
             .attr("y", numClasses * cellSize + 45)
             .attr("text-anchor", "middle")
             .attr("font-size", `${titleFontSize}px`)
-            .attr("font-weight", "bold")
+            .call(applyFont.family)
+            .call(applyFont.weight.bold)
             .text("Predicted");
 
         g.append("text")
@@ -244,7 +252,8 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
             .attr("text-anchor", "middle")
             .attr("dominant-baseline", "middle")
             .attr("font-size", `${titleFontSize}px`)
-            .attr("font-weight", "bold")
+            .call(applyFont.family)
+            .call(applyFont.weight.bold)
             .attr(
                 "transform",
                 `rotate(-90, -45, ${(numClasses * cellSize) / 2})`
@@ -299,7 +308,7 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
             </div>
 
             {needsScrolling && (
-                <div className="py-2 border-t flex justify-center text-xs text-gray-600 flex-shrink-0">
+                <div className="border-t flex justify-center text-xs text-gray-600 flex-shrink-0">
                     <p>Scroll to view more</p>
                 </div>
             )}

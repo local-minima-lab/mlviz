@@ -35,7 +35,6 @@ const ModelOptionWrapper = <T extends Record<string, any>>({
         [params, setParams]
     );
 
-    // Generate consistent ID for label association
     const inputId = `input-${option.type}-${option.name}`;
 
     const renderInput = () => {

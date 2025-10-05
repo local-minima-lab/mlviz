@@ -1,8 +1,11 @@
-import type { TrainingParameters } from "@/types/story";
-
-/** Represents the metadata of a trained model. */
-export interface ModelMetadata extends TrainingParameters {
-    created_at: string; // ISO 8601 string
+/** Histogram data for a node in the decision tree. */
+export interface HistogramData {
+    feature_values: number[];
+    class_labels: number[];
+    bins: number[];
+    counts_by_class: Record<string, number[]>;
+    threshold?: number;
+    total_samples: number;
 }
 
 /** Represents a leaf node in the decision tree. */
@@ -11,6 +14,7 @@ export interface LeafNode {
     value: number[][]; // e.g., [[0, 0, 50]] for 50 samples of class 2
     samples: number;
     impurity: number;
+    histogram_data?: HistogramData | null;
 }
 
 /** Represents a split node in the decision tree. */
@@ -21,6 +25,8 @@ export interface SplitNode {
     threshold: number;
     samples: number;
     impurity: number;
+    value?: number[][];  // Class distribution for the split node
+    histogram_data?: HistogramData | null;
     left: TreeNode;
     right: TreeNode;
 }
@@ -38,6 +44,16 @@ export interface ModelScores {
 
 export interface ModelMetadata {
     created_at: string;
+    dataset_info: any;
+    feature_names: string[];      // ✅ Critical for prediction!
+    class_names: string[];       // ✅ Also needed for prediction
+    // Sklearn parameters
+    max_depth?: number;
+    criterion?: string;
+    min_samples_split?: number;
+    min_samples_leaf?: number;
+    random_state?: number;
+    max_features?: string | number | null;
 }
 
 export interface TrainModelResponse {
@@ -55,4 +71,9 @@ export interface TrainModelResponse {
         f1: number;
     };
     model_metadata: any;
+}
+
+export interface PredictionProps {
+    data?: Record<string, any>;
+    points?: Record<string, any>;
 }

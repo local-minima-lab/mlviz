@@ -9,7 +9,7 @@ const API_BASE_URL = "/api/dt"; // Adjust if your Flask app is on a different or
  * @returns A promise resolving to ModelStatusResponse.
  */
 export const getParameters = async (): Promise<ModelOption[]> => {
-    const response = await fetch(`${API_BASE_URL}/get_params`);
+    const response = await fetch(`${API_BASE_URL}/train_params`);
     if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -26,7 +26,7 @@ export const getParameters = async (): Promise<ModelOption[]> => {
 export const trainModel = async (
     params: TrainingParameters = {}
 ): Promise<TrainModelResponse> => {
-    const response = await fetch(`${API_BASE_URL}/train_model`, {
+    const response = await fetch(`${API_BASE_URL}/train`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
@@ -49,16 +49,8 @@ export const trainModel = async (
  * Gets the parameters of the decision tree model parameters.
  * @returns A promise resolving to ModelStatusResponse.
  */
-export const getPredictParameters = async (
-    params: TrainingParameters = {}
-): Promise<Record<string, any>> => {
-    const response = await fetch(`${API_BASE_URL}/get_predict_params`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify(params),
-    });
+export const getPredictParameters = async (): Promise<Record<string, any>> => {
+    const response = await fetch(`${API_BASE_URL}/predict_params`);
     if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
     }

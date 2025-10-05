@@ -1,20 +1,21 @@
-import DecisionTreeFeature from "@/components/decision_tree/classifier/prediction/Feature";
+import DecisionTreePredictVisualization from "@/components/decision_tree/classifier/prediction/Visualisation";
 import React from "react";
 interface ComponentRegistryProps {
     componentName: string;
-    parameters: Record<string, any>;
+    data?: Record<string, any> | null;
+    points?: Record<string, any> | null;
 }
 
 const componentMap: Record<string, React.ComponentType<any>> = {
-    decision_tree: DecisionTreeFeature,
+    decision_tree: DecisionTreePredictVisualization,
 } as const;
 
 export const PredictComponent: React.FC<ComponentRegistryProps> = ({
     componentName,
-    parameters,
+    data,
+    points,
 }) => {
     const Component = componentMap[componentName as keyof typeof componentMap];
-
     if (!Component) {
         return (
             <div className="text-center p-8">
@@ -25,5 +26,10 @@ export const PredictComponent: React.FC<ComponentRegistryProps> = ({
         );
     }
 
-    return <Component {...parameters} />;
+    return (
+        <Component
+            data={data}
+            points={points}
+        />
+    );
 };

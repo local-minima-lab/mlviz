@@ -1,17 +1,18 @@
-import DecisionTreeFeature from "@/components/decision_tree/classifier/training/Feature";
+import DecisionTree from "@/components/decision_tree/classifier/training/Visualisation";
+import type { TrainModelResponse } from "@/types/model";
 import React from "react";
 interface ComponentRegistryProps {
     componentName: string;
-    parameters: Record<string, any>;
+    data?: TrainModelResponse | Record<string, any> | null;
 }
 
 const componentMap: Record<string, React.ComponentType<any>> = {
-    decision_tree: DecisionTreeFeature,
+    decision_tree: DecisionTree,
 } as const;
 
 export const TrainComponent: React.FC<ComponentRegistryProps> = ({
     componentName,
-    parameters,
+    data,
 }) => {
     const Component = componentMap[componentName as keyof typeof componentMap];
 
@@ -25,5 +26,5 @@ export const TrainComponent: React.FC<ComponentRegistryProps> = ({
         );
     }
 
-    return <Component {...parameters} />;
+    return <Component data={data} />;
 };

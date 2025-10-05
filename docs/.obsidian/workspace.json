@@ -1,0 +1,267 @@
+{
+  "main": {
+    "id": "5ebea61b44dd2f7e",
+    "type": "split",
+    "children": [
+      {
+        "id": "29dc2e661060df6c",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "b7b34e220679307d",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "front-end/visualisations.md",
+                "mode": "source",
+                "source": true
+              },
+              "icon": "lucide-file",
+              "title": "visualisations"
+            }
+          },
+          {
+            "id": "7427dd76d3945a44",
+            "type": "leaf",
+            "state": {
+              "type": "excalidraw",
+              "state": {
+                "file": "front-end/media/pages.md"
+              },
+              "icon": "lucide-ghost",
+              "title": "excalidraw"
+            }
+          },
+          {
+            "id": "f691658a113a54f6",
+            "type": "leaf",
+            "state": {
+              "type": "excalidraw",
+              "state": {
+                "file": "front-end/media/example_viz.md"
+              },
+              "icon": "lucide-ghost",
+              "title": "excalidraw"
+            }
+          },
+          {
+            "id": "eab8fb18949ea6e1",
+            "type": "leaf",
+            "state": {
+              "type": "excalidraw",
+              "state": {
+                "file": "front-end/media/high_level_view_viz.md"
+              },
+              "icon": "lucide-ghost",
+              "title": "excalidraw"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "f8140053c8354aac",
+    "type": "split",
+    "children": [
+      {
+        "id": "a97d1dd1a16ec4a4",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "caa5bceb2fec56af",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "2a5d070351298d6c",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "eb600c391857258a",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 206.5
+  },
+  "right": {
+    "id": "586d9dc223ede81d",
+    "type": "split",
+    "children": [
+      {
+        "id": "a888fdcf45f38657",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "ee9ae6cbf689b4f2",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "general/tech_stack.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for tech_stack"
+            }
+          },
+          {
+            "id": "9ebec0dd69cd356d",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "general/tech_stack.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from tech_stack"
+            }
+          },
+          {
+            "id": "adf6aeb2ee18bf55",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "7df31796b31c55a4",
+            "type": "leaf",
+            "pinned": true,
+            "state": {
+              "type": "kanban",
+              "state": {
+                "file": "todo.md",
+                "kanbanViewState": {
+                  "kanban-plugin": "list",
+                  "list-collapse": [
+                    false,
+                    false,
+                    false,
+                    false
+                  ]
+                }
+              },
+              "pinned": true,
+              "icon": "lucide-trello",
+              "title": "todo"
+            }
+          },
+          {
+            "id": "af50a3f90ad003e9",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "front-end/visualisations.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of visualisations"
+            }
+          }
+        ],
+        "currentTab": 3
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false,
+      "obsidian-excalidraw-plugin:New drawing": false,
+      "obsidian-kanban:Create new board": false
+    }
+  },
+  "active": "b7b34e220679307d",
+  "lastOpenFiles": [
+    "front-end/media/pages.md",
+    "front-end/media/high_level_view_viz.md",
+    "front-end/media/example_viz.md",
+    "front-end/visualisations.md",
+    "front-end/stories.md",
+    "front-end/media/visualisations 2025-10-01 17.18.32.excalidraw.svg",
+    "front-end/_index.md",
+    "front-end/media/pages 2025-10-05 14.31.08.excalidraw.svg",
+    "front-end/media/example_viz.svg",
+    "_index.md",
+    "todo.md",
+    "general/tech_stack.md",
+    "front-end/media/pages.svg",
+    "front-end/Untitled",
+    "front-end/media/visualisations 2025-10-01 17.35.43.excalidraw.svg",
+    "front-end/media/high_level_view_viz.svg",
+    "front-end/media",
+    "to-do.md",
+    "to-do.canvas",
+    "Untitled.base",
+    "general/media/tech_stack.svg",
+    "general/media/tech_stack.md",
+    "fonts/InterTight.ttf",
+    "fonts",
+    "untitled folder",
+    "general/media",
+    "Excalidraw/tech_stack 2025-10-01 16.05.42.excalidraw.md",
+    "Excalidraw",
+    "Excalidraw/Drawing 2025-10-01 16.04.52.excalidraw.md",
+    "general",
+    "back-end"
+  ]
+}
