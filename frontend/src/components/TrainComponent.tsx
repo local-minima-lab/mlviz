@@ -1,4 +1,6 @@
 import DecisionTree from "@/components/decision_tree/classifier/training/Visualisation";
+import KNN from "@/components/knn/classifier/learning/Visualisation";
+
 import type { TrainModelResponse } from "@/types/model";
 import React from "react";
 interface ComponentRegistryProps {
@@ -8,6 +10,7 @@ interface ComponentRegistryProps {
 
 const componentMap: Record<string, React.ComponentType<any>> = {
     decision_tree: DecisionTree,
+    knn: KNN,
 } as const;
 
 export const TrainComponent: React.FC<ComponentRegistryProps> = ({

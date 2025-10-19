@@ -1,46 +1,17 @@
-/** Histogram data for a node in the decision tree. */
-export interface HistogramData {
-    feature_values: number[];
-    class_labels: number[];
-    bins: number[];
-    counts_by_class: Record<string, number[]>;
-    threshold?: number;
-    total_samples: number;
-}
+/**
+ * Model types - now auto-generated from backend Pydantic models.
+ * These types are automatically synced with the FastAPI OpenAPI spec.
+ *
+ * To regenerate: npm run generate:types
+ */
+import type { components } from "./api";
 
-/** Represents a leaf node in the decision tree. */
-export interface LeafNode {
-    type: "leaf";
-    value: number[][]; // e.g., [[0, 0, 50]] for 50 samples of class 2
-    samples: number;
-    impurity: number;
-    histogram_data?: HistogramData | null;
-}
+// Core tree structure types (auto-synced with backend)
+export type TreeNode = components["schemas"]["TreeNode"];
+export type HistogramData = components["schemas"]["HistogramData"];
 
-/** Represents a split node in the decision tree. */
-export interface SplitNode {
-    type: "split";
-    feature: string;
-    feature_index: number;
-    threshold: number;
-    samples: number;
-    impurity: number;
-    value?: number[][];  // Class distribution for the split node
-    histogram_data?: HistogramData | null;
-    left: TreeNode;
-    right: TreeNode;
-}
-
-/** Union type for either a leaf or split node. */
-export type TreeNode = LeafNode | SplitNode;
-
-/** Represents the metrics/scores from model evaluation. */
-export interface ModelScores {
-    accuracy: number;
-    precision: number;
-    recall: number;
-    f1: number;
-}
+// Metrics/scores types
+export type ModelScores = components["schemas"]["BaseMetrics"];
 
 export interface ModelMetadata {
     created_at: string;
@@ -56,22 +27,8 @@ export interface ModelMetadata {
     max_features?: string | number | null;
 }
 
-export interface TrainModelResponse {
-    success: boolean;
-    model_key: string; // New field from backend
-    cached: boolean; // New field from backend
-    metadata: ModelMetadata;
-    tree: TreeNode; // Placeholder, assuming this matches your tree_to_dict output
-    classes: string[];
-    matrix: number[][];
-    scores: {
-        accuracy: number;
-        precision: number;
-        recall: number;
-        f1: number;
-    };
-    model_metadata: any;
-}
+// Training response type (auto-synced with backend DecisionTreeTrainingResponse)
+export type TrainModelResponse = components["schemas"]["DecisionTreeTrainingResponse"];
 
 export interface PredictionProps {
     data?: Record<string, any>;

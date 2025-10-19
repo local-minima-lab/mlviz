@@ -1,0 +1,457 @@
+import json
+import numpy as np
+from typing import Dict, List, Optional, Any, Union
+from pathlib import Path
+
+from sklearn.neighbors import KNeighborsClassifier
+
+from models import (
+    KNNParameters,
+    NeighborInfo,
+    DecisionBoundaryData,
+    Dataset,
+    PredefinedDataset,
+)
+from .dataset_service import dataset_service
+
+
+class KNNService:
+    """Service for KNN prediction and visualization."""
+
+    def __init__(self):
+        self.dataset_service = dataset_service
+        self._load_parameter_config()
+
+    def _load_parameter_config(self):
+        config_path = Path(__file__).parent.parent / \
+            "config" / "knn_params.json"
+        with open(config_path) as f:
+            self.param_config = json.load(f)
+
+    async def get_parameters(self) -> List[Dict[str, Any]]:
+        """Get KNN parameter configuration."""
+        return self.param_config["parameters"]
+
+    async def _resolve_dataset(
+        self, dataset_param: Optional[Union[Dict[str, Any], PredefinedDataset, Dataset]]
+    ) -> Dataset:
+        """Resolve dataset parameter to Dataset object."""
+        if dataset_param is None:
+            return await self.dataset_service.load_predefined_dataset(
+                PredefinedDataset(name="iris")
+            )
+        elif isinstance(dataset_param, dict):
+            if "name" in dataset_param:
+                return await self.dataset_service.load_predefined_dataset(
+                    PredefinedDataset(**dataset_param)
+                )
+            else:
+                return Dataset(**dataset_param)
+        elif isinstance(dataset_param, PredefinedDataset):
+            return await self.dataset_service.load_predefined_dataset(dataset_param)
+        else:
+            return dataset_param
+
+    def _get_neighbor_info(
+        self,
+        model: KNeighborsClassifier,
+        query_point: np.ndarray,
+        X_train: np.ndarray,
+        y_train: np.ndarray,
+        class_names: List[str],
+    ) -> List[NeighborInfo]:
+        """Get information about K-nearest neighbors for a query point."""
+        # Get K nearest neighbors
+        distances, indices = model.kneighbors(
+            query_point.reshape(1, -1), return_distance=True
+        )
+
+        neighbors = []
+        for idx, dist in zip(indices[0], distances[0]):
+            neighbors.append(
+                NeighborInfo(
+                    index=int(idx),
+                    distance=float(dist),
+                    label=class_names[int(y_train[idx])],
+                    coordinates=X_train[idx].tolist(),
+                )
+            )
+
+        return neighbors
+
+    def _get_all_distances(
+        self, query_point: np.ndarray, X_train: np.ndarray, metric: str, p: float
+    ) -> List[float]:
+        """Calculate distances from query point to all training points."""
+        from sklearn.metrics import pairwise_distances
+
+        distances = pairwise_distances(
+            query_point.reshape(1, -1),
+            X_train,
+            metric=metric if metric != "minkowski" else "minkowski",
+            n_jobs=1,
+            **({"p": p} if metric == "minkowski" else {}),
+        )
+
+        return distances[0].tolist()
+
+    def _compute_distance_matrix(
+        self, X_train: np.ndarray, metric: str, p: float
+    ) -> List[List[float]]:
+        """Compute pairwise distance matrix for all training points.
+
+        Returns a matrix where element [i][j] is the distance from point i to point j.
+        Diagonal elements (self-distance) are set to 0.
+        """
+        from sklearn.metrics import pairwise_distances
+
+        distance_matrix = pairwise_distances(
+            X_train,
+            X_train,
+            metric=metric if metric != "minkowski" else "minkowski",
+            n_jobs=1,
+            **({"p": p} if metric == "minkowski" else {}),
+        )
+
+        # Ensure diagonal is exactly 0 (may have small floating point errors)
+        np.fill_diagonal(distance_matrix, 0)
+
+        return distance_matrix.tolist()
+
+    def _compute_neighbor_indices(
+        self, X_train: np.ndarray, k: int, metric: str, p: float
+    ) -> List[List[int]]:
+        """Compute K nearest neighbor indices for each training point.
+
+        Returns a list where element [i] contains the indices of the K nearest
+        neighbors for point i, sorted by distance (closest first).
+        """
+        from sklearn.metrics import pairwise_distances
+
+        distance_matrix = pairwise_distances(
+            X_train,
+            X_train,
+            metric=metric if metric != "minkowski" else "minkowski",
+            n_jobs=1,
+            **({"p": p} if metric == "minkowski" else {}),
+        )
+
+        # For each point, find K nearest neighbors (excluding itself)
+        neighbor_indices = []
+        for i in range(len(X_train)):
+            # Get distances for this point, set self-distance to infinity
+            distances = distance_matrix[i].copy()
+            distances[i] = np.inf
+
+            # Get indices of K nearest neighbors
+            k_nearest = np.argsort(distances)[:k]
+            neighbor_indices.append(k_nearest.tolist())
+
+        return neighbor_indices
+
+    def _generate_decision_boundary(
+        self,
+        model: KNeighborsClassifier,
+        X_train: np.ndarray,
+        class_names: List[str],
+        resolution: int = 50,
+    ) -> Optional[DecisionBoundaryData]:
+        """Generate decision boundary visualization data."""
+        n_features = X_train.shape[1]
+
+        # Only support 1D, 2D, and 3D visualization
+        if n_features > 3:
+            # For higher dimensions, use first 3 features
+            n_features = min(3, X_train.shape[1])
+            X_train = X_train[:, :n_features]
+
+        if n_features == 1:
+            # 1D: Create a line of points
+            x_min, x_max = X_train[:, 0].min(), X_train[:, 0].max()
+            margin = (x_max - x_min) * 0.1
+            x_line = np.linspace(x_min - margin, x_max + margin, resolution)
+            mesh_points = x_line.reshape(-1, 1)
+
+        elif n_features == 2:
+            # 2D: Create a grid
+            x_min, x_max = X_train[:, 0].min(), X_train[:, 0].max()
+            y_min, y_max = X_train[:, 1].min(), X_train[:, 1].max()
+            x_margin = (x_max - x_min) * 0.1
+            y_margin = (y_max - y_min) * 0.1
+
+            xx, yy = np.meshgrid(
+                np.linspace(x_min - x_margin, x_max + x_margin, resolution),
+                np.linspace(y_min - y_margin, y_max + y_margin, resolution),
+            )
+            mesh_points = np.c_[xx.ravel(), yy.ravel()]
+
+        else:  # n_features == 3
+            # 3D: Create a 3D grid (smaller resolution to avoid memory issues)
+            res_3d = min(resolution, 30)  # Cap at 30 for 3D to avoid explosion
+            x_min, x_max = X_train[:, 0].min(), X_train[:, 0].max()
+            y_min, y_max = X_train[:, 1].min(), X_train[:, 1].max()
+            z_min, z_max = X_train[:, 2].min(), X_train[:, 2].max()
+            x_margin = (x_max - x_min) * 0.1
+            y_margin = (y_max - y_min) * 0.1
+            z_margin = (z_max - z_min) * 0.1
+
+            xx, yy, zz = np.meshgrid(
+                np.linspace(x_min - x_margin, x_max + x_margin, res_3d),
+                np.linspace(y_min - y_margin, y_max + y_margin, res_3d),
+                np.linspace(z_min - z_margin, z_max + z_margin, res_3d),
+            )
+            mesh_points = np.c_[xx.ravel(), yy.ravel(), zz.ravel()]
+
+        # Predict class for each mesh point
+        predictions_idx = model.predict(mesh_points)
+        predictions = [class_names[int(idx)] for idx in predictions_idx]
+
+        return DecisionBoundaryData(
+            mesh_points=mesh_points.tolist(),
+            predictions=predictions,
+            dimensions=n_features,
+        )
+
+    async def predict(
+        self,
+        parameters: KNNParameters,
+        dataset_param: Dict[str, Any],
+        query_points: List[List[float]],
+        visualisation_features: Optional[List[int]] = None,
+        include_boundary: bool = True,
+        boundary_resolution: int = 50,
+    ) -> Dict[str, Any]:
+        """Make KNN predictions with visualization data.
+
+        Args:
+            parameters: KNN algorithm parameters
+            dataset_param: Training dataset
+            query_points: Points to classify
+            visualization_features: Feature indices for visualization (1-3 features)
+            include_boundary: Whether to generate decision boundary
+            boundary_resolution: Resolution of boundary mesh
+
+        Returns:
+            Dictionary with predictions, neighbors, and visualization data
+        """
+        # Resolve dataset
+        dataset = await self._resolve_dataset(dataset_param)
+        dataset_info = await self.dataset_service.prepare_dataset_for_training(dataset)
+
+        X_train_full = dataset_info["X_train"]
+        y_train = dataset_info["y_train"]
+        feature_names_full = dataset_info["feature_names"]
+        class_names = dataset_info["target_names"]
+
+        n_features = X_train_full.shape[1]
+
+        # Determine visualization features
+        if visualisation_features is None:
+            if n_features <= 3:
+                # Use all features for <=3D
+                visualisation_features = list(range(n_features))
+            else:
+                # Use first 3 features for >3D
+                visualisation_features = [0, 1, 2]
+
+        # Validate visualization_features
+        if len(visualisation_features) > 3:
+            raise ValueError(
+                "visualization_features can have at most 3 features")
+        if len(visualisation_features) < 1:
+            raise ValueError(
+                "visualization_features must have at least 1 feature")
+        if max(visualisation_features) >= n_features:
+            raise ValueError(
+                f"Feature index {max(visualisation_features)} out of range for dataset with {n_features} features")
+
+        # Extract visualization feature names
+        viz_feature_names = [feature_names_full[i]
+                             for i in visualisation_features]
+
+        # Automatically disable boundary for >3D if no visualization features specified
+        # or if visualization features still result in >3D
+        if len(visualisation_features) > 3:
+            include_boundary = False
+
+        # Create and fit KNN model on FULL feature set
+        sklearn_params = parameters.to_sklearn_params()
+        model = KNeighborsClassifier(**sklearn_params)
+        model.fit(X_train_full, y_train)
+
+        # Extract data for visualization (subset of features)
+        X_train_viz = X_train_full[:, visualisation_features]
+
+        # Make predictions on FULL feature set (accurate predictions)
+        query_array = np.array(query_points)
+        predictions_idx = model.predict(query_array)
+        predictions = [class_names[int(idx)] for idx in predictions_idx]
+
+        # Extract query points for visualization (subset of features)
+        query_array_viz = query_array[:, visualisation_features]
+
+        # Get neighbor information for each query point (using FULL features)
+        neighbors_info = []
+        all_distances = []
+
+        for query_point in query_array:
+            # Get K-nearest neighbors info (full features for accurate neighbors)
+            neighbor_info = self._get_neighbor_info(
+                model, query_point, X_train_full, y_train, class_names
+            )
+            neighbors_info.append(neighbor_info)
+
+            # Get distances to all training points (full features)
+            distances = self._get_all_distances(
+                query_point, X_train_full, parameters.metric, parameters.p
+            )
+            all_distances.append(distances)
+
+        # Compute distance matrix and neighbor indices for interactive exploration
+        # Use visualization features for distances (since that's what user sees)
+        distance_matrix = self._compute_distance_matrix(
+            X_train_viz, parameters.metric, parameters.p
+        )
+        neighbor_indices = self._compute_neighbor_indices(
+            X_train_viz, parameters.n_neighbors, parameters.metric, parameters.p
+        )
+
+        # Generate decision boundary if requested (using visualization features only)
+        decision_boundary = None
+        if include_boundary:
+            # Create a separate model trained ONLY on visualization features
+            # This shows the decision boundary for the selected feature space
+            model_viz = KNeighborsClassifier(**sklearn_params)
+            model_viz.fit(X_train_viz, y_train)
+
+            decision_boundary = self._generate_decision_boundary(
+                model_viz, X_train_viz, class_names, boundary_resolution
+            )
+
+        return {
+            "success": True,
+            "predictions": predictions,
+            "prediction_indices": predictions_idx.tolist(),
+            "neighbors_info": [
+                [neighbor.model_dump() for neighbor in neighbors]
+                for neighbors in neighbors_info
+            ],
+            "training_points": X_train_viz.tolist(),  # Visualization subset only
+            "training_labels": [class_names[int(idx)] for idx in y_train],
+            "all_distances": all_distances,  # Distances based on FULL features
+            "distance_matrix": distance_matrix,
+            "neighbor_indices": neighbor_indices,
+            "decision_boundary": (
+                decision_boundary.model_dump() if decision_boundary else None
+            ),
+            "feature_names": feature_names_full,  # All feature names
+            "class_names": class_names,
+            "n_dimensions": n_features,  # Total number of features
+            "visualisation_feature_indices": visualisation_features,
+            "visualisation_feature_names": viz_feature_names,
+        }
+
+    async def visualise(
+        self,
+        parameters: KNNParameters,
+        dataset_param: Dict[str, Any],
+        visualisation_features: Optional[List[int]] = None,
+        include_boundary: bool = True,
+        boundary_resolution: int = 50,
+    ) -> Dict[str, Any]:
+        """Get KNN visualisation data without making predictions.
+
+        This endpoint is useful for visualizing the training dataset
+        with decision boundaries before making any predictions.
+
+        Args:
+            parameters: KNN algorithm parameters
+            dataset_param: Training dataset
+            visualisation_features: Feature indices for visualisation (1-3 features)
+            include_boundary: Whether to generate decision boundary
+            boundary_resolution: Resolution of boundary mesh
+
+        Returns:
+            Dictionary with training data, decision boundary, and metadata
+        """
+        # Resolve dataset
+        dataset = await self._resolve_dataset(dataset_param)
+        dataset_info = await self.dataset_service.prepare_dataset_for_training(dataset)
+
+        X_train_full = dataset_info["X_train"]
+        y_train = dataset_info["y_train"]
+        feature_names_full = dataset_info["feature_names"]
+        class_names = dataset_info["target_names"]
+
+        n_features = X_train_full.shape[1]
+
+        # Determine visualisation features
+        if visualisation_features is None:
+            if n_features <= 3:
+                visualisation_features = list(range(n_features))
+            else:
+                visualisation_features = [0, 1, 2]
+
+        # Validate visualisation_features
+        if len(visualisation_features) > 3:
+            raise ValueError(
+                "visualisation_features can have at most 3 features")
+        if len(visualisation_features) < 1:
+            raise ValueError(
+                "visualisation_features must have at least 1 feature")
+        if max(visualisation_features) >= n_features:
+            raise ValueError(
+                f"Feature index {max(visualisation_features)} out of range for dataset with {n_features} features"
+            )
+
+        # Extract visualisation feature names
+        viz_feature_names = [feature_names_full[i]
+                             for i in visualisation_features]
+
+        # Auto-disable boundary for >3D
+        if len(visualisation_features) > 3:
+            include_boundary = False
+
+        # Extract data for visualisation (subset of features)
+        X_train_viz = X_train_full[:, visualisation_features]
+
+        # Compute distance matrix and neighbor indices for interactive exploration
+        # Use visualization features for distances (since that's what user sees)
+        distance_matrix = self._compute_distance_matrix(
+            X_train_viz, parameters.metric, parameters.p
+        )
+        neighbor_indices = self._compute_neighbor_indices(
+            X_train_viz, parameters.n_neighbors, parameters.metric, parameters.p
+        )
+
+        # Generate decision boundary if requested
+        decision_boundary = None
+        if include_boundary:
+            # Create model trained on visualisation features only
+            sklearn_params = parameters.to_sklearn_params()
+            model_viz = KNeighborsClassifier(**sklearn_params)
+            model_viz.fit(X_train_viz, y_train)
+
+            decision_boundary = self._generate_decision_boundary(
+                model_viz, X_train_viz, class_names, boundary_resolution
+            )
+
+        return {
+            "success": True,
+            "training_points": X_train_viz.tolist(),
+            "training_labels": [class_names[int(idx)] for idx in y_train],
+            "distance_matrix": distance_matrix,
+            "neighbor_indices": neighbor_indices,
+            "decision_boundary": (
+                decision_boundary.model_dump() if decision_boundary else None
+            ),
+            "feature_names": feature_names_full,
+            "class_names": class_names,
+            "n_dimensions": n_features,
+            "visualisation_feature_indices": visualisation_features,
+            "visualisation_feature_names": viz_feature_names,
+        }
+
+
+# Global service instance
+knn_service = KNNService()

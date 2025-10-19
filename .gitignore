@@ -62,3 +62,8 @@ yarn-error.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Auto-generated files (committed by CI/CD workflow)
+# Uncomment these lines if you want to generate types only in CI/CD
+# backend/openapi.json
+# frontend/src/types/api.ts

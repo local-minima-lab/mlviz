@@ -1,170 +1,66 @@
-// src/context/ModelContext.tsx
-
-import { trainModel as initiateTrainModel } from "@/api/dt";
-import type { Parameters } from "@/types/story";
-import React, {
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useState,
-    type ReactNode,
-} from "react";
-import type { TrainModelResponse } from "../types/model";
-
-const LOCAL_STORAGE_PARAMS_KEY = "params";
-
-interface ModelContextType {
-    isModelLoading: boolean;
-    modelError: string | null;
-    currentModelData: TrainModelResponse | null;
-    lastTrainedParams: Parameters;
-    trainNewModel: (params: Parameters) => Promise<void>;
-    retrieveStoredModel: () => Promise<void>;
-    clearStoredModelParams: () => void;
-    // Helper methods for prediction components
-    getFeatureNames: () => string[] | null;
-    getClassNames: () => string[] | null;
-    getModelKey: () => string | null;
-    isModelReady: () => boolean;
-}
-
-const ModelContext = createContext<ModelContextType | undefined>(undefined);
-
 /**
- * Props for the ModelProvider component.
+ * Generic Model Context Provider
+ *
+ * This component acts as a router for model-specific contexts.
+ * Based on the `model_name` provided in a story page, it wraps its
+ * children with the appropriate context provider (e.g., DecisionTreeProvider, KNNProvider).
+ *
+ * It also provides a unified `useModel` hook that returns the correct
+ * context data for the currently active model.
  */
+import React, { createContext, useContext } from "react";
+import { DecisionTreeProvider, useDecisionTree } from "./DecisionTreeContext";
+import { KNNProvider, useKNN } from "./KNNContext";
+
 interface ModelProviderProps {
-    children: ReactNode;
+    children: React.ReactNode;
+    model_name: string;
 }
 
-/**
- * Provides the ModelContext to its children components.
- * It manages the state and interactions with the model API.
- */
-export const ModelProvider: React.FC<ModelProviderProps> = ({ children }) => {
-    const [isModelLoading, setIsModelLoading] = useState<boolean>(false);
-    const [modelError, setModelError] = useState<string | null>(null);
-    const [currentModelData, setCurrentModelData] =
-        useState<TrainModelResponse | null>(null);
-
-    const [lastTrainedParams, setLastTrainedParams] = useState<Parameters>(
-        () => {
-            const storedParams = localStorage.getItem(LOCAL_STORAGE_PARAMS_KEY);
-            if (storedParams == null) return {};
-            else return JSON.parse(storedParams as string);
-        }
-    );
-
-    const trainNewModel = useCallback(async (params: Parameters = {}) => {
-        setIsModelLoading(true);
-        setModelError(null);
-        try {
-            const data: TrainModelResponse = await initiateTrainModel(params);
-
-            if (data.success) {
-                setCurrentModelData(data);
-                setLastTrainedParams(params);
-                localStorage.setItem(
-                    LOCAL_STORAGE_PARAMS_KEY,
-                    JSON.stringify(params)
-                );
-            } else {
-                throw new Error(
-                    "Training failed - API returned success: false"
-                );
-            }
-        } catch (error) {
-            console.error("❌ Failed to train model:", error);
-            setModelError(
-                error instanceof Error
-                    ? error.message
-                    : "Unknown error training model"
-            );
-            setCurrentModelData(null);
-        } finally {
-            setIsModelLoading(false);
-        }
-    }, []);
-
-    const retrieveStoredModel = useCallback(async () => {
-        await trainNewModel(lastTrainedParams);
-    }, [trainNewModel, lastTrainedParams]);
-
-    const clearStoredModelParams = useCallback(() => {
-        localStorage.removeItem(LOCAL_STORAGE_PARAMS_KEY);
-        setLastTrainedParams({});
-        setCurrentModelData(null);
-        setModelError(null);
-        setIsModelLoading(false);
-    }, []);
-
-    useEffect(() => {
-        if (
-            !currentModelData &&
-            !isModelLoading &&
-            Object.keys(lastTrainedParams).length > 0
-        ) {
-            trainNewModel(lastTrainedParams);
-        } else if (!currentModelData && !isModelLoading) {
-        }
-    }, [currentModelData, isModelLoading, lastTrainedParams]);
-
-    // Helper functions for prediction components
-    const getFeatureNames = useCallback((): string[] | null => {
-        if (!currentModelData?.metadata?.feature_names) {
-            return null;
-        }
-        return currentModelData.metadata.feature_names;
-    }, [currentModelData]);
-
-    const getClassNames = useCallback((): string[] | null => {
-        if (!currentModelData?.classes) {
-            return null;
-        }
-        return currentModelData.classes;
-    }, [currentModelData]);
-
-    const getModelKey = useCallback((): string | null => {
-        return currentModelData?.model_key || null;
-    }, [currentModelData]);
-
-    const isModelReady = useCallback((): boolean => {
-        const ready = !!(
-            currentModelData?.success &&
-            currentModelData?.metadata?.feature_names &&
-            currentModelData?.classes
-        );
-
-        return ready;
-    }, [currentModelData]);
-
-    const contextValue: ModelContextType = {
-        isModelLoading,
-        modelError,
-        currentModelData,
-        lastTrainedParams,
-        trainNewModel,
-        retrieveStoredModel,
-        clearStoredModelParams,
-        // Helper methods for prediction components
-        getFeatureNames,
-        getClassNames,
-        getModelKey,
-        isModelReady,
-    };
-
-    return (
-        <ModelContext.Provider value={contextValue}>
-            {children}
-        </ModelContext.Provider>
-    );
+// A map of model names to their respective providers
+const providers: Record<string, React.FC<{ children: React.ReactNode }>> = {
+    decision_tree: DecisionTreeProvider,
+    knn: KNNProvider,
 };
 
-export const useModel = () => {
-    const context = useContext(ModelContext);
-    if (context === undefined) {
-        throw new Error("useModel must be used within a ModelProvider");
+export const ModelProvider: React.FC<ModelProviderProps> = ({
+    children,
+    model_name,
+}) => {
+    const Provider = providers[model_name];
+
+    if (!Provider) {
+        // Fallback or error for an unknown model
+        return <>{children}</>;
     }
-    return context;
+
+    return <Provider>{children}</Provider>;
+};
+
+// A map of model names to their respective hooks
+const hooks: Record<string, () => any> = {
+    decision_tree: useDecisionTree,
+    knn: useKNN,
+};
+
+// A generic context to hold the current model name
+const ModelNameContext = createContext<string | undefined>(undefined);
+
+export const ModelNameProvider = ModelNameContext.Provider;
+
+/**
+ * A unified hook to access the context of the currently active model.
+ */
+export const useModel = () => {
+    const modelName = useContext(ModelNameContext);
+    if (!modelName) {
+        throw new Error("useModel must be used within a ModelNameProvider");
+    }
+
+    const useModelHook = hooks[modelName];
+    if (!useModelHook) {
+        throw new Error(`No model context hook found for model: ${modelName}`);
+    }
+
+    return useModelHook();
 };

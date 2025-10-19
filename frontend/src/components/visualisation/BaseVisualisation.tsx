@@ -105,6 +105,7 @@ const BaseVisualisation: React.FC<BaseVisualisationProps> = ({
                     currentStepFloor: stepFloor,
                     stepFraction: stepFraction,
                 },
+                svgSelection: svg,
             },
             dimensions: {
                 width: containerWidth,

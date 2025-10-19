@@ -1,48 +1,22 @@
-export interface BaseOption {
-    name: string;
-    description: string;
-    default: any;
-}
+/**
+ * Parameter types - now auto-generated from backend Pydantic models.
+ * These types are automatically synced with the FastAPI OpenAPI spec.
+ *
+ * To regenerate: npm run generate:types
+ */
+import type { components } from "./api";
 
-export interface SelectOption extends BaseOption {
-    type: "select";
-    options: string[];
-}
+// Export backend-generated types with frontend-friendly aliases
+export type SelectOption = components["schemas"]["SelectParameterInfo"];
+export type IntOption = components["schemas"]["IntParameterInfo"];
+export type NumberOption = components["schemas"]["NumberParameterInfo"];
+export type FloatOption = components["schemas"]["FloatParameterInfo"];
+export type AnyOption = components["schemas"]["AnyParameterInfo"];
 
-export interface IntOption extends BaseOption {
-    type: "int";
-    min?: number;
-    max?: number;
-}
-
-export interface NumberOption extends BaseOption {
-    type: "number";
-    min?: number;
-    max?: number;
-    step?: number;
-}
-
-export interface FloatOption extends BaseOption {
-    type: "float";
-    min?: number;
-    max?: number;
-    step?: number;
-}
-
-export interface AnyOption extends BaseOption {
-    type: "any";
-}
-
-export interface HybridOption extends BaseOption {
-    type: "select";
-    options: string[];
-    allowCustom?: boolean; // For parameters that accept both select AND numeric
-}
-
+// Union type for all parameter options
 export type ModelOption =
     | SelectOption
     | IntOption
     | NumberOption
     | FloatOption
-    | AnyOption
-    | HybridOption;
+    | AnyOption;

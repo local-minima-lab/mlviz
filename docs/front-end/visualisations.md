@@ -16,39 +16,41 @@ The capabilities are implemented at a lower level so that there is no need for r
 
 # BaseVisualisation as a template
 
->[!note]
->This refers to the `visualisation/BaseVisualisation` component, and not any base visualisation components used for further customisation for specific models.
+> [!note]
+> This refers to the `visualisation/BaseVisualisation` component, and not any base visualisation components used for further customisation for specific models.
 
 ```typescript
 interface BaseVisualisationProps {
-	// Core configuration
-	dataConfig: VisualisationDataConfig;
-	capabilities: VisualisationCapabilities;
-	// Optional configurations
-	styleConfig?: VisualizationStyleConfig;
-	controlsConfig?: VisualizationControlsConfig;
-	layoutConfig?: VisualizationLayoutConfig;
-	eventHandlers?: VisualizationEventHandlers;
+    // Core configuration
+    dataConfig: VisualisationDataConfig;
+    capabilities: VisualisationCapabilities;
+    // Optional configurations
+    styleConfig?: VisualizationStyleConfig;
+    controlsConfig?: VisualizationControlsConfig;
+    layoutConfig?: VisualizationLayoutConfig;
+    eventHandlers?: VisualizationEventHandlers;
 }
 ```
 
 Generally, the `BaseVisualisation` take in these information, which are separated into different sub-records/dictionaries of configurations. Due to the high customisability, the configs are separated into separate types for easy extension in the future.
-* `dataConfig` contains all necessary information to display the data such as
-	* the actual data itself
-	* the render function used for the visualisation, to display the data
-* `capabilities` contains all the information on what capabilities the visualisation should have
-	* the big categories of the keys are all the different capabilities - if they exist in the argument, then the visualisation has that capability.
-	* the values are the parameters for the different visualisations
-* `styleConfig` is optional parameter for styling on the visualisation
-* `controlsConfig` is optional parameter for styling of the control bar for the capabilities
-* `layoutConfig` is optional parameter for extra layout items
-* `eventHandlers` is optional parameter for event handlers like to handle stepping when playing an animation
+
+-   `dataConfig` contains all necessary information to display the data such as
+    -   the actual data itself
+    -   the render function used for the visualisation, to display the data
+-   `capabilities` contains all the information on what capabilities the visualisation should have
+    -   the big categories of the keys are all the different capabilities - if they exist in the argument, then the visualisation has that capability.
+    -   the values are the parameters for the different visualisations
+-   `styleConfig` is optional parameter for styling on the visualisation
+-   `controlsConfig` is optional parameter for styling of the control bar for the capabilities
+-   `layoutConfig` is optional parameter for extra layout items
+-   `eventHandlers` is optional parameter for event handlers like to handle stepping when playing an animation
 
 # Controls
 
 The current controls supported are:
-- zooming
-- animation (playing)
-- export
-	- to SVG/PNG (still)
-	- to webm
+
+-   zooming
+-   animation (playing)
+-   export
+    -   to SVG/PNG (still)
+    -   to webm

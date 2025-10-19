@@ -142,6 +142,17 @@
                     }
                 }
             ]
+        },
+        "knn": {
+            "name": "knn",
+            "description": "KNN",
+            "start_page": 0,
+            "nodes": [
+                {
+                    "index": 3365337393
+                }
+            ],
+            "edges": []
         }
     },
     "pages": {
@@ -170,8 +181,18 @@
         "3204261850": {
             "page_type": "static",
             "parameters": {
-                "text": "# Heading 1\n Text 1\n ## Heading 2\n Text 2\n ### Heading 3\n Text 3\n #### Heading 4\n Text 4\n $$x+2x=3x$$ \n Text 5"
+                "text": "New story"
             }
+        },
+        "3365337393": {
+            "page_type": "dynamic",
+            "parameters": {
+                "visualisation_features": [0, 1],
+                "include_boundary": true
+            },
+            "dynamic_type": "model",
+            "model_name": "knn",
+            "component_type": "viz_only"
         }
     }
 }
