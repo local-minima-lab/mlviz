@@ -103,8 +103,8 @@ const BasePlot: React.FC<BasePlotProps> = ({
 
     // 3D rotation state (only used for 3D plots)
     const [rotation, setRotation] = useState<Scatter3DRotation>({
-        alpha: 0.5,
-        beta: 0.5,
+        alpha: 0.35, // Horizontal rotation: slight angle from side
+        beta: 0.25,  // Vertical rotation: pulled down view
     });
 
     // ============================================================================
@@ -270,58 +270,83 @@ const BasePlot: React.FC<BasePlotProps> = ({
     // 3D Rotation Controls
     // ============================================================================
 
-    const rotation3DControls = dimensions === 3 ? (
-        <div className="bg-white rounded-lg shadow-md p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                </svg>
-                3D Rotation
-            </h3>
+    const rotation3DControls =
+        dimensions === 3 ? (
+            <div className="bg-white rounded-lg shadow-md p-4 space-y-3">
+                <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+                        />
+                    </svg>
+                    3D Rotation
+                </h3>
 
-            {/* Horizontal Rotation (Alpha - Y axis) */}
-            <div className="space-y-1">
-                <label className="flex justify-between text-xs text-gray-600">
-                    <span>Horizontal (α)</span>
-                    <span className="font-mono text-gray-500">{Math.round(rotation.alpha * 360)}°</span>
-                </label>
-                <input
-                    type="range"
-                    min="0"
-                    max="2"
-                    step="0.01"
-                    value={rotation.alpha}
-                    onChange={(e) => setRotation(prev => ({ ...prev, alpha: parseFloat(e.target.value) }))}
-                    className="w-full h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                />
+                {/* Horizontal Rotation (Alpha - Y axis) */}
+                <div className="space-y-1">
+                    <label className="flex justify-between text-xs text-gray-600">
+                        <span>Horizontal (α)</span>
+                        <span className="font-mono text-gray-500">
+                            {Math.round(rotation.alpha * 360)}°
+                        </span>
+                    </label>
+                    <input
+                        type="range"
+                        min="0"
+                        max="2"
+                        step="0.01"
+                        value={rotation.alpha}
+                        onChange={(e) =>
+                            setRotation((prev) => ({
+                                ...prev,
+                                alpha: parseFloat(e.target.value),
+                            }))
+                        }
+                        className="w-full h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    />
+                </div>
+
+                {/* Vertical Rotation (Beta - X axis) */}
+                <div className="space-y-1">
+                    <label className="flex justify-between text-xs text-gray-600">
+                        <span>Vertical (β)</span>
+                        <span className="font-mono text-gray-500">
+                            {Math.round(rotation.beta * 360)}°
+                        </span>
+                    </label>
+                    <input
+                        type="range"
+                        min="-0.5"
+                        max="0.5"
+                        step="0.01"
+                        value={rotation.beta}
+                        onChange={(e) =>
+                            setRotation((prev) => ({
+                                ...prev,
+                                beta: parseFloat(e.target.value),
+                            }))
+                        }
+                        className="w-full h-2 bg-green-100 rounded-lg appearance-none cursor-pointer accent-green-600"
+                    />
+                </div>
+
+                {/* Reset Button */}
+                <button
+                    onClick={() => setRotation({ alpha: 0.35, beta: 0.25 })}
+                    className="w-full px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                >
+                    Reset View
+                </button>
             </div>
-
-            {/* Vertical Rotation (Beta - X axis) */}
-            <div className="space-y-1">
-                <label className="flex justify-between text-xs text-gray-600">
-                    <span>Vertical (β)</span>
-                    <span className="font-mono text-gray-500">{Math.round(rotation.beta * 360)}°</span>
-                </label>
-                <input
-                    type="range"
-                    min="-0.5"
-                    max="0.5"
-                    step="0.01"
-                    value={rotation.beta}
-                    onChange={(e) => setRotation(prev => ({ ...prev, beta: parseFloat(e.target.value) }))}
-                    className="w-full h-2 bg-green-100 rounded-lg appearance-none cursor-pointer accent-green-600"
-                />
-            </div>
-
-            {/* Reset Button */}
-            <button
-                onClick={() => setRotation({ alpha: 0.5, beta: 0.5 })}
-                className="w-full px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-            >
-                Reset View
-            </button>
-        </div>
-    ) : null;
+        ) : null;
 
     // ============================================================================
     // Render

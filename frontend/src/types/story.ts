@@ -26,6 +26,12 @@ export interface BypassCheck extends BaseCondition {
     condition_type: "Bypass";
 }
 
+export interface SlideCheck extends BaseCondition {
+    condition_type: "Slide";
+    slide_name: string;
+    slide_description?: string;
+}
+
 export interface Lambda extends BaseCondition {
     condition_type: "Lambda";
     exec_str: string;
@@ -46,6 +52,7 @@ export type Condition =
     | TimeCheck
     | ButtonPress
     | BypassCheck
+    | SlideCheck
     | Lambda
     | AndCheck
     | OrCheck;
@@ -69,7 +76,8 @@ interface BasePage {
 }
 
 export interface StaticPageParameters {
-    text: string;
+    text?: string;
+    link?: string;
 }
 
 export interface StaticPage extends BasePage {

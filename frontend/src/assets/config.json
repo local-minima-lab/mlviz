@@ -1,24 +1,24 @@
 {
     "stories": {
-        "decision_tree_max_depth": {
-            "name": "decision_tree_max_depth",
-            "description": "Decision Tree max depth",
+        "decision_tree_classifier": {
+            "name": "decision_tree_classifier",
+            "description": "An introduction to DecisionTreeClassifiers.",
             "start_page": 0,
             "nodes": [
                 {
-                    "index": 881648388
+                    "index": 339858608
                 },
                 {
                     "index": 3595475928
                 },
                 {
-                    "index": 413280384
-                },
-                {
-                    "index": 3595475928
+                    "index": 3170219703
                 },
                 {
                     "index": 413280384
+                },
+                {
+                    "index": 1452535
                 }
             ],
             "edges": [
@@ -45,28 +45,7 @@
                         "story_name": null
                     },
                     "condition": {
-                        "condition_type": "Parameter",
-                        "category": "trainParams",
-                        "parameter": "max_depth",
-                        "comparator": "=",
-                        "value": 3
-                    }
-                },
-                {
-                    "start": {
-                        "local_index": 3,
-                        "story_name": null
-                    },
-                    "end": {
-                        "local_index": 4,
-                        "story_name": null
-                    },
-                    "condition": {
-                        "condition_type": "Parameter",
-                        "category": "trainParams",
-                        "parameter": "max_depth",
-                        "comparator": "=",
-                        "value": 4
+                        "condition_type": "Bypass"
                     }
                 },
                 {
@@ -79,11 +58,50 @@
                         "story_name": null
                     },
                     "condition": {
-                        "condition_type": "Parameter",
-                        "category": "predictParams",
-                        "parameter": "petal length (cm)",
-                        "comparator": "=",
-                        "value": 2.45
+                        "condition_type": "Bypass"
+                    }
+                },
+                {
+                    "start": {
+                        "local_index": 3,
+                        "story_name": null
+                    },
+                    "end": {
+                        "local_index": 4,
+                        "story_name": null
+                    },
+                    "condition": {
+                        "condition_type": "And",
+                        "conditions": [
+                            {
+                                "condition_type": "Parameter",
+                                "category": "predictParams",
+                                "parameter": "sepal length (cm)",
+                                "comparator": "=",
+                                "value": 7.1
+                            },
+                            {
+                                "condition_type": "Parameter",
+                                "category": "predictParams",
+                                "parameter": "sepal width (cm)",
+                                "comparator": "=",
+                                "value": 3.0
+                            },
+                            {
+                                "condition_type": "Parameter",
+                                "category": "predictParams",
+                                "parameter": "petal length (cm)",
+                                "comparator": "=",
+                                "value": 5.9
+                            },
+                            {
+                                "condition_type": "Parameter",
+                                "category": "predictParams",
+                                "parameter": "petal width (cm)",
+                                "comparator": "=",
+                                "value": 2.1
+                            }
+                        ]
                     }
                 },
                 {
@@ -96,80 +114,35 @@
                         "story_name": null
                     },
                     "condition": {
-                        "condition_type": "Parameter",
-                        "category": "predictParams",
-                        "parameter": "petal length (cm)",
-                        "comparator": "=",
-                        "value": 2.45
-                    }
-                },
-                {
-                    "start": {
-                        "local_index": 4,
-                        "story_name": null
-                    },
-                    "end": {
-                        "local_index": 0,
-                        "story_name": "decision_tree"
-                    },
-                    "condition": {
                         "condition_type": "Bypass"
                     }
                 }
             ]
-        },
-        "decision_tree": {
-            "name": "decision_tree",
-            "description": "Decision Tree",
-            "start_page": 0,
-            "nodes": [
-                {
-                    "index": 3204261850
-                }
-            ],
-            "edges": [
-                {
-                    "start": {
-                        "local_index": 0,
-                        "story_name": null
-                    },
-                    "end": {
-                        "local_index": 0,
-                        "story_name": "decision_tree_max_depth"
-                    },
-                    "condition": {
-                        "condition_type": "Bypass"
-                    }
-                }
-            ]
-        },
-        "knn": {
-            "name": "knn",
-            "description": "KNN",
-            "start_page": 0,
-            "nodes": [
-                {
-                    "index": 3365337393
-                }
-            ],
-            "edges": []
         }
     },
     "pages": {
-        "881648388": {
+        "339858608": {
             "page_type": "static",
             "parameters": {
-                "text": "Test text page"
+                "link": "/dtree/introduction.md"
             }
         },
         "3595475928": {
             "page_type": "dynamic",
             "parameters": {
-                "whitelist": ["max_depth"]
+                "whitelist": [
+                    "max_depth"
+                ]
             },
             "dynamic_type": "model",
             "model_name": "decision_tree",
             "component_type": "train"
+        },
+        "3170219703": {
+            "page_type": "static",
+            "parameters": {
+                "link": "/dtree/prediction.md"
+            }
         },
         "413280384": {
             "page_type": "dynamic",
@@ -178,21 +151,11 @@
             "model_name": "decision_tree",
             "component_type": "predict"
         },
-        "3204261850": {
+        "1452535": {
             "page_type": "static",
             "parameters": {
-                "text": "New story"
+                "link": "dtree/end.md"
             }
-        },
-        "3365337393": {
-            "page_type": "dynamic",
-            "parameters": {
-                "visualisation_features": [0, 1],
-                "include_boundary": true
-            },
-            "dynamic_type": "model",
-            "model_name": "knn",
-            "component_type": "viz_only"
         }
     }
 }

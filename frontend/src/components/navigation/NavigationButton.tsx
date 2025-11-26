@@ -47,7 +47,7 @@ const NavigationButton: React.FC<NavigationButtonProps> = ({
             disabled={!isNavigable}
             onClick={goToNextPage}
             className={`
-             w-full h-[10dvh] transition-all duration-100 shadow-lg hover:shadow-2xl text-sm tracking-tight
+             w-full min-h-[10dvh] h-auto py-3 transition-all duration-100 shadow-lg hover:shadow-2xl text-sm tracking-tight
             ${
                 isNavigable
                     ? `
@@ -64,14 +64,18 @@ const NavigationButton: React.FC<NavigationButtonProps> = ({
         >
             <Card
                 key={`${edge.end.story_name}_${edge.end.local_index}`}
-                className="flex flex-col justify-start items-start shadow-none"
+                className="flex flex-col justify-start items-start shadow-none w-full"
             >
-                <CardTitle className="flex items-center gap-2 px-2">
+                <CardTitle className="flex items-center font-normal text-wrap gap-2 px-2">
                     {isNavigable ? (
-                        <>
-                            <CheckCircle className="w-5 h-5" />
-                            Complete
-                        </>
+                        edge.condition.condition_type === "Slide" ? (
+                            edge.condition.slide_name
+                        ) : (
+                            <>
+                                <CheckCircle className="w-5 h-5" />
+                                Complete
+                            </>
+                        )
                     ) : (
                         <>
                             <XCircle className="w-5 h-5" />
@@ -80,7 +84,7 @@ const NavigationButton: React.FC<NavigationButtonProps> = ({
                     )}
                 </CardTitle>
 
-                <CardFooter className="text-sm text-left px-2 whitespace-normal">
+                <CardFooter className="text-sm text-left px-2 py-2 font-light leading-tight whitespace-normal break-words">
                     {displayCondition(edge.condition)}
                 </CardFooter>
             </Card>

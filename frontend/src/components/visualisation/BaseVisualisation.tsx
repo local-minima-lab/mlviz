@@ -136,7 +136,7 @@ const BaseVisualisation: React.FC<BaseVisualisationProps> = ({
         >
             {/* Top Controls Slot */}
             {topControls && (
-                <div className="p-4 flex-shrink-0">{topControls}</div>
+                <div className="bg-white p-4 flex-shrink-0">{topControls}</div>
             )}
 
             <div

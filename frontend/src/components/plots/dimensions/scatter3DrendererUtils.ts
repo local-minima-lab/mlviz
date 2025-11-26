@@ -76,27 +76,8 @@ export function renderScatter3D(
     // Create color scale
     const colorScale = createScatterColorScale(config);
 
-    // Render decision boundary if provided (3D mesh)
-    if (decisionBoundary && decisionBoundary.dimensions === 3) {
-        renderDecisionBoundary3D(
-            container,
-            decisionBoundary,
-            projection,
-            config
-        );
-    }
-
-    // Render 3D axes
-    if (showAxes) {
-        renderAxes3D(container, projection, featureNames, bounds);
-    }
-
-    // Render grid (3D plane)
-    if (showGrid) {
-        renderGrid3D(container, projection, bounds);
-    }
-
     // Project and sort points by depth (painter's algorithm)
+    // Do this early so we can use it for shadows and depth lines
     const projectedPoints: ProjectedPoint[] = plotPoints.map((point) => {
         const proj = projection(
             point.coordinates[0],
@@ -113,7 +94,50 @@ export function renderScatter3D(
     // Sort by depth (back to front)
     projectedPoints.sort((a, b) => a.depth - b.depth);
 
-    // Render data points
+    // ============================================================================
+    // Rendering Order (back to front for painter's algorithm):
+    // 1. Grid with 3D box frame (furthest back)
+    // 2. Shadows on base plane
+    // 3. Decision boundaries
+    // 4. Depth connector lines
+    // 5. Axes
+    // 6. Data points (on top)
+    // 7. Legend (overlay)
+    // ============================================================================
+
+    // 1. Render grid (3D plane with box frame)
+    if (showGrid) {
+        renderGrid3D(container, projection, bounds);
+    }
+
+    // 2. Render shadows on base plane
+    renderShadows3D(
+        container,
+        projectedPoints,
+        projection,
+        bounds,
+        pointRadius
+    );
+
+    // 3. Render decision boundary if provided (3D mesh)
+    if (decisionBoundary && decisionBoundary.dimensions === 3) {
+        renderDecisionBoundary3D(
+            container,
+            decisionBoundary,
+            projection,
+            config
+        );
+    }
+
+    // 4. Render depth connector lines
+    renderDepthLines3D(container, projectedPoints, projection, bounds);
+
+    // 5. Render 3D axes
+    if (showAxes) {
+        renderAxes3D(container, projection, featureNames, bounds);
+    }
+
+    // 6. Render data points (on top)
     renderDataPoints3D(
         container,
         projectedPoints,
@@ -187,23 +211,47 @@ function renderDecisionBoundary3D(
     // For 3D decision boundaries, we'd render a mesh surface
     // This is a simplified version - full implementation would use
     // triangulation and proper depth sorting
-    const boundaryGroup = g
-        .append("g")
-        .attr("class", "decision-boundary-3d")
-        .attr("opacity", 0.2);
+    const boundaryGroup = g.append("g").attr("class", "decision-boundary-3d");
+
+    // Project all boundary points and calculate depths
+    const projectedBoundary = boundary.meshPoints.map(
+        (point: number[], i: number) => {
+            const proj = projection(point[0], point[1], point[2]);
+            return {
+                point,
+                proj,
+                depth: proj.z,
+                index: i,
+            };
+        }
+    );
+
+    // Sort by depth (back to front)
+    projectedBoundary.sort((a, b) => a.depth - b.depth);
+
+    // Calculate depth extent for normalization
+    const depthExtent = d3.extent(projectedBoundary, (d) => d.depth) as [
+        number,
+        number
+    ];
+    const depthScale = d3.scaleLinear().domain(depthExtent).range([0, 1]); // 0 = far (back), 1 = near (front)
 
     function renderPoints<Prediction extends string | number>(
         predictions: Prediction[],
         getColor: (p: Prediction) => string
     ) {
-        boundary.meshPoints.forEach((point: number[], i: number) => {
-            const proj = projection(point[0], point[1], point[2]);
+        projectedBoundary.forEach(({ proj, depth, index }) => {
+            const depthFactor = depthScale(depth);
+
             boundaryGroup
                 .append("circle")
                 .attr("cx", proj.x)
                 .attr("cy", proj.y)
-                .attr("r", 2)
-                .attr("fill", getColor(predictions[i]));
+                // Depth-based radius: closer points are slightly larger
+                .attr("r", 1.5 + depthFactor * 1) // Range: 1.5 to 2.5
+                .attr("fill", getColor(predictions[index]))
+                // Depth-based opacity: closer points are more opaque
+                .attr("opacity", 0.08 + depthFactor * 0.1); // Range: 0.08 to 0.18 (lighter/more transparent)
         });
     }
 
@@ -212,6 +260,84 @@ function renderDecisionBoundary3D(
     } else {
         renderPoints(boundary.predictions as number[], makeGetColor(config));
     }
+}
+
+function renderShadows3D(
+    g: d3.Selection<SVGGElement, unknown, null, undefined>,
+    projectedPoints: ProjectedPoint[],
+    projection: (x: number, y: number, z: number) => Point3D,
+    bounds: { min: number[]; max: number[] },
+    radius: number
+) {
+    const shadowGroup = g.append("g").attr("class", "shadows-3d");
+
+    // Project each point's shadow onto the base plane (z = min)
+    shadowGroup
+        .selectAll("circle")
+        .data(projectedPoints)
+        .enter()
+        .append("circle")
+        .attr("cx", (d) => {
+            // Project the point's XY position to the base plane
+            const shadowProj = projection(
+                d.coordinates[0],
+                d.coordinates[1],
+                bounds.min[2]
+            );
+            return shadowProj.x;
+        })
+        .attr("cy", (d) => {
+            const shadowProj = projection(
+                d.coordinates[0],
+                d.coordinates[1],
+                bounds.min[2]
+            );
+            return shadowProj.y;
+        })
+        .attr("r", radius * 0.8) // Slightly smaller than the point
+        .attr("fill", "#000")
+        .attr("opacity", 0.15)
+        .attr("pointer-events", "none"); // Shadows don't interfere with interactions
+}
+
+function renderDepthLines3D(
+    g: d3.Selection<SVGGElement, unknown, null, undefined>,
+    projectedPoints: ProjectedPoint[],
+    projection: (x: number, y: number, z: number) => Point3D,
+    bounds: { min: number[]; max: number[] }
+) {
+    const linesGroup = g.append("g").attr("class", "depth-lines-3d");
+
+    // Draw vertical lines from each point down to the base plane
+    linesGroup
+        .selectAll("line")
+        .data(projectedPoints)
+        .enter()
+        .append("line")
+        .attr("x1", (d) => d.projected.x)
+        .attr("y1", (d) => d.projected.y)
+        .attr("x2", (d) => {
+            // Project to base plane
+            const baseProj = projection(
+                d.coordinates[0],
+                d.coordinates[1],
+                bounds.min[2]
+            );
+            return baseProj.x;
+        })
+        .attr("y2", (d) => {
+            const baseProj = projection(
+                d.coordinates[0],
+                d.coordinates[1],
+                bounds.min[2]
+            );
+            return baseProj.y;
+        })
+        .attr("stroke", "#9ca3af") // Gray color
+        .attr("stroke-width", 1)
+        .attr("stroke-dasharray", "2,2") // Dashed line
+        .attr("opacity", 0.3)
+        .attr("pointer-events", "none"); // Lines don't interfere with interactions
 }
 
 function renderAxes3D(
@@ -232,14 +358,14 @@ function renderAxes3D(
         .attr("y1", origin.y)
         .attr("x2", xEnd.x)
         .attr("y2", xEnd.y)
-        .attr("stroke", "#e74c3c")
+        .attr("stroke", "#999999")
         .attr("stroke-width", 2);
 
     axesGroup
         .append("text")
         .attr("x", xEnd.x + 10)
         .attr("y", xEnd.y)
-        .attr("fill", "#e74c3c")
+        .attr("fill", "#999999")
         .attr("font-size", "12px")
         .attr("font-weight", "bold")
         .text(featureNames[0] || "X");
@@ -252,14 +378,14 @@ function renderAxes3D(
         .attr("y1", origin.y)
         .attr("x2", yEnd.x)
         .attr("y2", yEnd.y)
-        .attr("stroke", "#2ecc71")
+        .attr("stroke", "#999999")
         .attr("stroke-width", 2);
 
     axesGroup
         .append("text")
         .attr("x", yEnd.x)
         .attr("y", yEnd.y - 10)
-        .attr("fill", "#2ecc71")
+        .attr("fill", "#999999")
         .attr("font-size", "12px")
         .attr("font-weight", "bold")
         .text(featureNames[1] || "Y");
@@ -272,14 +398,14 @@ function renderAxes3D(
         .attr("y1", origin.y)
         .attr("x2", zEnd.x)
         .attr("y2", zEnd.y)
-        .attr("stroke", "#3498db")
+        .attr("stroke", "#999999")
         .attr("stroke-width", 2);
 
     axesGroup
         .append("text")
         .attr("x", zEnd.x + 10)
         .attr("y", zEnd.y)
-        .attr("fill", "#3498db")
+        .attr("fill", "#999999")
         .attr("font-size", "12px")
         .attr("font-weight", "bold")
         .text(featureNames[2] || "Z");
@@ -295,8 +421,9 @@ function renderGrid3D(
     const steps = 5;
     const xRange = bounds.max[0] - bounds.min[0];
     const yRange = bounds.max[1] - bounds.min[1];
+    const zRange = bounds.max[2] - bounds.min[2];
 
-    // Draw grid on XY plane at Z=min
+    // Draw grid on XY plane at Z=min (bottom/base plane)
     for (let i = 0; i <= steps; i++) {
         const t = i / steps;
 
@@ -330,6 +457,120 @@ function renderGrid3D(
             .attr("stroke-width", 1)
             .attr("opacity", 0.5);
     }
+
+    // Draw 3D box frame (edges of the bounding box)
+    const corners = [
+        [bounds.min[0], bounds.min[1], bounds.min[2]],
+        [bounds.max[0], bounds.min[1], bounds.min[2]],
+        [bounds.max[0], bounds.max[1], bounds.min[2]],
+        [bounds.min[0], bounds.max[1], bounds.min[2]],
+        [bounds.min[0], bounds.min[1], bounds.max[2]],
+        [bounds.max[0], bounds.min[1], bounds.max[2]],
+        [bounds.max[0], bounds.max[1], bounds.max[2]],
+        [bounds.min[0], bounds.max[1], bounds.max[2]],
+    ];
+
+    // Define edges connecting corners (12 edges of a cube)
+    const edges = [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 0], // Bottom face
+        [4, 5],
+        [5, 6],
+        [6, 7],
+        [7, 4], // Top face
+        [0, 4],
+        [1, 5],
+        [2, 6],
+        [3, 7], // Vertical edges
+    ];
+
+    edges.forEach(([i, j]) => {
+        const p1 = projection(corners[i][0], corners[i][1], corners[i][2]);
+        const p2 = projection(corners[j][0], corners[j][1], corners[j][2]);
+
+        gridGroup
+            .append("line")
+            .attr("x1", p1.x)
+            .attr("y1", p1.y)
+            .attr("x2", p2.x)
+            .attr("y2", p2.y)
+            .attr("stroke", "#9ca3af")
+            .attr("stroke-width", 1.5)
+            .attr("opacity", 0.4);
+    });
+
+    // Optional: Add back wall grids for better depth perception
+    // XZ plane at Y=min (back wall)
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+
+        // Lines parallel to X on back wall
+        const z = bounds.min[2] + t * zRange;
+        const start = projection(bounds.min[0], bounds.min[1], z);
+        const end = projection(bounds.max[0], bounds.min[1], z);
+
+        gridGroup
+            .append("line")
+            .attr("x1", start.x)
+            .attr("y1", start.y)
+            .attr("x2", end.x)
+            .attr("y2", end.y)
+            .attr("stroke", "#e5e7eb")
+            .attr("stroke-width", 0.5)
+            .attr("opacity", 0.25);
+
+        // Lines parallel to Z on back wall
+        const x = bounds.min[0] + t * xRange;
+        const start2 = projection(x, bounds.min[1], bounds.min[2]);
+        const end2 = projection(x, bounds.min[1], bounds.max[2]);
+
+        gridGroup
+            .append("line")
+            .attr("x1", start2.x)
+            .attr("y1", start2.y)
+            .attr("x2", end2.x)
+            .attr("y2", end2.y)
+            .attr("stroke", "#e5e7eb")
+            .attr("stroke-width", 0.5)
+            .attr("opacity", 0.25);
+    }
+
+    // YZ plane at X=min (left wall)
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+
+        // Lines parallel to Y on left wall
+        const z = bounds.min[2] + t * zRange;
+        const start = projection(bounds.min[0], bounds.min[1], z);
+        const end = projection(bounds.min[0], bounds.max[1], z);
+
+        gridGroup
+            .append("line")
+            .attr("x1", start.x)
+            .attr("y1", start.y)
+            .attr("x2", end.x)
+            .attr("y2", end.y)
+            .attr("stroke", "#e5e7eb")
+            .attr("stroke-width", 0.5)
+            .attr("opacity", 0.2);
+
+        // Lines parallel to Z on left wall
+        const y = bounds.min[1] + t * yRange;
+        const start2 = projection(bounds.min[0], y, bounds.min[2]);
+        const end2 = projection(bounds.min[0], y, bounds.max[2]);
+
+        gridGroup
+            .append("line")
+            .attr("x1", start2.x)
+            .attr("y1", start2.y)
+            .attr("x2", end2.x)
+            .attr("y2", end2.y)
+            .attr("stroke", "#e5e7eb")
+            .attr("stroke-width", 0.5)
+            .attr("opacity", 0.2);
+    }
 }
 
 function renderDataPoints3D(
@@ -343,6 +584,13 @@ function renderDataPoints3D(
 ) {
     const pointsGroup = g.append("g").attr("class", "data-points-3d");
 
+    // Calculate depth range for normalization
+    const depthExtent = d3.extent(projectedPoints, (d) => d.depth) as [
+        number,
+        number
+    ];
+    const depthScale = d3.scaleLinear().domain(depthExtent).range([0, 1]); // 0 = far (back), 1 = near (front)
+
     const circles = pointsGroup
         .selectAll("circle")
         .data(projectedPoints)
@@ -350,9 +598,17 @@ function renderDataPoints3D(
         .append("circle")
         .attr("cx", (d) => d.projected.x)
         .attr("cy", (d) => d.projected.y)
-        .attr("r", radius)
+        // Depth-based radius: closer points are larger
+        .attr("r", (d) => {
+            const depthFactor = depthScale(d.depth);
+            return radius * (0.6 + depthFactor * 0.9); // Range: 0.6x to 1.5x
+        })
         .attr("fill", (d) => colorScale(d))
-        .attr("opacity", opacity)
+        // Depth-based opacity: closer points are more opaque
+        .attr("opacity", (d) => {
+            const depthFactor = depthScale(d.depth);
+            return opacity * (0.5 + depthFactor * 0.5); // Range: 0.5x to 1x of base opacity
+        })
         .attr("stroke", "#fff")
         .attr("stroke-width", 1.5)
         .attr("cursor", onPointClick ? "pointer" : "default");
@@ -369,18 +625,22 @@ function renderDataPoints3D(
         circles
             .on("mouseenter", (event, d) => {
                 onPointHover(d.originalIndex);
+                const depthFactor = depthScale(d.depth);
+                const baseRadius = radius * (0.6 + depthFactor * 0.9);
                 d3.select(event.currentTarget)
                     .transition()
                     .duration(150)
-                    .attr("r", radius * 1.5)
+                    .attr("r", baseRadius * 1.5)
                     .attr("stroke-width", 2.5);
             })
-            .on("mouseleave", (event) => {
+            .on("mouseleave", (event, d) => {
                 onPointHover(null);
+                const depthFactor = depthScale(d.depth);
+                const baseRadius = radius * (0.6 + depthFactor * 0.9);
                 d3.select(event.currentTarget)
                     .transition()
                     .duration(150)
-                    .attr("r", radius)
+                    .attr("r", baseRadius)
                     .attr("stroke-width", 1.5);
             });
     }

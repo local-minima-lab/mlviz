@@ -22,49 +22,79 @@ interface VisualisationProps {
 const Visualisation: React.FC<VisualisationProps> = ({ data: knnData }) => {
     if (!knnData) return <></>;
 
-    // State for selected point (point of interest)
-    const [selectedPointIndex, setSelectedPointIndex] = useState<number | null>(
-        null
-    );
+    const [alpha, beta] = [0.35, 0.1];
 
-    // State for 3D rotation
-    const [rotation3D, setRotation3D] = useState({ alpha: 0.5, beta: 0.5 });
+    // State for 3D rotation (only updated when user manually changes sliders)
+    const [rotation3D, setRotation3D] = useState({ alpha: alpha, beta: beta });
+
+    // Ref for actual rotation values during animation (doesn't trigger re-renders)
+    const currentRotationRef = useRef({ alpha: alpha, beta: beta });
 
     const [isRotating, setIsRotating] = useState(false);
-    const [rotationSpeed, setRotationSpeed] = useState(0.005); // radians per frame
+    const [secondsPerRotation, setSecondsPerRotation] = useState(5); // seconds per full rotation (default 5 seconds)
+    const targetFPS = 20; // Target 20 FPS - realistic for 3D rendering performance
+    const frameInterval = 1000 / targetFPS; // ms between frames (50ms)
+    const lastRenderTimeRef = useRef<number>(0); // Last time we rendered to screen
     const [rotationAxis, setRotationAxis] = useState<
         "horizontal" | "vertical" | "both"
     >("horizontal");
     // Track rotation directions (1 = forward, -1 = reverse)
     const rotationDirectionRef = useRef({ alpha: 1, beta: 1 });
 
-    // Handle point click - toggle selection
-    const handlePointClick = useCallback((index: number) => {
-        setSelectedPointIndex((prev) => (prev === index ? null : index));
-    }, []);
+    // Sync ref when state changes (manual slider adjustment)
+    useEffect(() => {
+        if (!isRotating) {
+            currentRotationRef.current = rotation3D;
+        }
+    }, [rotation3D, isRotating]);
 
-    // Auto-rotation animation loop
+    // Auto-rotation animation loop with delta time for smooth 60fps
+    // Uses refs to avoid triggering React re-renders on every frame
     const animationFrameRef = useRef<number | undefined>(undefined);
     useEffect(() => {
         if (!isRotating) {
             if (animationFrameRef.current) {
                 cancelAnimationFrame(animationFrameRef.current);
             }
+            lastRenderTimeRef.current = 0;
+            // Sync ref with state when stopping
+            currentRotationRef.current = { ...rotation3D };
             return;
         }
 
-        let frameCount = 0;
-        const animate = () => {
-            frameCount++;
+        // Initialize ref with current state when starting
+        currentRotationRef.current = { ...rotation3D };
 
-            setRotation3D((prev) => {
-                const newRotation = { ...prev };
+        const animate = (currentTime: number) => {
+            // Initialize timestamps on first frame
+            if (lastRenderTimeRef.current === 0) {
+                lastRenderTimeRef.current = currentTime;
+                animationFrameRef.current = requestAnimationFrame(animate);
+                return;
+            }
+
+            // Throttle updates to target FPS for better performance
+            // Only update React state (which triggers expensive D3 re-render) at target FPS
+            const timeSinceLastRender = currentTime - lastRenderTimeRef.current;
+
+            if (timeSinceLastRender >= frameInterval) {
+                // Calculate delta time since last RENDER (not last frame)
+                const deltaTime = timeSinceLastRender / 1000;
+
+                // Calculate rotation increment based on time, not frames
+                // Convert seconds per rotation to rotations per second, then to radians/second
+                const rotationsPerSecond = 1 / secondsPerRotation;
+                const radiansPerSecond = rotationsPerSecond * Math.PI * 2;
+                const deltaRadians = radiansPerSecond * deltaTime;
+
+                // Update rotation in ref (doesn't trigger re-render)
+                const newRotation = { ...currentRotationRef.current };
 
                 // Update based on selected axis with auto-reversing at bounds
                 if (rotationAxis === "horizontal" || rotationAxis === "both") {
                     const newAlpha =
-                        prev.alpha +
-                        rotationSpeed * rotationDirectionRef.current.alpha;
+                        currentRotationRef.current.alpha +
+                        deltaRadians * rotationDirectionRef.current.alpha;
 
                     // Check bounds for horizontal (0 to 2)
                     if (newAlpha > 2) {
@@ -80,8 +110,8 @@ const Visualisation: React.FC<VisualisationProps> = ({ data: knnData }) => {
 
                 if (rotationAxis === "vertical" || rotationAxis === "both") {
                     const newBeta =
-                        prev.beta +
-                        rotationSpeed * rotationDirectionRef.current.beta;
+                        currentRotationRef.current.beta +
+                        deltaRadians * rotationDirectionRef.current.beta;
 
                     // Check bounds for vertical (-0.5 to 0.5)
                     if (newBeta > 0.5) {
@@ -95,8 +125,10 @@ const Visualisation: React.FC<VisualisationProps> = ({ data: knnData }) => {
                     }
                 }
 
-                return newRotation;
-            });
+                currentRotationRef.current = newRotation;
+                setRotation3D({ ...newRotation });
+                lastRenderTimeRef.current = currentTime;
+            }
 
             animationFrameRef.current = requestAnimationFrame(animate);
         };
@@ -107,35 +139,15 @@ const Visualisation: React.FC<VisualisationProps> = ({ data: knnData }) => {
             if (animationFrameRef.current) {
                 cancelAnimationFrame(animationFrameRef.current);
             }
+            lastRenderTimeRef.current = 0;
         };
-    }, [isRotating, rotationSpeed, rotationAxis]);
+        // Note: rotation3D is intentionally NOT in dependencies to avoid restarting animation loop
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isRotating, secondsPerRotation, rotationAxis, knnData.visualisation_feature_indices]);
 
     // Transform API response to visualization data
     console.log(knnData);
     const dimensions = knnData.visualisation_feature_indices?.length || 0;
-
-    // Create queries structure for selected point (mimics prediction mode)
-    const selectedPointQuery = useMemo(() => {
-        if (selectedPointIndex === null || !knnData.neighbor_indices) {
-            return undefined;
-        }
-
-        const neighborIndices = knnData.neighbor_indices[selectedPointIndex];
-        const distanceRow = knnData.distance_matrix[selectedPointIndex];
-        const selectedLabel = knnData.training_labels[selectedPointIndex];
-
-        return {
-            queryPoint: knnData.training_points[selectedPointIndex],
-            prediction: selectedLabel,
-            predictionIndex: knnData.class_names.indexOf(selectedLabel),
-            allDistances: distanceRow,
-            neighbors: neighborIndices.map((neighborIdx: number) => ({
-                index: neighborIdx,
-                distance: distanceRow[neighborIdx],
-                label: knnData.training_labels[neighborIdx],
-            })),
-        };
-    }, [selectedPointIndex, knnData]);
 
     const visualizationData: KNNVisualizationData = useMemo(() => {
         const decisionBoundary = knnData.decision_boundary
@@ -154,10 +166,9 @@ const Visualisation: React.FC<VisualisationProps> = ({ data: knnData }) => {
             classNames: knnData.class_names,
             nDimensions: dimensions,
             k: 5, // Default K, can be made configurable
-            // Add queries array if a point is selected
-            queries: selectedPointQuery ? [selectedPointQuery] : undefined,
+            queries: undefined,
         };
-    }, [knnData, dimensions, selectedPointQuery]);
+    }, [knnData, dimensions]);
 
     // Create color scale
     const colorScale = useMemo(
@@ -171,7 +182,7 @@ const Visualisation: React.FC<VisualisationProps> = ({ data: knnData }) => {
         [visualizationData.classNames]
     );
 
-    // Render callback
+    // Stable render callback that always reads latest rotation from ref
     const renderCallback = useCallback(
         (
             container: d3.Selection<SVGGElement, unknown, null, undefined>,
@@ -185,36 +196,21 @@ const Visualisation: React.FC<VisualisationProps> = ({ data: knnData }) => {
                 props: {
                     colorScale,
                     k: visualizationData.k,
-                    onPointClick: handlePointClick,
-                    rotation3D
+                    // Always read from ref to get latest rotation without recreating callback
+                    rotation3D: currentRotationRef.current,
                 },
             });
         },
-        [visualizationData, colorScale, handlePointClick, rotation3D]
+        // rotation3D intentionally excluded - we read from ref instead
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [visualizationData, colorScale]
     );
 
     // 3D Rotation Controls (only show for 3D plots)
     const rotation3DControls =
         dimensions === 3 ? (
-            <div className="rounded-lg bg-white p-4 flex flex-row gap-2">
-                <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                    <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-                        />
-                    </svg>
-                    3D Rotation
-                </h3>
-
-                <div className="flex flex-col w-full flex-1">
+            <div className="flex flex-row gap-2">
+                <div className="flex flex-col align-center w-full flex-1">
                     <div className="flex flex-row justify-between gap-2">
                         {/* Horizontal Rotation (Alpha - Y axis) */}
                         <div className="space-y-1 flex-1">
@@ -267,7 +263,7 @@ const Visualisation: React.FC<VisualisationProps> = ({ data: knnData }) => {
 
                     {/* Animation Controls */}
                     <div className="pt-2 border-gray-200 w-full flex-1">
-                        <div className="flex flex-row justify-between gap-2 w-full">
+                        <div className="flex flex-row justify-between gap-2 items-center">
                             {/* Play/Pause Button */}
                             <button
                                 onClick={() => setIsRotating(!isRotating)}
@@ -313,7 +309,7 @@ const Visualisation: React.FC<VisualisationProps> = ({ data: knnData }) => {
                             {/* Rotation Axis Selector */}
                             <div className="flex-1">
                                 <label className="text-xs text-gray-600">
-                                    Rotation Axis
+                                    <span>Rotation Axis</span>
                                 </label>
                                 <div className="flex gap-1">
                                     <button
@@ -358,41 +354,37 @@ const Visualisation: React.FC<VisualisationProps> = ({ data: knnData }) => {
                                 <label className="flex justify-between text-xs text-gray-600 w-full">
                                     <span>Speed</span>
                                     <span className="font-mono text-gray-500">
-                                        {rotationSpeed === 0.005
-                                            ? "Normal"
-                                            : rotationSpeed < 0.005
-                                            ? "Slow"
-                                            : "Fast"}
+                                        {secondsPerRotation.toFixed(0)}s / rotation
                                     </span>
                                 </label>
                                 <input
                                     type="range"
-                                    min="0.001"
-                                    max="0.02"
-                                    step="0.001"
-                                    value={rotationSpeed}
+                                    min="1"
+                                    max="30"
+                                    step="1"
+                                    value={secondsPerRotation}
                                     onChange={(e) =>
-                                        setRotationSpeed(
+                                        setSecondsPerRotation(
                                             parseFloat(e.target.value)
                                         )
                                     }
                                     className="w-full h-2 !bg-purple-100 rounded-lg appearance-none cursor-pointer accent-purple-600"
                                 />
                             </div>
+
+                            {/* Reset Button */}
+                            <button
+                                onClick={() => {
+                                    setRotation3D({ alpha: alpha, beta: beta });
+                                    setIsRotating(false);
+                                }}
+                                className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
+                            >
+                                Reset View
+                            </button>
                         </div>
                     </div>
                 </div>
-
-                {/* Reset Button */}
-                <button
-                    onClick={() => {
-                        setRotation3D({ alpha: 0.5, beta: 0.5 });
-                        setIsRotating(false);
-                    }}
-                    className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-                >
-                    Reset View
-                </button>
             </div>
         ) : null;
 
