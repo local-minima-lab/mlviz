@@ -6,7 +6,7 @@
     "scripts": {
         "dev": "vite",
         "devhost": "vite --host",
-        "build": "tsc -b && vite build",
+        "build": "tsc --noEmit && vite build",
         "lint": "eslint .",
         "preview": "vite preview",
         "generate:openapi": "cd ../backend && source venv/bin/activate && python3 generate_openapi.py",
