@@ -234,7 +234,7 @@ const BaseDecisionTreeVisualization: React.FC<BaseTreeProps> = ({
             .attr("fill", (d) => colorScale(d.class))
             .attr("opacity", 0.8);
 
-        if (histogramData.threshold !== undefined) {
+        if (histogramData.threshold !== undefined && histogramData.threshold !== null) {
             g.append("line")
                 .attr("x1", xScale(histogramData.threshold))
                 .attr("x2", xScale(histogramData.threshold))
@@ -401,7 +401,7 @@ const BaseDecisionTreeVisualization: React.FC<BaseTreeProps> = ({
             .attr("fill", (d) => colorScale(d.class))
             .attr("opacity", 0.8);
 
-        if (histogramData.threshold !== undefined) {
+        if (histogramData.threshold !== undefined && histogramData.threshold !== null) {
             g.append("line")
                 .attr("x1", xScale(histogramData.threshold))
                 .attr("x2", xScale(histogramData.threshold))

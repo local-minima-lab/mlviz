@@ -27,8 +27,6 @@ const LOCAL_STORAGE_KEY = "knn_params";
 // Types
 // ============================================================================
 
-type KNNParameters = KNNVisualisationRequest["parameters"];
-
 interface KNNContextType {
     // Visualization (training) state
     isVisualizationLoading: boolean;

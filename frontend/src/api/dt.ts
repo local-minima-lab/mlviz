@@ -1,5 +1,6 @@
 import type { ParameterInfo } from "@/api/types";
 import type { components } from "@/types/api";
+import { API_BASE_URL as BASE_URL } from "@/api/config";
 
 // Type aliases: auto generated from OpenAPI spec.
 
@@ -8,7 +9,7 @@ export type DecisionTreeRequest =
 export type DecisionTreeResponse =
     components["schemas"]["DecisionTreeTrainingResponse"];
 
-const API_BASE_URL = "/api/dt";
+const API_BASE_URL = `${BASE_URL}/api/dt`;
 
 /**
  * Gets the parameters of the decision tree parameters.

@@ -5,6 +5,7 @@
 
 import type { ParameterInfo } from "@/api/types";
 import type { components } from "@/types/api";
+import { API_BASE_URL as BASE_URL } from "@/api/config";
 
 // ============================================================================
 // Type Aliases (auto-generated from OpenAPI spec)
@@ -21,7 +22,7 @@ type KNNPredictionResponse = components["schemas"]["KNNPredictionResponse"];
 // Constants
 // ============================================================================
 
-const API_BASE_URL = "/api/knn";
+const API_BASE_URL = `${BASE_URL}/api/knn`;
 
 // ============================================================================
 // API Functions
