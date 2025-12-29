@@ -1,9 +1,9 @@
-name: Deploy Backend to Cloud Run
+name: Deploy Backend to Cloud Run (prototype-1)
 
 on:
     push:
         branches:
-            - main
+            - prototype-1
         paths:
             - "backend/**"
             - ".github/workflows/deploy-backend.yml"
