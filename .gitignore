@@ -69,3 +69,7 @@ Thumbs.db
 # Uncomment these lines if you want to generate types only in CI/CD
 # backend/openapi.json
 # frontend/src/types/api.ts
+
+# Temporary
+/config/
+.github/SERVICE_NAMES.md
