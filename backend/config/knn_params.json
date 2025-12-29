@@ -1,0 +1,50 @@
+{
+  "parameters": [
+    {
+      "name": "n_neighbors",
+      "type": "int",
+      "default": 5,
+      "min": 1,
+      "max": 50,
+      "description": "Number of neighbors to use for k-neighbors queries. Smaller values are more sensitive to noise."
+    },
+    {
+      "name": "weights",
+      "type": "select",
+      "default": "uniform",
+      "options": ["uniform", "distance"],
+      "description": "Weight function: 'uniform' gives equal weight to all neighbors, 'distance' weights by inverse distance."
+    },
+    {
+      "name": "algorithm",
+      "type": "select",
+      "default": "auto",
+      "options": ["auto", "ball_tree", "kd_tree", "brute"],
+      "description": "Algorithm used to compute nearest neighbors. 'auto' selects the best based on training data."
+    },
+    {
+      "name": "leaf_size",
+      "type": "int",
+      "default": 30,
+      "min": 1,
+      "max": 100,
+      "description": "Leaf size for BallTree or KDTree. Affects construction speed and memory usage."
+    },
+    {
+      "name": "p",
+      "type": "float",
+      "default": 2,
+      "min": 1,
+      "max": 10,
+      "step": 0.1,
+      "description": "Power parameter for Minkowski metric. p=1 is Manhattan distance, p=2 is Euclidean distance."
+    },
+    {
+      "name": "metric",
+      "type": "select",
+      "default": "minkowski",
+      "options": ["minkowski", "euclidean", "manhattan", "chebyshev"],
+      "description": "Distance metric to use for computing distances between points."
+    }
+  ]
+}

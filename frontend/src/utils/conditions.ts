@@ -26,6 +26,9 @@ export function isConditionMet(
         case "Bypass":
             return true;
 
+        case "Slide":
+            return true;
+
         case "Parameter":
             const paramValue = state[condition.category]?.[condition.parameter];
             return (
@@ -65,6 +68,11 @@ export function displayCondition(condition: Condition): string {
     switch (condition.condition_type) {
         case "Bypass":
             return "Continue.";
+
+        case "Slide":
+            return `${
+                condition.slide_description ? condition.slide_description : ""
+            }`;
 
         case "Parameter":
             return `Set ${condition.parameter} ${condition.comparator} ${condition.value}`;

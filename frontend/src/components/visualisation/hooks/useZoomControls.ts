@@ -192,6 +192,8 @@ export const useZoomControls = ({
                 });
             }
 
+            // No filtering needed - zoom works normally for all plots
+
             zoom.on("zoom", (event) => {
                 // Parse initial transform to get base translation and scale
                 const transformMatch = initialTransform.match(

@@ -40,10 +40,12 @@ const Visualisation: React.FC<VisualisationProps> = ({ data: treeData }) => {
 
         // Always include children - the framework will handle the filtering
         if (node.type === "split") {
-            transformed.children.push(
-                transformTreeData(node.left, depth + 1),
-                transformTreeData(node.right, depth + 1)
-            );
+            if (node.left) {
+                transformed.children.push(transformTreeData(node.left, depth + 1));
+            }
+            if (node.right) {
+                transformed.children.push(transformTreeData(node.right, depth + 1));
+            }
         }
 
         return transformed;
@@ -55,10 +57,9 @@ const Visualisation: React.FC<VisualisationProps> = ({ data: treeData }) => {
             depth: number = 0
         ): number => {
             if (node.type === "leaf") return depth;
-            return Math.max(
-                calculateMaxDepth(node.left, depth + 1),
-                calculateMaxDepth(node.right, depth + 1)
-            );
+            const leftDepth = node.left ? calculateMaxDepth(node.left, depth + 1) : depth;
+            const rightDepth = node.right ? calculateMaxDepth(node.right, depth + 1) : depth;
+            return Math.max(leftDepth, rightDepth);
         };
 
         const calculatedMaxDepth = calculateMaxDepth(treeData.tree);

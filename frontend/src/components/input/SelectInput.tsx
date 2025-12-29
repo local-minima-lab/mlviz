@@ -32,7 +32,7 @@ const SelectInput = ({
                 <SelectValue placeholder={String(option.default)} />
             </SelectTrigger>
             <SelectContent>
-                {option.options.map((optionValue: string) => (
+                {(option.options as string[]).map((optionValue) => (
                     <SelectItem
                         value={optionValue}
                         key={optionValue}

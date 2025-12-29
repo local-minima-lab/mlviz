@@ -40,11 +40,13 @@ const Visualisation: React.FC<VisualisationProps> = ({
         const newPath = [...path, node];
         if (node.type === "leaf") return newPath;
 
+        if (!node.feature || node.threshold === null || node.threshold === undefined) return newPath;
         const featureValue = points[node.feature];
         if (featureValue === undefined) return newPath;
 
         const goLeft = featureValue <= node.threshold;
         const nextNode = goLeft ? node.left : node.right;
+        if (!nextNode) return newPath;
         return calculatePredictionPath(nextNode, newPath);
     };
 
@@ -95,20 +97,26 @@ const Visualisation: React.FC<VisualisationProps> = ({
         };
 
         if (node.type === "split") {
-            transformed.children.push(
-                transformTreeDataWithPath(
-                    node.left,
-                    depth + 1,
-                    pathNodes,
-                    currentPathDepth
-                ),
-                transformTreeDataWithPath(
-                    node.right,
-                    depth + 1,
-                    pathNodes,
-                    currentPathDepth
-                )
-            );
+            if (node.left) {
+                transformed.children.push(
+                    transformTreeDataWithPath(
+                        node.left,
+                        depth + 1,
+                        pathNodes,
+                        currentPathDepth
+                    )
+                );
+            }
+            if (node.right) {
+                transformed.children.push(
+                    transformTreeDataWithPath(
+                        node.right,
+                        depth + 1,
+                        pathNodes,
+                        currentPathDepth
+                    )
+                );
+            }
         }
 
         return transformed;

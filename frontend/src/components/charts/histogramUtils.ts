@@ -1,6 +1,7 @@
 // Shared histogram rendering utilities
 
 import type { HistogramData } from "@/types/model";
+import { DEFAULT_COLORS } from "@/utils/colorUtils";
 import * as d3 from "d3";
 
 export interface HistogramRenderOptions {
@@ -20,15 +21,6 @@ export interface StackedHistogramData {
     y0: number;
     y1: number;
 }
-
-export const DEFAULT_COLORS = [
-    "#1f77b4",
-    "#ff7f0e",
-    "#2ca02c",
-    "#d62728",
-    "#9467bd",
-    "#8c564b",
-];
 
 export function prepareHistogramData(
     data: HistogramData
@@ -109,7 +101,7 @@ export function renderHistogramBars(
         .attr("opacity", 0.8);
 
     // Add threshold line if available and requested
-    if (options.showThreshold && data.threshold !== undefined) {
+    if (options.showThreshold && data.threshold) {
         container
             .append("line")
             .attr("x1", margin.left + xScale(data.threshold))

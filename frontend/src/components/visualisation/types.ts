@@ -139,6 +139,8 @@ interface VisualisationRenderState {
         currentStepFloor: number;
         stepFraction: number;
     };
+    // SVG element for attaching behaviors at the root level
+    svgSelection?: d3.Selection<SVGSVGElement, unknown, null, undefined>;
 }
 
 export interface VisualisationRenderContext {

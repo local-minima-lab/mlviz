@@ -4,7 +4,7 @@ from fastapi.responses import RedirectResponse
 import uvicorn
 
 from core.config import settings
-from api import decision_tree, dataset
+from api import decision_tree, dataset, knn
 
 app = FastAPI(
     title="MLviz",
@@ -25,10 +25,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=settings.get_all_origins(),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
@@ -38,6 +35,8 @@ app.include_router(decision_tree.router, prefix="/api/dt",
                    tags=["Decision Tree"])
 app.include_router(dataset.router,
                    prefix="/api/dataset", tags=["Dataset"])
+app.include_router(knn.router, prefix="/api/knn",
+                   tags=["K-Nearest Neighbors"])
 
 
 @app.get("/", include_in_schema=False)

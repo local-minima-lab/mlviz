@@ -36,8 +36,8 @@ const FloatInput = ({
             value={displayValue}
             onChange={handleChange}
             placeholder={String(option.default)}
-            min={option.min}
-            max={option.max}
+            min={option.min ?? undefined}
+            max={option.max ?? undefined}
             step={option.step || "0.01"}
             className="bg-gray-50 font-mono"
         />
