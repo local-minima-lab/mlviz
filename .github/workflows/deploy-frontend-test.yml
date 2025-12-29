@@ -12,7 +12,7 @@ on:
 env:
     PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
     REGION: ${{ secrets.GCP_REGION }}
-    SERVICE_NAME: mlviz-frontend
+    SERVICE_NAME: frontend
 
 jobs:
     deploy:
@@ -36,34 +36,23 @@ jobs:
               run: |
                   gcloud builds submit \
                     --config=cloudbuild.yaml \
-                    --substitutions=_SERVICE_NAME=${{ env.SERVICE_NAME }},_VITE_API_BASE_URL=${{ secrets.BACKEND_URL }}
-
-            - name: Get latest build ID
-              id: get-build
-              working-directory: ./frontend
-              run: |
-                  BUILD_ID=$(gcloud builds list --limit=1 --format="value(id)")
-                  echo "build_id=${BUILD_ID}" >> $GITHUB_OUTPUT
-                  echo "Latest build ID: ${BUILD_ID}"
-
-            - name: Substitute environment variables in cloudrun.yaml
-              working-directory: ./frontend
-              run: |
-                  sed -i "s|\${PROJECT_ID}|${{ env.PROJECT_ID }}|g" cloudrun.yaml
-                  sed -i "s|\${SERVICE_NAME}|${{ env.SERVICE_NAME }}|g" cloudrun.yaml
-                  sed -i "s|\${IMAGE_TAG}|${{ steps.get-build.outputs.build_id }}|g" cloudrun.yaml
-                  sed -i "s|\${REGION}|${{ env.REGION }}|g" cloudrun.yaml
+                    --substitutions=_VITE_API_BASE_URL=${{ secrets.BACKEND_URL }}
 
             - name: Deploy to Cloud Run
               working-directory: ./frontend
               run: |
-                  gcloud run services replace cloudrun.yaml \
-                    --region ${{ env.REGION }}
+                  gcloud run deploy frontend \
+                    --image gcr.io/${{ env.PROJECT_ID }}/frontend:latest \
+                    --region ${{ env.REGION }} \
+                    --allow-unauthenticated \
+                    --platform managed \
+                    --port 8080 \
+                    --memory 512Mi
 
             - name: Get service URL
               id: get-url
               run: |
-                  SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+                  SERVICE_URL=$(gcloud run services describe frontend \
                     --platform managed \
                     --region ${{ env.REGION }} \
                     --format 'value(status.url)')
