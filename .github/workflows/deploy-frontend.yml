@@ -59,6 +59,14 @@ jobs:
                   echo "url=${SERVICE_URL}" >> $GITHUB_OUTPUT
                   echo "✅ Frontend deployed to: ${SERVICE_URL}"
 
+            - name: Update backend CORS
+              run: |
+                  echo "Updating backend CORS to allow: ${{ steps.get-url.outputs.url }}"
+                  gcloud run services update backend \
+                    --region ${{ env.REGION }} \
+                    --set-env-vars FRONTEND_URL=${{ steps.get-url.outputs.url }}
+                  echo "✅ Backend CORS updated"
+
             - name: Test deployment
               run: |
                   HTTP_CODE=$(curl -o /dev/null -s -w "%{http_code}" ${{ steps.get-url.outputs.url }})
