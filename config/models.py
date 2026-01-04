@@ -97,7 +97,7 @@ class DynamicPage(DynamicPageAbstract):
 class ModelPage(DynamicPageAbstract):
     dynamic_type: Literal["model"] = "model"
     model_name: str
-    component_type: Literal["train", "predict"]
+    component_type: Literal["train", "predict", "manual"]
 
 
 DynamicPageUnion = Annotated[
