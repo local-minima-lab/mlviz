@@ -9,6 +9,8 @@ import * as d3 from "d3";
 import {
     addNodeInteractions,
     getClassDistribution,
+    renderExpandableLeafNode,
+    renderInlineEditor,
     renderIntegratedSplitNode,
     renderLeafNode,
     setupTooltip,
@@ -16,7 +18,7 @@ import {
 } from "./rendererUtils";
 
 interface RenderMode {
-    name: "training" | "prediction";
+    name: "training" | "prediction" | "manual";
     // Responsible for checking what nodes are visible
     getVisibleNodes: (
         root: d3.HierarchyNode<TransformedNode>,
@@ -221,13 +223,32 @@ const generateLinkLabelText = (
     return isLeftChild ? "T" : "F";
 };
 
+const MANUAL_MODE: RenderMode = {
+    name: "manual",
+    getVisibleNodes: (root) => root.descendants(),
+    getVisibleLinks: (root) => root.links(),
+    applyNodeStyles: (node) => {
+        node.style("opacity", 1).style("clip-path", "none");
+    },
+    applyLinkStyles: (links, _visibleNodes, _currentStep, pathLineColor) => {
+        links.attr("stroke", pathLineColor).attr("opacity", 1);
+    },
+    applyLinkLabelStyles: (labels, pathLineColor) => {
+        labels.attr("fill", pathLineColor);
+    },
+};
+
 export const renderDecisionTree = ({
     container,
     data,
     context,
     props,
     mode,
-}: RenderVisualisationProps & { mode: "training" | "prediction" }) => {
+}: RenderVisualisationProps & { mode: "training" | "prediction" | "manual" }) => {
+    console.log('[DecisionTreeRenderer] renderDecisionTree called with mode:', mode);
+    console.log('[DecisionTreeRenderer] Props:', props);
+    console.log('[DecisionTreeRenderer] Data:', data);
+    
     const {
         transformTreeData,
         getTooltipContent,
@@ -263,7 +284,12 @@ export const renderDecisionTree = ({
         d.y = d.depth * depthSpacing + nodeHeight / 2;
     });
 
-    const renderMode = mode === "training" ? TRAINING_MODE : PREDICTION_MODE;
+    const renderMode =
+        mode === "training"
+            ? TRAINING_MODE
+            : mode === "prediction"
+              ? PREDICTION_MODE
+              : MANUAL_MODE;
 
     const visibleNodes = renderMode.getVisibleNodes(root, currentStep, context);
     const visibleLinks = renderMode.getVisibleLinks(root, currentStep, context);
@@ -303,6 +329,45 @@ export const renderDecisionTree = ({
             colorScale,
             interpolationFactor
         );
+        
+        // In manual mode, add click handler for split nodes
+        if (mode === "manual" && props.manualCallbacks?.onNodeClick) {
+            // Calculate node path
+            const nodePath: number[] = [];
+            let current = d;
+            while (current.parent) {
+                const siblings = current.parent.children || [];
+                const index = siblings.indexOf(current);
+                nodePath.unshift(index);
+                current = current.parent;
+            }
+            
+            // Check if this node is selected
+            const isSelected = props.selectedNodePath && 
+                              props.selectedNodePath.length === nodePath.length &&
+                              props.selectedNodePath.every((val, idx) => val === nodePath[idx]);
+            
+            // Add click handler if not selected
+            if (!isSelected) {
+                nodeGroup
+                    .style('cursor', 'pointer')
+                    .on('click', (event) => {
+                        event.stopPropagation();
+                        console.log('[ManualTree] Split node clicked at depth', d.depth);
+                        // Build path to this node
+                        const path: number[] = [];
+                        let current = d;
+                        while (current.parent) {
+                            const siblings = current.parent.children || [];
+                            const index = siblings.indexOf(current);
+                            path.unshift(index);
+                            current = current.parent;
+                        }
+                        console.log('[ManualTree] Calculated path:', path);
+                        props.manualCallbacks!.onNodeClick!(path);
+                    });
+            }
+        }
     });
 
     leafNodes.each(function (d) {
@@ -314,18 +379,69 @@ export const renderDecisionTree = ({
         >;
         const distribution = getClassDistribution(d, data.classes);
 
-        // Add interpolation factor for path highlighting
-        const interpolationFactor = d.data.isOnPath
-            ? calculateInterpolationFactor(d.depth, context)
-            : 0;
-        renderLeafNode(
-            nodeGroup,
-            d,
-            distribution,
-            80,
-            colorScale,
-            interpolationFactor
-        );
+        // In manual mode, render expandable leaf nodes
+        if (mode === "manual") {
+            // Check if this node is selected
+            // Root node has empty path [], child nodes have path like [0] or [1]
+            const nodePath: number[] = [];
+            let current = d;
+            while (current.parent) {
+                const siblings = current.parent.children || [];
+                const index = siblings.indexOf(current);
+                nodePath.unshift(index);
+                current = current.parent;
+            }
+            
+            const isSelected = props.selectedNodePath && 
+                              props.selectedNodePath.length === nodePath.length &&
+                              props.selectedNodePath.every((val, idx) => val === nodePath[idx]);
+            
+            console.log('[ManualTree] Rendering leaf node - depth:', d.depth, 'path:', nodePath, 'isSelected:', isSelected);
+            
+            renderExpandableLeafNode(
+                nodeGroup,
+                d,
+                distribution,
+                80,
+                colorScale,
+                isSelected || false
+            );
+            
+            // Add click handler for node selection in manual mode
+            if (!isSelected && props.manualCallbacks?.onNodeClick) {
+                console.log('[ManualTree] Adding click handler to node at depth', d.depth);
+                nodeGroup
+                    .style('cursor', 'pointer')
+                    .on('click', (event) => {
+                        event.stopPropagation();
+                        console.log('[ManualTree] Node clicked at depth', d.depth);
+                        // Build path to this node
+                        const path: number[] = [];
+                        let current = d;
+                        while (current.parent) {
+                            const siblings = current.parent.children || [];
+                            const index = siblings.indexOf(current);
+                            path.unshift(index);
+                            current = current.parent;
+                        }
+                        console.log('[ManualTree] Calculated path:', path);
+                        props.manualCallbacks!.onNodeClick!(path);
+                    });
+            }
+        } else {
+            // Add interpolation factor for path highlighting
+            const interpolationFactor = d.data.isOnPath
+                ? calculateInterpolationFactor(d.depth, context)
+                : 0;
+            renderLeafNode(
+                nodeGroup,
+                d,
+                distribution,
+                80,
+                colorScale,
+                interpolationFactor
+            );
+        }
     });
 
     container
@@ -395,4 +511,47 @@ export const renderDecisionTree = ({
     renderMode.applyLinkLabelStyles(linkLabels, pathLineColor, onPathColor);
 
     addNodeInteractions(node, tooltip, getTooltipContent);
+
+    // Render inline editor in manual mode when a node is selected
+    console.log('[DecisionTreeRenderer] Checking inline editor - mode:', mode, 'selectedNodePath:', props.selectedNodePath);
+    // Show editor only if path is not null (null means no selection)
+    if (mode === "manual" && props.selectedNodePath !== undefined && props.selectedNodePath !== null) {
+        console.log('[DecisionTreeRenderer] Attempting to render inline editor');
+        console.log('[DecisionTreeRenderer] Visible nodes:', visibleNodes.length);
+        
+        const selectedNode = visibleNodes.find(n => {
+            // For root node, path is empty array and depth is 0
+            // For child nodes, match by depth
+            if (props.selectedNodePath!.length === 0) {
+                return n.depth === 0;
+            }
+            return n.depth === props.selectedNodePath!.length;
+        });
+        
+        console.log('[DecisionTreeRenderer] Found selected node:', selectedNode);
+        console.log('[DecisionTreeRenderer] Node type:', selectedNode?.data.type);
+        console.log('[DecisionTreeRenderer] Feature names:', props.featureNames);
+        console.log('[DecisionTreeRenderer] Manual callbacks:', props.manualCallbacks);
+        
+        // Show editor for both leaf and split nodes (splitting a split node replaces its children)
+        if (selectedNode && props.featureNames && props.manualCallbacks) {
+            console.log('[DecisionTreeRenderer] Rendering inline editor!');
+            renderInlineEditor(
+                container,
+                selectedNode,
+                props.featureNames,
+                props.featureStats || null,
+                props.selectedFeature || null,
+                props.selectedThreshold || null,
+                props.manualCallbacks
+            );
+        } else {
+            console.log('[DecisionTreeRenderer] Not rendering editor - reason:', {
+                hasSelectedNode: !!selectedNode,
+                nodeType: selectedNode?.data.type,
+                hasFeatureNames: !!props.featureNames,
+                hasCallbacks: !!props.manualCallbacks
+            });
+        }
+    }
 };

@@ -9,7 +9,7 @@
                     "index": 339858608
                 },
                 {
-                    "index": 3595475928
+                    "index": 3408163045
                 },
                 {
                     "index": 3170219703
@@ -127,16 +127,12 @@
                 "link": "/dtree/introduction.md"
             }
         },
-        "3595475928": {
+        "3408163045": {
             "page_type": "dynamic",
-            "parameters": {
-                "whitelist": [
-                    "max_depth"
-                ]
-            },
+            "parameters": {},
             "dynamic_type": "model",
             "model_name": "decision_tree",
-            "component_type": "train"
+            "component_type": "manual"
         },
         "3170219703": {
             "page_type": "static",

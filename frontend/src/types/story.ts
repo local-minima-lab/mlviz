@@ -97,7 +97,7 @@ export interface DynamicPage extends DynamicPageParameters {
 export interface ModelPage extends DynamicPageParameters {
     dynamic_type: "model";
     model_name: string;
-    component_type: "train" | "predict";
+    component_type: "train" | "predict" | "manual" | "viz_only";
 }
 
 export type DynamicPageUnion = DynamicPage | ModelPage;

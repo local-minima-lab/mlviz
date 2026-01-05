@@ -21,6 +21,20 @@ export interface BaseDecisionTreeRenderProps {
     pathFillColor?: string;
     onPathColor?: string;
     colorScale?: d3.ScaleOrdinal<string, string>;
+    // Manual tree building props
+    selectedNodePath?: number[] | null;
+    featureNames?: string[];
+    featureStats?: any;
+    selectedFeature?: string | null;
+    selectedThreshold?: number | null;
+    manualCallbacks?: {
+        onNodeClick?: (path: number[]) => void;
+        onFeatureSelect?: (feature: string) => void;
+        onThresholdChange?: (threshold: number) => void;
+        onSplit?: () => void;
+        onCancel?: () => void;
+        onMarkAsLeaf?: () => void;
+    };
 }
 
 export interface RenderVisualisationProps {

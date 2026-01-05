@@ -22,6 +22,7 @@ interface BaseDecisionTreeVisualizationProps {
     maxDisplayDepth?: number;
     onDepthChange?: (depth: number) => void;
     showPlayControls?: boolean;
+    disableZoom?: boolean;
     onNodeHover?: (d: any, event: any) => void;
     renderFunction: ({
         container,
@@ -44,6 +45,7 @@ const BaseDecisionTreeVisualization: React.FC<
     maxDisplayDepth,
     onDepthChange,
     showPlayControls = false,
+    disableZoom = false,
     renderFunction,
 }) => {
     const { pathLineColor, pathFillColor } = nodeStyleConfig;
@@ -107,12 +109,14 @@ const BaseDecisionTreeVisualization: React.FC<
                 autoPlay: false, // Start paused so user can control
             },
         }),
-        zoomable: {
-            scaleExtent: [0.1, 3] as [number, number],
-            enableReset: true,
-            enablePan: true,
-            panMargin: 50,
-        },
+        ...(!disableZoom && {
+            zoomable: {
+                scaleExtent: [0.1, 3] as [number, number],
+                enableReset: true,
+                enablePan: true,
+                panMargin: 50,
+            },
+        }),
     };
 
     if (!data) return null;

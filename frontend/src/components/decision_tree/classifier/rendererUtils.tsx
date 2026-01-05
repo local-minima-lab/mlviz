@@ -20,6 +20,7 @@ export interface TransformedNode {
     children: TransformedNode[];
     isOnPath?: boolean;
     isCurrentNode?: boolean;
+    terminal?: boolean; // Flag to mark a leaf as terminal (not splittable)
 }
 
 export const getClassDistribution = (
@@ -127,6 +128,9 @@ export const renderLeafNode = (
     interpolationFactor?: number
 ) => {
     const leafHeight = 40;
+
+    console.log('[renderLeafNode] Called with distribution:', distribution, 'totalWidth:', totalWidth);
+    console.log('[renderLeafNode] Node data:', d.data);
 
     if (distribution.length === 0) return;
 
@@ -464,4 +468,332 @@ export const addNodeInteractions = (
         .on("mouseleave", function () {
             tooltip.style("opacity", 0);
         });
+};
+
+// Manual tree building rendering functions
+
+export const renderExpandableLeafNode = (
+    nodeGroup: d3.Selection<SVGGElement, any, null, undefined>,
+    d: any,
+    distribution: ClassDistribution[],
+    nodeWidth: number,
+    colorScale: d3.ScaleOrdinal<string, string, never>,
+    isSelected: boolean
+): void => {
+    const nodeHeight = 40;
+    
+    // Check if this is a terminal leaf (marked as not splittable)
+    const isTerminal = d.data?.terminal === true;
+    console.log('[renderExpandableLeafNode] Node:', d.data, 'isTerminal:', isTerminal);
+    
+    // If terminal, render as a regular leaf node without + icon
+    if (isTerminal) {
+        console.log('[renderExpandableLeafNode] Rendering as terminal leaf');
+        console.log(distribution, nodeWidth)
+        renderLeafNode(nodeGroup, 
+            d, 
+            distribution, 
+            nodeWidth, 
+            colorScale);
+        return;
+    }
+    
+    // Background with selection highlight
+    nodeGroup
+        .append("rect")
+        .attr("width", nodeWidth)
+        .attr("height", nodeHeight)
+        .attr("x", -nodeWidth / 2)
+        .attr("y", -nodeHeight / 2)
+        .attr("rx", 6)
+        .attr("fill", isSelected ? "#e0e7ff" : "#f3f4f6")
+        .attr("stroke", isSelected ? "#4f46e5" : "#d1d5db")
+        .attr("stroke-width", isSelected ? 2 : 1);
+    
+    // Display class distribution
+    const barGroup = nodeGroup.append("g");
+    const barWidth = nodeWidth - 20;
+    const barHeight = 8;
+    const barX = -barWidth / 2;
+    const barY = -nodeHeight / 4;
+    
+    let xOffset = 0;
+    const totalSamples = d.data.samples;
+    distribution.forEach((classDistribution, i) => {
+        const segmentWidth = (classDistribution.count / totalSamples) * barWidth;
+        barGroup
+            .append("rect")
+            .attr("x", barX + xOffset)
+            .attr("y", barY)
+            .attr("width", segmentWidth)
+            .attr("height", barHeight)
+            .attr("fill", colorScale(i.toString()))
+            .attr("rx", 2);
+        xOffset += segmentWidth;
+    });
+    
+    // Show "+" icon or "Selected" text
+    if (isSelected) {
+        nodeGroup
+            .append("text")
+            .attr("y", nodeHeight / 4 + 5)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "12px")
+            .attr("fill", "#4f46e5")
+            .attr("font-weight", "bold")
+            .text("Selected");
+    } else {
+        nodeGroup
+            .append("text")
+            .attr("y", nodeHeight / 2 - 5)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "10px")
+            .attr("fill", "#6b7280")
+            .text(`n=${d.data.samples}`);
+    }
+    
+};
+
+export const renderInlineEditor = (
+    container: d3.Selection<SVGGElement, unknown, null, undefined>,
+    selectedNode: any,
+    featureNames: string[],
+    featureStats: any | null,
+    selectedFeature: string | null,
+    selectedThreshold: number | null,
+    callbacks: {
+        onFeatureSelect?: (feature: string) => void;
+        onThresholdChange?: (threshold: number) => void;
+        onSplit?: () => void;
+        onCancel?: () => void;
+        onMarkAsLeaf?: () => void;
+    }
+): void => {
+    const editorWidth = 400;
+    const editorX = selectedNode.x;
+    const editorY = selectedNode.y + 60;
+    
+    // Create foreignObject for HTML content
+    const foreign = container
+        .append('foreignObject')
+        .attr('x', editorX - editorWidth / 2)
+        .attr('y', editorY)
+        .attr('width', editorWidth)
+        .attr('height', 600)
+        .attr('class', 'inline-editor');
+    
+    const div = foreign
+        .append('xhtml:div')
+        .style('background', 'white')
+        .style('border', '2px solid #4f46e5')
+        .style('border-radius', '8px')
+        .style('padding', '16px')
+        .style('box-shadow', '0 4px 6px rgba(0, 0, 0, 0.1)');
+    
+    // Title
+    div
+        .append('div')
+        .style('font-size', '16px')
+        .style('font-weight', 'bold')
+        .style('margin-bottom', '12px')
+        .style('color', '#1f2937')
+        .text('Split Node');
+    
+    // Feature dropdown
+    const select = div
+        .append('select')
+        .style('width', '100%')
+        .style('padding', '8px 12px')
+        .style('border', '1px solid #d1d5db')
+        .style('border-radius', '4px')
+        .style('margin-bottom', '12px')
+        .style('font-size', '14px')
+        .on('change', function() {
+            const value = (this as HTMLSelectElement).value;
+            callbacks.onFeatureSelect?.(value);
+        });
+    
+    select.append('option').attr('value', '').text('Select feature...');
+    select.selectAll('option.feature')
+        .data(featureNames)
+        .enter()
+        .append('option')
+        .attr('class', 'feature')
+        .attr('value', d => d)
+        .property('selected', d => d === selectedFeature)
+        .text(d => d);
+    
+    // If feature selected, show histogram and slider
+    if (featureStats && selectedFeature) {
+        // Histogram container
+        const histContainer = div
+            .append('div')
+            .style('margin-bottom', '12px');
+        
+        const histSvg = histContainer
+            .append('svg')
+            .attr('width', '100%')
+            .attr('height', 100)
+            .style('display', 'block');
+        
+        // Render histogram
+        const histGroup = histSvg.append('g');
+        const stackedData = prepareHistogramData(featureStats.histogram_data);
+        const histWidth = editorWidth - 32;
+        renderHistogramBars(histGroup, featureStats.histogram_data, stackedData, {
+            width: histWidth,
+            height: 100,
+            showThreshold: false,
+        });
+        
+        // Add threshold line
+        const currentThreshold = selectedThreshold || featureStats.best_threshold;
+        const featureRange = featureStats.feature_range;
+        const thresholdX = ((currentThreshold - featureRange[0]) / (featureRange[1] - featureRange[0])) * histWidth;
+        
+        const thresholdLine = histSvg
+            .append('line')
+            .attr('x1', thresholdX)
+            .attr('x2', thresholdX)
+            .attr('y1', 0)
+            .attr('y2', 100)
+            .attr('stroke', '#4f46e5')
+            .attr('stroke-width', 2)
+            .attr('stroke-dasharray', '5,5')
+            .attr('class', 'threshold-line');
+        
+        // Add threshold label
+        const thresholdLabel = histSvg
+            .append('text')
+            .attr('x', thresholdX)
+            .attr('y', -5)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '10px')
+            .attr('fill', '#4f46e5')
+            .attr('font-weight', 'bold')
+            .text(currentThreshold.toFixed(2));
+        
+        // Threshold slider
+        const sliderContainer = div
+            .append('div')
+            .style('margin-bottom', '12px');
+        
+        sliderContainer
+            .append('label')
+            .style('display', 'block')
+            .style('font-size', '12px')
+            .style('color', '#6b7280')
+            .style('margin-bottom', '4px')
+            .text('Threshold');
+        
+        sliderContainer
+            .append('input')
+            .attr('type', 'range')
+            .attr('min', featureStats.feature_range[0])
+            .attr('max', featureStats.feature_range[1])
+            .attr('step', (featureStats.feature_range[1] - featureStats.feature_range[0]) / 100)
+            .attr('value', selectedThreshold || featureStats.best_threshold)
+            .style('width', '100%');
+        
+        // Metrics - find information gain for current threshold
+        const initialThreshold = selectedThreshold || featureStats.best_threshold;
+        
+        // Find the threshold stats for the current threshold value
+        let currentInformationGain = 0;
+        if (featureStats.thresholds && Array.isArray(featureStats.thresholds)) {
+            const closestStats = featureStats.thresholds.reduce((prev: any, curr: any) => {
+                return Math.abs(curr.threshold - initialThreshold) < Math.abs(prev.threshold - initialThreshold)
+                    ? curr
+                    : prev;
+            });
+            currentInformationGain = closestStats.information_gain;
+        }
+        
+        const metricsDiv = div
+            .append('div')
+            .style('font-size', '12px')
+            .style('color', '#6b7280')
+            .style('margin-bottom', '12px')
+            .attr('class', 'metrics-display')
+            .html(`Information Gain: ${currentInformationGain.toFixed(4)}`);
+        
+        // Update metrics when threshold changes
+        const updateMetrics = (threshold: number) => {
+            // Update information gain
+            if (featureStats.thresholds && Array.isArray(featureStats.thresholds)) {
+                const closestStats = featureStats.thresholds.reduce((prev: any, curr: any) => {
+                    return Math.abs(curr.threshold - threshold) < Math.abs(prev.threshold - threshold)
+                        ? curr
+                        : prev;
+                });
+                metricsDiv.html(`Information Gain: ${closestStats.information_gain.toFixed(4)}`);
+            }
+            
+            // Update threshold line position
+            const newThresholdX = ((threshold - featureRange[0]) / (featureRange[1] - featureRange[0])) * histWidth;
+            thresholdLine
+                .attr('x1', newThresholdX)
+                .attr('x2', newThresholdX);
+            thresholdLabel
+                .attr('x', newThresholdX)
+                .text(threshold.toFixed(2));
+        };
+        
+        // Update slider to call updateMetrics
+        sliderContainer
+            .select('input')
+            .on('input', function() {
+                const newThreshold = parseFloat((this as HTMLInputElement).value);
+                updateMetrics(newThreshold);
+                callbacks.onThresholdChange?.(newThreshold);
+            });
+    }
+    
+    // Buttons
+    const buttonGroup = div
+        .append('div')
+        .style('display', 'flex')
+        .style('gap', '8px');
+    
+    buttonGroup
+        .append('button')
+        .style('flex', '1')
+        .style('background', '#4f46e5')
+        .style('color', 'white')
+        .style('padding', '8px 16px')
+        .style('border', 'none')
+        .style('border-radius', '4px')
+        .style('cursor', 'pointer')
+        .style('font-size', '14px')
+        .style('font-weight', '500')
+        .text('Split')
+        .on('click', () => callbacks.onSplit?.());
+    
+    buttonGroup
+        .append('button')
+        .style('flex', '1')
+        .style('background', '#10b981')
+        .style('color', 'white')
+        .style('padding', '8px 16px')
+        .style('border', 'none')
+        .style('border-radius', '4px')
+        .style('cursor', 'pointer')
+        .style('font-size', '14px')
+        .style('font-weight', '500')
+        .text('Mark as Leaf')
+        .on('click', () => callbacks.onMarkAsLeaf?.());
+    
+    buttonGroup
+        .append('button')
+        .style('flex', '1')
+        .style('background', '#e5e7eb')
+        .style('color', '#374151')
+        .style('padding', '8px 16px')
+        .style('border', 'none')
+        .style('border-radius', '4px')
+        .style('cursor', 'pointer')
+        .style('font-size', '14px')
+        .style('font-weight', '500')
+        .text('Cancel')
+        .on('click', () => callbacks.onCancel?.());
 };
