@@ -1632,6 +1632,21 @@
             "type": "array",
             "title": "Value"
           },
+          "samples_mask": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Samples Mask",
+            "description": "Indices of samples that reached this node (None for trained models, populated for manual trees)"
+          },
           "type": {
             "type": "string",
             "const": "leaf",
@@ -2099,6 +2114,21 @@
             },
             "type": "array",
             "title": "Value"
+          },
+          "samples_mask": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Samples Mask",
+            "description": "Indices of samples that reached this node (None for trained models, populated for manual trees)"
           },
           "type": {
             "type": "string",

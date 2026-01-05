@@ -30,6 +30,10 @@ class BaseNode(BaseModel):
     samples: int
     impurity: float
     value: List[List[float]]
+    samples_mask: Optional[List[int]] = Field(
+        None,
+        description="Indices of samples that reached this node (None for trained models, populated for manual trees)"
+    )
 
 
 class LeafNode(BaseNode):

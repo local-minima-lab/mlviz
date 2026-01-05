@@ -18,25 +18,29 @@ import React, {
     useCallback,
     useContext,
     useEffect,
+    useRef,
     useState,
-    type ReactNode,
+    type ReactNode
 } from "react";
 
 const LOCAL_STORAGE_PARAMS_KEY = "dt_params";
+const LOCAL_STORAGE_MODE_KEY = "dt_tree_mode";
+const LOCAL_STORAGE_TREE_DATA_KEY = "dt_tree_data";
 
 interface DecisionTreeContextType {
     isModelLoading: boolean;
     modelError: string | null;
+    treeMode: 'trained' | 'manual' | null;
     currentModelData: DecisionTreeResponse | null;
     lastTrainedParams: Parameters;
     trainNewModel: (params: Parameters) => Promise<void>;
-    retrieveStoredModel: () => Promise<void>;
     clearStoredModelParams: () => void;
     // Helper methods for prediction components
     getFeatureNames: () => string[] | null;
     getClassNames: () => string[] | null;
     getModelKey: () => string | null;
     isModelReady: () => boolean;
+    getManualTreeData: () => { tree: TreeNode; model_metadata: { feature_names: string[] }; classes: string[] } | null;
     // Manual tree building
     manualTree: TreeNode | null;
     selectedNodePath: number[] | null;
@@ -65,15 +69,32 @@ interface DecisionTreeProviderProps {
 
 /**
  * Provides the DecisionTreeContext to its children components.
- * It manages the state and interactions with the Decision Tree API.
+ * It manages the state and O tjointeractions with the Decision Tree API.
  */
 export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
     children,
 }) => {
     const [isModelLoading, setIsModelLoading] = useState<boolean>(false);
     const [modelError, setModelError] = useState<string | null>(null);
-    const [currentModelData, setCurrentModelData] =
-        useState<DecisionTreeResponse | null>(null);
+    
+    // Unified tree data with mode tracking (persisted to localStorage)
+    const [treeMode, setTreeMode] = useState<'trained' | 'manual' | null>(() => {
+        const stored = localStorage.getItem(LOCAL_STORAGE_MODE_KEY);
+        return (stored as 'trained' | 'manual' | null) || null;
+    });
+    const [currentModelData, setCurrentModelData] = useState<DecisionTreeResponse | null>(() => {
+        const stored = localStorage.getItem(LOCAL_STORAGE_TREE_DATA_KEY);
+        if (stored) {
+            try {
+                console.log('[DecisionTreeContext] Loading tree data from localStorage');
+                return JSON.parse(stored);
+            } catch (e) {
+                console.error('[DecisionTreeContext] Failed to parse tree data:', e);
+                return null;
+            }
+        }
+        return null;
+    });
 
     const [lastTrainedParams, setLastTrainedParams] = useState<Parameters>(
         () => {
@@ -83,8 +104,8 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
         }
     );
 
-    // Manual tree building state
-    const [manualTree, setManualTree] = useState<TreeNode | null>(null);
+    // Manual tree building state (UI state only)
+    const manualTree = treeMode === 'manual' ? currentModelData?.tree : null;
     const [selectedNodePath, setSelectedNodePath] = useState<number[] | null>(null);
     const [manualFeatureStats, setManualFeatureStats] = useState<components["schemas"]["ManualFeatureStatsResponse"] | null>(null);
     const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
@@ -145,6 +166,7 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
 
             if (data.success) {
                 setCurrentModelData(data);
+                setTreeMode('trained');
                 setLastTrainedParams(params);
                 localStorage.setItem(
                     LOCAL_STORAGE_PARAMS_KEY,
@@ -163,32 +185,65 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
                     : "Unknown error training model"
             );
             setCurrentModelData(null);
+            setTreeMode(null);
         } finally {
             setIsModelLoading(false);
         }
     }, []);
 
-    const retrieveStoredModel = useCallback(async () => {
-        await trainNewModel(lastTrainedParams);
-    }, [trainNewModel, lastTrainedParams]);
+
 
     const clearStoredModelParams = useCallback(() => {
         localStorage.removeItem(LOCAL_STORAGE_PARAMS_KEY);
         setLastTrainedParams({});
         setCurrentModelData(null);
+        setTreeMode(null);
         setModelError(null);
         setIsModelLoading(false);
     }, []);
 
+    // Persist treeMode to localStorage whenever it changes
     useEffect(() => {
+        if (treeMode) {
+            localStorage.setItem(LOCAL_STORAGE_MODE_KEY, treeMode);
+        } else {
+            localStorage.removeItem(LOCAL_STORAGE_MODE_KEY);
+        }
+    }, [treeMode]);
+
+    // Track if we've attempted auto-load to prevent infinite loops
+    const autoLoadAttempted = useRef(false);
+
+    useEffect(() => {
+        // Only auto-load trained model if:
+        // 1. Haven't already attempted auto-load
+        // 2. No tree data exists
+        // 3. Not currently loading
+        // 4. Has stored training parameters  
+        // 5. Not in manual mode (manual tree takes precedence)
         if (
+            !autoLoadAttempted.current &&
             !currentModelData &&
             !isModelLoading &&
+            treeMode !== 'manual' &&
             Object.keys(lastTrainedParams).length > 0
         ) {
+            console.log('[AutoLoad] Attempting to load stored model with params:', lastTrainedParams);
+            autoLoadAttempted.current = true;
             trainNewModel(lastTrainedParams);
         }
-    }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Empty array = run only once on mount
+
+    // Log and persist currentModelData to localStorage whenever it changes
+    useEffect(() => {
+        console.log('[DecisionTreeContext] currentModelData updated:', currentModelData);
+        if (currentModelData) {
+            localStorage.setItem(LOCAL_STORAGE_TREE_DATA_KEY, JSON.stringify(currentModelData));
+        } else {
+            localStorage.removeItem(LOCAL_STORAGE_TREE_DATA_KEY);
+        }
+    }, [currentModelData]);
 
     // Helper functions for prediction components
     const getFeatureNames = useCallback((): string[] | null => {
@@ -219,40 +274,88 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
         return ready;
     }, [currentModelData]);
 
+    const getManualTreeData = useCallback(() => {
+        // Return null if manual tree doesn't exist
+        if (!manualTree) {
+            return null;
+        }
+
+        // Get feature names and classes from the current model data
+        const featureNames = getFeatureNames();
+        const classNames = getClassNames();
+
+        // Return null if metadata is missing
+        if (!featureNames || !classNames) {
+            console.warn('[ManualTree] Cannot create prediction data - missing feature names or class names');
+            return null;
+        }
+
+        // Format the manual tree data for prediction component
+        return {
+            tree: manualTree,
+            model_metadata: {
+                feature_names: featureNames,
+            },
+            classes: classNames,
+        };
+    }, [manualTree, getFeatureNames, getClassNames]);
+
     // Manual tree building functions
     const initializeManualTree = useCallback(async () => {
         console.log('[ManualTree] initializeManualTree called');
-        console.log('[ManualTree] currentModelData:', currentModelData);
+        console.log('[ManualTree] treeData:', currentModelData);
+        console.log('[ManualTree] treeMode:', treeMode);
         
-        // If no model data exists, load dataset directly instead of training
-        if (!currentModelData) {
-            console.log('[ManualTree] No currentModelData, loading dataset...');
+        // If no tree data exists or not in manual mode, load dataset
+        if (!currentModelData || treeMode !== 'manual') {
+            console.log('[ManualTree] Loading dataset for manual tree...');
             try {
                 const datasetResponse = await loadDataset('iris'); // Default to iris
                 console.log('[ManualTree] Dataset loaded:', datasetResponse);
                 
                 // Transform dataset response to match DecisionTreeResponse format
                 // Combine X and y into matrix format
-                const matrix = datasetResponse.X.map((row, idx) => [
+                const matrix = datasetResponse.X.map((row: any, idx: number) => [
                     ...row,
                     datasetResponse.y[idx]
                 ]);
                 
-                // Create a minimal DecisionTreeResponse-like object for manual tree
-                const mockModelData: DecisionTreeResponse = {
+                // Calculate class distribution from dataset
+                const classes = datasetResponse.target_names;
+                const numClasses = classes.length;
+                
+                // Count samples per class
+                const classCounts = new Array(numClasses).fill(0);
+                matrix.forEach((row: any) => {
+                    const targetValue = row[row.length - 1]; // Last column is the target
+                    const classIndex = targetValue; // Assuming target is already class index
+                    if (classIndex >= 0 && classIndex < numClasses) {
+                        classCounts[classIndex]++;
+                    }
+                });
+                
+                // Convert counts to proportions for the value array
+                const totalSamples = matrix.length;
+                const classProportions = classCounts.map(count => count / totalSamples);
+                
+                const rootNode: TreeNode = {
+                    type: 'leaf',
+                    samples: totalSamples,
+                    impurity: 0, // Will be calculated by backend if needed
+                    value: [classProportions], // Array of proportions for each class
+                    samples_mask: Array.from({ length: totalSamples }, (_, i) => i), // [0, 1, 2, ..., n-1]
+                };
+                
+                // Create tree data in manual mode
+                const manualTreeData: DecisionTreeResponse = {
                     success: true,
-                    model_key: 'manual-tree-dataset',
+                    model_key: 'manual_tree',
                     cached: false,
                     metadata: {
                         feature_names: datasetResponse.feature_names,
                     },
-                    tree: {
-                        type: 'leaf',
-                        samples: matrix.length,
-                        impurity: 0,
-                        value: [[]],
-                    },
-                    classes: datasetResponse.target_names,
+                    tree: rootNode,
+                    classes: classes,
                     matrix: matrix,
                     scores: {
                         accuracy: 0,
@@ -262,54 +365,24 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
                     },
                 };
                 
-                setCurrentModelData(mockModelData);
-                // The useEffect will call initializeManualTree again
-                return;
+                console.log('[ManualTree] Created manual tree data:', manualTreeData);
+                
+                setCurrentModelData(manualTreeData);
+                setTreeMode('manual');
+                
+                // Clear training params when entering manual mode
+                localStorage.removeItem(LOCAL_STORAGE_PARAMS_KEY);
+                setLastTrainedParams({});
+                
+                setSelectedNodePath(null);
+                setSelectedFeature(null);
+                setManualFeatureStats(null);
+                setSelectedThreshold(null);
             } catch (error) {
                 console.error('[ManualTree] Failed to load dataset:', error);
-                return;
             }
         }
-        
-        // Calculate class distribution from dataset
-        // The matrix contains features + target, where target is the last column
-        const matrix = currentModelData.matrix || [];
-        const classes = currentModelData.classes || [];
-        const numClasses = classes.length;
-        
-        console.log('[ManualTree] Dataset info - samples:', matrix.length, 'classes:', classes);
-        
-        // Count samples per class
-        const classCounts = new Array(numClasses).fill(0);
-        matrix.forEach(row => {
-            const targetValue = row[row.length - 1]; // Last column is the target
-            const classIndex = targetValue; // Assuming target is already class index
-            if (classIndex >= 0 && classIndex < numClasses) {
-                classCounts[classIndex]++;
-            }
-        });
-        
-        console.log('[ManualTree] Class counts:', classCounts);
-        
-        // Convert counts to proportions for the value array
-        const totalSamples = matrix.length;
-        const classProportions = classCounts.map(count => count / totalSamples);
-        
-        const rootNode: TreeNode = {
-            type: 'leaf',
-            samples: totalSamples,
-            impurity: 0, // Will be calculated by backend if needed
-            value: [classProportions], // Array of proportions for each class
-        };
-        
-        console.log('[ManualTree] Created root node:', rootNode);
-        
-        setManualTree(rootNode);
-        setSelectedNodePath(null);
-        setSelectedFeature(null);
-        setManualFeatureStats(null);
-        setSelectedThreshold(null);
-    }, [currentModelData]);
+    }, [currentModelData, treeMode]);
 
     const selectManualNode = useCallback((path: number[] | null) => {
         setSelectedNodePath(path);
@@ -327,7 +400,7 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
         try {
             const stats = await calculateFeatureStats({
                 feature,
-                parent_samples_mask: null, // TODO: Get from node when available
+                parent_samples_mask: node.samples_mask || null, // Use node's sample indices
                 criterion: 'gini',
                 max_thresholds: 100,
             });
@@ -356,7 +429,7 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
             const nodeStats = await calculateNodeStats({
                 feature: selectedFeature,
                 threshold: selectedThreshold,
-                parent_samples_mask: null, // TODO: Get from node when available
+                parent_samples_mask: node.samples_mask || null, // Use node's sample indices
                 criterion: 'gini',
             });
             
@@ -385,25 +458,36 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
                 samples: node.samples,
                 impurity: nodeStats.split_stats.parent_stats.impurity,
                 value: node.value,
+                samples_mask: node.samples_mask, // Preserve parent's sample mask
                 histogram_data: nodeStats.histogram_data,
                 left: {
                     type: 'leaf',
                     samples: nodeStats.split_stats.left_stats.samples,
                     impurity: nodeStats.split_stats.left_stats.impurity,
                     value: [leftProbs],
+                    samples_mask: nodeStats.left_samples_mask, // From API response
                 },
                 right: {
                     type: 'leaf',
                     samples: nodeStats.split_stats.right_stats.samples,
                     impurity: nodeStats.split_stats.right_stats.impurity,
                     value: [rightProbs],
+                    samples_mask: nodeStats.right_samples_mask, // From API response
                 },
             };
             
             console.log('[ManualTree] Created split node:', splitNode);
             
             const newTree = updateNodeAtPath(manualTree, selectedNodePath, splitNode);
-            setManualTree(newTree);
+            
+            // Update treeData with the new tree
+            if (currentModelData) {
+                setCurrentModelData({
+                    ...currentModelData,
+                    tree: newTree,
+                });
+            }
+            
             setSelectedNodePath(null);
             setSelectedFeature(null);
             setManualFeatureStats(null);
@@ -411,7 +495,7 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
         } catch (error) {
             console.error('Failed to split node:', error);
         }
-    }, [manualTree, selectedNodePath, selectedFeature, selectedThreshold, getNodeByPath, updateNodeAtPath]);
+    }, [manualTree, selectedNodePath, selectedFeature, selectedThreshold, getNodeByPath, updateNodeAtPath, currentModelData]);
 
     const markNodeAsLeaf = useCallback(() => {
         if (!manualTree || !selectedNodePath) return;
@@ -449,14 +533,23 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
         
         const updatedTree = updateNodeAtPath(manualTree, selectedNodePath, updatedNode);
         console.log('[ManualTree] Updated tree:', updatedTree);
-        setManualTree(updatedTree);
+        
+        // Update treeData with the new tree
+        if (currentModelData) {
+            setCurrentModelData({
+                ...currentModelData,
+                tree: updatedTree,
+            });
+
+            console.log(currentModelData)
+        }
         
         // Deselect the node
         setSelectedNodePath(null);
         setSelectedFeature(null);
         setManualFeatureStats(null);
         setSelectedThreshold(null);
-    }, [manualTree, selectedNodePath, getNodeByPath, updateNodeAtPath]);
+    }, [manualTree, selectedNodePath, getNodeByPath, updateNodeAtPath, currentModelData]);
 
     const canSplitManualNode = useCallback(() => {
         if (!selectedNodePath) return false;
@@ -475,16 +568,17 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
     const contextValue: DecisionTreeContextType = {
         isModelLoading,
         modelError,
-        currentModelData,
+        treeMode,
+        currentModelData: currentModelData,
         lastTrainedParams,
         trainNewModel,
-        retrieveStoredModel,
         clearStoredModelParams,
         // Helper methods for prediction components
         getFeatureNames,
         getClassNames,
         getModelKey,
         isModelReady,
+        getManualTreeData,
         // Manual tree building
         manualTree,
         selectedNodePath,
