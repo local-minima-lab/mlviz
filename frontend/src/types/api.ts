@@ -197,6 +197,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dt/manual/evaluate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Evaluate Manual Tree
+         * @description Evaluate a manually built tree against test data.
+         *
+         *     This endpoint calculates accuracy, precision, recall, and F1 scores
+         *     by making predictions on the test set using the provided tree structure.
+         *
+         *     Args:
+         *         request (ManualTreeEvaluateRequest): Contains tree structure and optional dataset
+         *
+         *     Raises:
+         *         HTTPException: If evaluation fails
+         *
+         *     Returns:
+         *         ManualTreeEvaluateResponse: Metrics (accuracy, precision, recall, F1) and confusion matrix
+         */
+        post: operations["evaluate_manual_tree_api_dt_manual_evaluate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dataset/list": {
         parameters: {
             query?: never;
@@ -577,7 +609,7 @@ export interface components {
                 [key: string]: unknown;
             };
             /** Tree */
-            tree: components["schemas"]["SplitNode"] | components["schemas"]["LeafNode"];
+            tree: components["schemas"]["SplitNode-Output"] | components["schemas"]["LeafNode"];
             /** Classes */
             classes: string[];
             /** Matrix */
@@ -878,6 +910,16 @@ export interface components {
             /** Value */
             value: number[][];
             /**
+             * Samples Mask
+             * @description Indices of samples that reached this node (None for trained models, populated for manual trees)
+             */
+            samples_mask?: number[] | null;
+            /**
+             * Terminal
+             * @description Whether this node is marked as terminal (frontend-only, used in manual tree building)
+             */
+            terminal?: boolean | null;
+            /**
              * Type
              * @default leaf
              * @constant
@@ -1040,6 +1082,37 @@ export interface components {
             class_names: string[];
         };
         /**
+         * ManualTreeEvaluateRequest
+         * @description Request to evaluate a manually built tree.
+         */
+        ManualTreeEvaluateRequest: {
+            /**
+             * Tree
+             * @description Root node of the manual tree
+             */
+            tree: components["schemas"]["SplitNode-Input"] | components["schemas"]["LeafNode"];
+            /**
+             * Dataset
+             * @description Dataset to use for evaluation (defaults to Iris)
+             */
+            dataset?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * ManualTreeEvaluateResponse
+         * @description Response containing evaluation metrics for a manual tree.
+         */
+        ManualTreeEvaluateResponse: {
+            /** @description Accuracy, precision, recall, F1 scores */
+            scores: components["schemas"]["BaseMetrics"];
+            /**
+             * Matrix
+             * @description Confusion matrix
+             */
+            matrix: number[][];
+        };
+        /**
          * NeighborInfo
          * @description Information about a single neighbor.
          */
@@ -1129,13 +1202,23 @@ export interface components {
          * SplitNode
          * @description Binary split node in a decision tree.
          */
-        SplitNode: {
+        "SplitNode-Input": {
             /** Samples */
             samples: number;
             /** Impurity */
             impurity: number;
             /** Value */
             value: number[][];
+            /**
+             * Samples Mask
+             * @description Indices of samples that reached this node (None for trained models, populated for manual trees)
+             */
+            samples_mask?: number[] | null;
+            /**
+             * Terminal
+             * @description Whether this node is marked as terminal (frontend-only, used in manual tree building)
+             */
+            terminal?: boolean | null;
             /**
              * Type
              * @default split
@@ -1144,15 +1227,60 @@ export interface components {
             type: "split";
             /** Feature */
             feature: string;
-            /** Feature Index */
-            feature_index: number;
+            /**
+             * Feature Index
+             * @description Numeric index of the feature (None for manual trees, populated for trained models)
+             */
+            feature_index?: number | null;
             /** Threshold */
             threshold: number;
             histogram_data?: components["schemas"]["HistogramData"] | null;
             /** Left */
-            left: components["schemas"]["SplitNode"] | components["schemas"]["LeafNode"];
+            left: components["schemas"]["SplitNode-Input"] | components["schemas"]["LeafNode"];
             /** Right */
-            right: components["schemas"]["SplitNode"] | components["schemas"]["LeafNode"];
+            right: components["schemas"]["SplitNode-Input"] | components["schemas"]["LeafNode"];
+        };
+        /**
+         * SplitNode
+         * @description Binary split node in a decision tree.
+         */
+        "SplitNode-Output": {
+            /** Samples */
+            samples: number;
+            /** Impurity */
+            impurity: number;
+            /** Value */
+            value: number[][];
+            /**
+             * Samples Mask
+             * @description Indices of samples that reached this node (None for trained models, populated for manual trees)
+             */
+            samples_mask?: number[] | null;
+            /**
+             * Terminal
+             * @description Whether this node is marked as terminal (frontend-only, used in manual tree building)
+             */
+            terminal?: boolean | null;
+            /**
+             * Type
+             * @default split
+             * @constant
+             */
+            type: "split";
+            /** Feature */
+            feature: string;
+            /**
+             * Feature Index
+             * @description Numeric index of the feature (None for manual trees, populated for trained models)
+             */
+            feature_index?: number | null;
+            /** Threshold */
+            threshold: number;
+            histogram_data?: components["schemas"]["HistogramData"] | null;
+            /** Left */
+            left: components["schemas"]["SplitNode-Output"] | components["schemas"]["LeafNode"];
+            /** Right */
+            right: components["schemas"]["SplitNode-Output"] | components["schemas"]["LeafNode"];
         };
         /**
          * SplitStatistics
@@ -1385,6 +1513,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ManualFeatureStatsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    evaluate_manual_tree_api_dt_manual_evaluate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualTreeEvaluateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualTreeEvaluateResponse"];
                 };
             };
             /** @description Validation Error */

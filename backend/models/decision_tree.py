@@ -34,6 +34,10 @@ class BaseNode(BaseModel):
         None,
         description="Indices of samples that reached this node (None for trained models, populated for manual trees)"
     )
+    terminal: Optional[bool] = Field(
+        None,
+        description="Whether this node is marked as terminal (frontend-only, used in manual tree building)"
+    )
 
 
 class LeafNode(BaseNode):
@@ -45,7 +49,10 @@ class SplitNode(BaseNode):
     """Binary split node in a decision tree."""
     type: Literal["split"] = "split"
     feature: str
-    feature_index: int
+    feature_index: Optional[int] = Field(
+        None,
+        description="Numeric index of the feature (None for manual trees, populated for trained models)"
+    )
     threshold: float
     histogram_data: Optional[HistogramData] = None
     left: 'TreeNode'

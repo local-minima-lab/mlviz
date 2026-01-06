@@ -1,7 +1,7 @@
 import BaseDecisionTreeVisualization from "@/components/decision_tree/classifier/BaseVisualisation";
 import { renderDecisionTree } from "@/components/decision_tree/classifier/DecisionTreeRenderer";
 import type { RenderVisualisationProps } from "@/components/decision_tree/classifier/types";
-import { useDecisionTree } from "@/contexts/DecisionTreeContext";
+import { useDecisionTree } from "@/contexts/models/DecisionTreeContext";
 import type { TreeNode } from "@/types/model";
 import { useCallback, useEffect } from "react";
 
@@ -21,7 +21,12 @@ const Visualisation: React.FC = () => {
         splitManualNode,
         markNodeAsLeaf,
     } = useDecisionTree();
-    
+
+
+    useEffect(() => {
+        initializeManualTree();
+    }, []);
+
     // All hooks must be called before any early returns
     useEffect(() => {
         console.log('[ManualTree] useEffect - manualTree:', manualTree);

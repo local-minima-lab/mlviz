@@ -120,3 +120,26 @@ export const calculateFeatureStats = async (
 
     return response.json();
 };
+
+/**
+ * Evaluates a manually built tree against test data.
+ * @param request Manual tree evaluation request
+ * @returns A promise resolving to evaluation metrics and confusion matrix
+ */
+export const evaluateManualTree = async (
+    request: components["schemas"]["ManualTreeEvaluateRequest"]
+): Promise<components["schemas"]["ManualTreeEvaluateResponse"]> => {
+    const response = await fetch(`${API_BASE_URL}/manual/evaluate`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+};

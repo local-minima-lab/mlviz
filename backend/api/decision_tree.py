@@ -9,6 +9,8 @@ from .models import (
     ManualNodeStatsResponse,
     ManualFeatureStatsRequest,
     ManualFeatureStatsResponse,
+    ManualTreeEvaluateRequest,
+    ManualTreeEvaluateResponse,
 )
 from services import dt_service, manual_tree_service
 
@@ -138,3 +140,26 @@ async def calculate_feature_stats(request: ManualFeatureStatsRequest) -> ManualF
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to calculate feature statistics: {str(e)}")
+
+
+@router.post("/manual/evaluate", response_model=ManualTreeEvaluateResponse)
+async def evaluate_manual_tree(request: ManualTreeEvaluateRequest) -> ManualTreeEvaluateResponse:
+    """Evaluate a manually built tree against test data.
+    
+    This endpoint calculates accuracy, precision, recall, and F1 scores
+    by making predictions on the test set using the provided tree structure.
+    
+    Args:
+        request (ManualTreeEvaluateRequest): Contains tree structure and optional dataset
+    
+    Raises:
+        HTTPException: If evaluation fails
+    
+    Returns:
+        ManualTreeEvaluateResponse: Metrics (accuracy, precision, recall, F1) and confusion matrix
+    """
+    try:
+        result = await dt_service.evaluate_manual_tree(request.tree, request.dataset)
+        return ManualTreeEvaluateResponse(**result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to evaluate tree: {str(e)}")

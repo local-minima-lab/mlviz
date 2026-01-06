@@ -158,6 +158,38 @@ class DecisionTreeService:
                         average="weighted", zero_division=0)
         )
 
+    def _predict_with_tree(self, tree_node: TreeNode, X: np.ndarray,
+                           feature_names: List[str]) -> np.ndarray:
+        """Make predictions using a TreeNode structure.
+        
+        Args:
+            tree_node: Root node of the tree
+            X: Feature matrix to predict on
+            feature_names: List of feature names
+            
+        Returns:
+            Array of predicted class indices
+        """
+        predictions = []
+        
+        for sample in X:
+            node = tree_node
+            # Traverse tree until we reach a leaf
+            while node.type == 'split':
+                feature_idx = feature_names.index(node.feature)
+                if sample[feature_idx] <= node.threshold:
+                    node = node.left
+                else:
+                    node = node.right
+            
+            # At leaf node, predict class with highest probability
+            class_probs = node.value[0]
+            predicted_class = np.argmax(class_probs)
+            predictions.append(predicted_class)
+        
+        return np.array(predictions)
+
+
     async def train_model(self,
                           training_params: DecisionTreeParameters, dataset_param: Dataset) -> Dict[str, Any]:
         """Train a decision tree model with caching."""
@@ -258,6 +290,43 @@ class DecisionTreeService:
         return {
             "predictions": prediction_names,
             "prediction_indices": predictions.tolist()
+        }
+
+    async def evaluate_manual_tree(self, tree: TreeNode, dataset_param: Optional[Union[Dict[str, Any], PredefinedDataset, Dataset]] = None) -> Dict[str, Any]:
+        """Evaluate a manually built tree against test data.
+        
+        Args:
+            tree: Root node of the manual tree
+            dataset_param: Dataset to use for evaluation (defaults to Iris)
+            
+        Returns:
+            Dictionary with scores and confusion matrix
+        """
+        dataset = await self._resolve_dataset(dataset_param)
+        dataset_info = await self.dataset_service.prepare_dataset_for_training(dataset)
+        
+        # Make predictions using the manual tree
+        predictions = self._predict_with_tree(
+            tree,
+            dataset_info["X_train"],
+            dataset_info["feature_names"]
+        )
+        
+        # Calculate metrics
+        y_test = dataset_info["y_train"]
+        metrics = BaseMetrics(
+            accuracy=accuracy_score(y_test, predictions),
+            precision=precision_score(y_test, predictions, average="weighted", zero_division=0),
+            recall=recall_score(y_test, predictions, average="weighted", zero_division=0),
+            f1=f1_score(y_test, predictions, average="weighted", zero_division=0)
+        )
+        
+        # Calculate confusion matrix
+        conf_matrix = confusion_matrix(y_test, predictions).tolist()
+        
+        return {
+            "scores": metrics.model_dump(),
+            "matrix": conf_matrix
         }
 
 

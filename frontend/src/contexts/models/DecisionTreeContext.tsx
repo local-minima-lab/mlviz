@@ -7,6 +7,7 @@ import { loadDataset } from "@/api/dataset";
 import {
     calculateFeatureStats,
     calculateNodeStats,
+    evaluateManualTree as evaluateManualTreeAPI,
     trainModel as initiateTrainModel,
     type DecisionTreeResponse,
 } from "@/api/dt";
@@ -52,8 +53,10 @@ interface DecisionTreeContextType {
     loadManualFeatureStats: (feature: string) => Promise<void>;
     updateManualThreshold: (threshold: number) => void;
     splitManualNode: () => Promise<void>;
-    markNodeAsLeaf: () => void;
+    markNodeAsLeaf: () => Promise<void>;
     canSplitManualNode: () => boolean;
+    evaluateManualTree: () => Promise<void>;
+    resetModelData: () => void;
 }
 
 const DecisionTreeContext = createContext<DecisionTreeContextType | undefined>(
@@ -482,10 +485,35 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
             
             // Update treeData with the new tree
             if (currentModelData) {
-                setCurrentModelData({
+                const updatedModelData = {
                     ...currentModelData,
                     tree: newTree,
-                });
+                };
+                setCurrentModelData(updatedModelData);
+                
+                // Automatically evaluate the tree to get updated metrics
+                try {
+
+                    const result = await evaluateManualTreeAPI({
+                        tree: newTree,
+                        dataset: null, // Uses default Iris dataset
+                    });
+                    
+                    // Update with scores and matrix
+                    setCurrentModelData({
+                        ...updatedModelData,
+                        scores: result.scores,
+                        matrix: result.matrix,
+                    });
+
+                    console.log("Show everything: ",currentModelData)
+                } catch (error) {
+                    console.error('[ManualTree] Failed to evaluate tree after split:', error);
+                    console.log("request body ",{
+                        tree: newTree,
+                        dataset: null, // Uses default Iris dataset
+                    })
+                }
             }
             
             setSelectedNodePath(null);
@@ -497,7 +525,7 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
         }
     }, [manualTree, selectedNodePath, selectedFeature, selectedThreshold, getNodeByPath, updateNodeAtPath, currentModelData]);
 
-    const markNodeAsLeaf = useCallback(() => {
+    const markNodeAsLeaf = useCallback(async () => {
         if (!manualTree || !selectedNodePath) return;
         
         const node = getNodeByPath(manualTree, selectedNodePath);
@@ -536,12 +564,29 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
         
         // Update treeData with the new tree
         if (currentModelData) {
-            setCurrentModelData({
+            const updatedModelData = {
                 ...currentModelData,
                 tree: updatedTree,
-            });
+            };
+            setCurrentModelData(updatedModelData);
 
-            console.log(currentModelData)
+            // Automatically evaluate the tree to get updated metrics
+            try {
+                // Clean tree to remove frontend-only fields like 'terminal'
+                const result = await evaluateManualTreeAPI({
+                    tree: updatedTree,
+                    dataset: null, // Uses default Iris dataset
+                });
+                
+                // Update with scores and matrix
+                setCurrentModelData({
+                    ...updatedModelData,
+                    scores: result.scores,
+                    matrix: result.matrix,
+                });
+            } catch (error) {
+                console.error('[ManualTree] Failed to evaluate tree after marking as leaf:', error);
+            }
         }
         
         // Deselect the node
@@ -556,6 +601,48 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
         const node = getNodeByPath(manualTree, selectedNodePath);
         return node?.type === 'leaf' && selectedFeature !== null && selectedThreshold !== null;
     }, [manualTree, selectedNodePath, selectedFeature, selectedThreshold, getNodeByPath]);
+
+    const evaluateManualTree = useCallback(async () => {
+        if (!currentModelData || treeMode !== 'manual') {
+            console.error('[ManualTree] Cannot evaluate: no manual tree data');
+            return;
+        }
+        
+        try {
+            console.log('[ManualTree] Evaluating tree...');
+            const result = await evaluateManualTreeAPI({
+                tree: currentModelData.tree,
+                dataset: null, // Use default (Iris)
+            });
+            
+            console.log('[ManualTree] Evaluation result:', result);
+            
+            // Update currentModelData with new scores and matrix
+            setCurrentModelData({
+                ...currentModelData,
+                scores: result.scores,
+                matrix: result.matrix,
+            });
+        } catch (error) {
+            console.error('[ManualTree] Failed to evaluate tree:', error);
+        }
+    }, [currentModelData, treeMode]);
+
+    const resetModelData = useCallback(() => {
+        console.log('[Context] Resetting model data');
+        
+        // Clear state
+        setCurrentModelData(null);
+        setTreeMode(null);
+        setSelectedNodePath(null);
+        setSelectedFeature(null);
+        setSelectedThreshold(null);
+        setManualFeatureStats(null);
+        
+        // Clear localStorage
+        localStorage.removeItem(LOCAL_STORAGE_TREE_DATA_KEY);
+        localStorage.removeItem(LOCAL_STORAGE_MODE_KEY);
+    }, []);
 
     // Log the complete tree structure whenever it changes
     useEffect(() => {
@@ -592,6 +679,8 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
         splitManualNode,
         markNodeAsLeaf,
         canSplitManualNode,
+        evaluateManualTree,
+        resetModelData,
     };
 
     return (

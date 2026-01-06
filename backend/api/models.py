@@ -119,6 +119,19 @@ class ManualFeatureStatsResponse(BaseModel):
     )
 
 
+class ManualTreeEvaluateRequest(BaseModel):
+    """Request to evaluate a manually built tree."""
+    tree: TreeNode = Field(description="Root node of the manual tree")
+    dataset: Optional[Dict[str, Any]] = Field(
+        None, description="Dataset to use for evaluation (defaults to Iris)")
+
+
+class ManualTreeEvaluateResponse(BaseModel):
+    """Response containing evaluation metrics for a manual tree."""
+    scores: BaseMetrics = Field(description="Accuracy, precision, recall, F1 scores")
+    matrix: List[List[int]] = Field(description="Confusion matrix")
+
+
 class BaseParameterInfo(BaseModel):
     """Base parameter information."""
     name: str

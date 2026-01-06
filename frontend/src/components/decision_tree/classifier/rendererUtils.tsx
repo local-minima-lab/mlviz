@@ -678,6 +678,7 @@ export const renderInlineEditor = (
             .append('div')
             .style('margin-bottom', '12px');
         
+        // Threshold label
         sliderContainer
             .append('label')
             .style('display', 'block')
@@ -686,14 +687,34 @@ export const renderInlineEditor = (
             .style('margin-bottom', '4px')
             .text('Threshold');
         
-        sliderContainer
+        // Create a flex container for slider and value
+        const sliderRow = sliderContainer
+            .append('div')
+            .style('display', 'flex')
+            .style('align-items', 'center')
+            .style('gap', '12px');
+        
+        // Slider input
+        sliderRow
             .append('input')
             .attr('type', 'range')
             .attr('min', featureStats.feature_range[0])
             .attr('max', featureStats.feature_range[1])
             .attr('step', (featureStats.feature_range[1] - featureStats.feature_range[0]) / 100)
             .attr('value', selectedThreshold || featureStats.best_threshold)
-            .style('width', '100%');
+            .style('flex', '1')
+            .style('min-width', '0');
+        
+        // Threshold value display
+        const thresholdValueDisplay = sliderRow
+            .append('span')
+            .style('font-size', '14px')
+            .style('font-weight', '600')
+            .style('color', '#1f2937')
+            .style('min-width', '60px')
+            .style('text-align', 'right')
+            .text((selectedThreshold || featureStats.best_threshold).toFixed(3));
+
         
         // Metrics - find information gain for current threshold
         const initialThreshold = selectedThreshold || featureStats.best_threshold;
@@ -737,16 +758,47 @@ export const renderInlineEditor = (
             thresholdLabel
                 .attr('x', newThresholdX)
                 .text(threshold.toFixed(2));
+            
+            // Update threshold value display
+            thresholdValueDisplay.text(threshold.toFixed(3));
         };
         
-        // Update slider to call updateMetrics
-        sliderContainer
-            .select('input')
-            .on('input', function() {
-                const newThreshold = parseFloat((this as HTMLInputElement).value);
-                updateMetrics(newThreshold);
-                callbacks.onThresholdChange?.(newThreshold);
+        // Helper function to find nearest valid threshold
+        const snapToNearestThreshold = (value: number): number => {
+            if (!featureStats.thresholds || !Array.isArray(featureStats.thresholds)) {
+                return value;
+            }
+            
+            const closestStats = featureStats.thresholds.reduce((prev: any, curr: any) => {
+                return Math.abs(curr.threshold - value) < Math.abs(prev.threshold - value)
+                    ? curr
+                    : prev;
             });
+            
+            return closestStats.threshold;
+        };
+        
+        // Update slider to call updateMetrics with snapping
+        const sliderInput = sliderContainer.select('input');
+        
+        sliderInput.on('input', function() {
+            // During dragging, show the raw value for smooth visual feedback
+            const rawValue = parseFloat((this as HTMLInputElement).value);
+            updateMetrics(rawValue);
+        });
+        
+        sliderInput.on('change', function() {
+            // On release, snap to nearest valid threshold
+            const rawValue = parseFloat((this as HTMLInputElement).value);
+            const snappedValue = snapToNearestThreshold(rawValue);
+            
+            // Update the slider to the snapped value
+            (this as HTMLInputElement).value = snappedValue.toString();
+            
+            // Update visuals and notify parent
+            updateMetrics(snappedValue);
+            callbacks.onThresholdChange?.(snappedValue);
+        });
     }
     
     // Buttons
