@@ -26,6 +26,7 @@ interface VisualisationZoomParameters {
         };
     };
     panMargin?: number; // Fixed pixel margin around content bounds
+    clickableSelector?: string;
 }
 
 interface VisualisationExportParameters {

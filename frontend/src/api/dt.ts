@@ -1,6 +1,6 @@
+import { API_BASE_URL as BASE_URL } from "@/api/config";
 import type { ParameterInfo } from "@/api/types";
 import type { components } from "@/types/api";
-import { API_BASE_URL as BASE_URL } from "@/api/config";
 
 // Type aliases: auto generated from OpenAPI spec.
 
@@ -61,6 +61,75 @@ export const getPredictParameters = async (
     request: Partial<DecisionTreeRequest>
 ): Promise<string[]> => {
     const response = await fetch(`${API_BASE_URL}/predict_params`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+};
+
+/**
+ * Calculates statistics for a potential node split in manual tree building.
+ * @param request Manual node statistics request
+ * @returns A promise resolving to node statistics and masks
+ */
+export const calculateNodeStats = async (
+    request: components["schemas"]["ManualNodeStatsRequest"]
+): Promise<components["schemas"]["ManualNodeStatsResponse"]> => {
+    const response = await fetch(`${API_BASE_URL}/manual/node-stats`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+};
+
+/**
+ * Calculates statistics for all possible thresholds of a feature.
+ * @param request Manual feature statistics request
+ * @returns A promise resolving to threshold statistics and feature metadata
+ */
+export const calculateFeatureStats = async (
+    request: components["schemas"]["ManualFeatureStatsRequest"]
+): Promise<components["schemas"]["ManualFeatureStatsResponse"]> => {
+    const response = await fetch(`${API_BASE_URL}/manual/feature-stats`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+};
+
+/**
+ * Evaluates a manually built tree against test data.
+ * @param request Manual tree evaluation request
+ * @returns A promise resolving to evaluation metrics and confusion matrix
+ */
+export const evaluateManualTree = async (
+    request: components["schemas"]["ManualTreeEvaluateRequest"]
+): Promise<components["schemas"]["ManualTreeEvaluateResponse"]> => {
+    const response = await fetch(`${API_BASE_URL}/manual/evaluate`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",

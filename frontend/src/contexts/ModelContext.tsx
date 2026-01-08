@@ -8,9 +8,9 @@
  * It also provides a unified `useModel` hook that returns the correct
  * context data for the currently active model.
  */
+import { DecisionTreeProvider, useDecisionTree } from "@/contexts/models/DecisionTreeContext";
+import { KNNProvider, useKNN } from "@/contexts/models/KNNContext";
 import React, { createContext, useContext } from "react";
-import { DecisionTreeProvider, useDecisionTree } from "./DecisionTreeContext";
-import { KNNProvider, useKNN } from "./KNNContext";
 
 interface ModelProviderProps {
     children: React.ReactNode;
@@ -37,8 +37,12 @@ export const ModelProvider: React.FC<ModelProviderProps> = ({
     return <Provider>{children}</Provider>;
 };
 
-// A map of model names to their respective hooks
-const hooks: Record<string, () => any> = {
+/**
+ * A map of model names to their respective hooks.
+ * Each hook must return a context that implements BaseModelContext.
+ * This ensures all model contexts have the required methods and properties.
+ */
+const hooks: Record<string, any> = {
     decision_tree: useDecisionTree,
     knn: useKNN,
 };
@@ -50,6 +54,7 @@ export const ModelNameProvider = ModelNameContext.Provider;
 
 /**
  * A unified hook to access the context of the currently active model.
+ * Returns a BaseModelContext with all required methods and properties.
  */
 export const useModel = () => {
     const modelName = useContext(ModelNameContext);

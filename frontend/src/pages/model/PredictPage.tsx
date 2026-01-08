@@ -16,6 +16,7 @@ const PredictPage: React.FC<PredictPageProps> = ({
     const { updateParams } = context;
 
     const { currentModelData, getFeatureNames } = useModel();
+    console.log("Current model data: ", currentModelData)
 
     const [predictionInputPoints, setPredictionInputPoints] = useState<
         Record<string, number>

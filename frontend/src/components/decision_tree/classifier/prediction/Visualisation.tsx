@@ -22,7 +22,16 @@ const Visualisation: React.FC<VisualisationProps> = ({
     pathLineColor,
     pathFillColor,
 }) => {
-    if (!data) return <></>;
+    
+    if (!data) {
+        return (
+            <div className="text-center p-8">
+                <p className="text-muted-foreground">
+                    No model data available. Please train a model or build a manual tree first.
+                </p>
+            </div>
+        );
+    }
 
     if (!points) {
         points = Object.fromEntries(

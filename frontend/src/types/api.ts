@@ -128,6 +128,107 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dt/manual/node-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Calculate Node Stats
+         * @description Calculate statistics for a potential node split in manual tree building.
+         *
+         *     This endpoint calculates entropy/gini, information gain, class distributions,
+         *     and histogram data for a given feature and threshold split.
+         *
+         *     Args:
+         *         request (ManualNodeStatsRequest): Contains dataset, feature, threshold,
+         *                                          parent samples mask, and criterion
+         *
+         *     Raises:
+         *         HTTPException: If feature not found or calculation fails
+         *
+         *     Returns:
+         *         ManualNodeStatsResponse: Statistics for parent and child nodes,
+         *                                 information gain, histogram data, and sample masks
+         */
+        post: operations["calculate_node_stats_api_dt_manual_node_stats_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dt/manual/feature-stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Calculate Feature Stats
+         * @description Calculate statistics for all possible thresholds of a feature.
+         *
+         *     This endpoint returns statistics for all valid split points of a feature,
+         *     enabling instant slider feedback without additional API calls.
+         *
+         *     Args:
+         *         request (ManualFeatureStatsRequest): Contains dataset, feature,
+         *                                             parent samples mask, criterion,
+         *                                             and max_thresholds limit
+         *
+         *     Raises:
+         *         HTTPException: If feature not found, has only one value, or calculation fails
+         *
+         *     Returns:
+         *         ManualFeatureStatsResponse: Array of threshold statistics, best threshold,
+         *                                    feature range, histogram, and metadata
+         */
+        post: operations["calculate_feature_stats_api_dt_manual_feature_stats_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/dt/manual/evaluate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Evaluate Manual Tree
+         * @description Evaluate a manually built tree against test data.
+         *
+         *     This endpoint calculates accuracy, precision, recall, and F1 scores
+         *     by making predictions on the test set using the provided tree structure.
+         *
+         *     Args:
+         *         request (ManualTreeEvaluateRequest): Contains tree structure and optional dataset
+         *
+         *     Raises:
+         *         HTTPException: If evaluation fails
+         *
+         *     Returns:
+         *         ManualTreeEvaluateResponse: Metrics (accuracy, precision, recall, F1) and confusion matrix
+         */
+        post: operations["evaluate_manual_tree_api_dt_manual_evaluate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dataset/list": {
         parameters: {
             query?: never;
@@ -507,7 +608,8 @@ export interface components {
             metadata: {
                 [key: string]: unknown;
             };
-            tree: components["schemas"]["TreeNode"];
+            /** Tree */
+            tree: components["schemas"]["SplitNode-Output"] | components["schemas"]["LeafNode"];
             /** Classes */
             classes: string[];
             /** Matrix */
@@ -797,6 +899,220 @@ export interface components {
             visualisation_feature_names?: string[] | null;
         };
         /**
+         * LeafNode
+         * @description Leaf node in a decision tree (no further splits).
+         */
+        LeafNode: {
+            /** Samples */
+            samples: number;
+            /** Impurity */
+            impurity: number;
+            /** Value */
+            value: number[][];
+            /**
+             * Samples Mask
+             * @description Indices of samples that reached this node (None for trained models, populated for manual trees)
+             */
+            samples_mask?: number[] | null;
+            /**
+             * Terminal
+             * @description Whether this node is marked as terminal (frontend-only, used in manual tree building)
+             */
+            terminal?: boolean | null;
+            /**
+             * Type
+             * @default leaf
+             * @constant
+             */
+            type: "leaf";
+        };
+        /**
+         * ManualFeatureStatsRequest
+         * @description Request to calculate statistics for all thresholds of a feature.
+         */
+        ManualFeatureStatsRequest: {
+            /**
+             * Feature
+             * @description Feature name to analyze
+             */
+            feature: string;
+            /**
+             * Parent Samples Mask
+             * @description Indices of samples that reached this node (None for root)
+             */
+            parent_samples_mask?: number[] | null;
+            /**
+             * Criterion
+             * @description Criterion to use for impurity calculation (gini or entropy)
+             * @default gini
+             */
+            criterion: string;
+            /**
+             * Max Thresholds
+             * @description Maximum number of thresholds to return
+             * @default 100
+             */
+            max_thresholds: number;
+            /**
+             * Dataset
+             * @description Dataset to use for training
+             */
+            dataset?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * ManualFeatureStatsResponse
+         * @description Response containing statistics for all thresholds of a feature.
+         */
+        ManualFeatureStatsResponse: {
+            /** Feature */
+            feature: string;
+            /** Feature Index */
+            feature_index: number;
+            /**
+             * Thresholds
+             * @description Statistics for each threshold, sorted by threshold value
+             */
+            thresholds: components["schemas"]["ThresholdStatistics"][];
+            /**
+             * Best Threshold
+             * @description Threshold with highest information gain
+             */
+            best_threshold: number;
+            /**
+             * Best Threshold Index
+             * @description Index of best threshold in the thresholds array
+             */
+            best_threshold_index: number;
+            /**
+             * Feature Range
+             * @description [min, max] values of the feature
+             */
+            feature_range: number[];
+            /** @description Overall feature distribution at current node */
+            histogram_data: components["schemas"]["HistogramData"];
+            /**
+             * Total Unique Values
+             * @description Total number of unique feature values
+             */
+            total_unique_values: number;
+            /**
+             * Returned Threshold Count
+             * @description Number of thresholds returned (may be capped)
+             */
+            returned_threshold_count: number;
+            /**
+             * Available Features
+             * @description List of all available features
+             */
+            available_features: string[];
+            /**
+             * Class Names
+             * @description List of all class names in the dataset
+             */
+            class_names: string[];
+        };
+        /**
+         * ManualNodeStatsRequest
+         * @description Request to calculate statistics for a potential node split.
+         */
+        ManualNodeStatsRequest: {
+            /**
+             * Feature
+             * @description Feature name to split on
+             */
+            feature: string;
+            /**
+             * Threshold
+             * @description Threshold value for the split
+             */
+            threshold: number;
+            /**
+             * Parent Samples Mask
+             * @description Indices of samples that reached this node (None for root)
+             */
+            parent_samples_mask?: number[] | null;
+            /**
+             * Criterion
+             * @description Criterion to use for impurity calculation (gini or entropy)
+             * @default gini
+             */
+            criterion: string;
+            /**
+             * Dataset
+             * @description Dataset to use for training
+             */
+            dataset?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * ManualNodeStatsResponse
+         * @description Response containing statistics for a potential split.
+         */
+        ManualNodeStatsResponse: {
+            /** Feature */
+            feature: string;
+            /** Feature Index */
+            feature_index: number;
+            /** Threshold */
+            threshold: number;
+            split_stats: components["schemas"]["SplitStatistics"];
+            histogram_data: components["schemas"]["HistogramData"];
+            /**
+             * Left Samples Mask
+             * @description Indices of samples that go to left child (<= threshold)
+             */
+            left_samples_mask: number[];
+            /**
+             * Right Samples Mask
+             * @description Indices of samples that go to right child (> threshold)
+             */
+            right_samples_mask: number[];
+            /**
+             * Available Features
+             * @description List of all available features
+             */
+            available_features: string[];
+            /**
+             * Class Names
+             * @description List of all class names in the dataset
+             */
+            class_names: string[];
+        };
+        /**
+         * ManualTreeEvaluateRequest
+         * @description Request to evaluate a manually built tree.
+         */
+        ManualTreeEvaluateRequest: {
+            /**
+             * Tree
+             * @description Root node of the manual tree
+             */
+            tree: components["schemas"]["SplitNode-Input"] | components["schemas"]["LeafNode"];
+            /**
+             * Dataset
+             * @description Dataset to use for evaluation (defaults to Iris)
+             */
+            dataset?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * ManualTreeEvaluateResponse
+         * @description Response containing evaluation metrics for a manual tree.
+         */
+        ManualTreeEvaluateResponse: {
+            /** @description Accuracy, precision, recall, F1 scores */
+            scores: components["schemas"]["BaseMetrics"];
+            /**
+             * Matrix
+             * @description Confusion matrix
+             */
+            matrix: number[][];
+        };
+        /**
          * NeighborInfo
          * @description Information about a single neighbor.
          */
@@ -821,6 +1137,24 @@ export interface components {
              * @description Feature values
              */
             coordinates: number[];
+        };
+        /**
+         * NodeStatistics
+         * @description Statistics for a node before/after split.
+         */
+        NodeStatistics: {
+            /** Samples */
+            samples: number;
+            /** Impurity */
+            impurity: number;
+            /** Class Distribution */
+            class_distribution: {
+                [key: string]: number;
+            };
+            /** Class Probabilities */
+            class_probabilities: {
+                [key: string]: number;
+            };
         };
         /**
          * NumberParameterInfo
@@ -865,30 +1199,122 @@ export interface components {
             options: unknown[];
         };
         /**
-         * TreeNode
-         * @description Core domain model for decision tree nodes.
+         * SplitNode
+         * @description Binary split node in a decision tree.
          */
-        TreeNode: {
-            /**
-             * Type
-             * @enum {string}
-             */
-            type: "split" | "leaf";
+        "SplitNode-Input": {
             /** Samples */
             samples: number;
             /** Impurity */
             impurity: number;
             /** Value */
             value: number[][];
+            /**
+             * Samples Mask
+             * @description Indices of samples that reached this node (None for trained models, populated for manual trees)
+             */
+            samples_mask?: number[] | null;
+            /**
+             * Terminal
+             * @description Whether this node is marked as terminal (frontend-only, used in manual tree building)
+             */
+            terminal?: boolean | null;
+            /**
+             * Type
+             * @default split
+             * @constant
+             */
+            type: "split";
             /** Feature */
-            feature?: string | null;
-            /** Feature Index */
+            feature: string;
+            /**
+             * Feature Index
+             * @description Numeric index of the feature (None for manual trees, populated for trained models)
+             */
             feature_index?: number | null;
             /** Threshold */
-            threshold?: number | null;
+            threshold: number;
             histogram_data?: components["schemas"]["HistogramData"] | null;
-            left?: components["schemas"]["TreeNode"] | null;
-            right?: components["schemas"]["TreeNode"] | null;
+            /** Left */
+            left: components["schemas"]["SplitNode-Input"] | components["schemas"]["LeafNode"];
+            /** Right */
+            right: components["schemas"]["SplitNode-Input"] | components["schemas"]["LeafNode"];
+        };
+        /**
+         * SplitNode
+         * @description Binary split node in a decision tree.
+         */
+        "SplitNode-Output": {
+            /** Samples */
+            samples: number;
+            /** Impurity */
+            impurity: number;
+            /** Value */
+            value: number[][];
+            /**
+             * Samples Mask
+             * @description Indices of samples that reached this node (None for trained models, populated for manual trees)
+             */
+            samples_mask?: number[] | null;
+            /**
+             * Terminal
+             * @description Whether this node is marked as terminal (frontend-only, used in manual tree building)
+             */
+            terminal?: boolean | null;
+            /**
+             * Type
+             * @default split
+             * @constant
+             */
+            type: "split";
+            /** Feature */
+            feature: string;
+            /**
+             * Feature Index
+             * @description Numeric index of the feature (None for manual trees, populated for trained models)
+             */
+            feature_index?: number | null;
+            /** Threshold */
+            threshold: number;
+            histogram_data?: components["schemas"]["HistogramData"] | null;
+            /** Left */
+            left: components["schemas"]["SplitNode-Output"] | components["schemas"]["LeafNode"];
+            /** Right */
+            right: components["schemas"]["SplitNode-Output"] | components["schemas"]["LeafNode"];
+        };
+        /**
+         * SplitStatistics
+         * @description Statistics for evaluating a split.
+         */
+        SplitStatistics: {
+            parent_stats: components["schemas"]["NodeStatistics"];
+            left_stats: components["schemas"]["NodeStatistics"];
+            right_stats: components["schemas"]["NodeStatistics"];
+            /** Information Gain */
+            information_gain: number;
+            /** Weighted Impurity */
+            weighted_impurity: number;
+        };
+        /**
+         * ThresholdStatistics
+         * @description Statistics for a single threshold value.
+         */
+        ThresholdStatistics: {
+            /** Threshold */
+            threshold: number;
+            /** Information Gain */
+            information_gain: number;
+            split_stats: components["schemas"]["SplitStatistics"];
+            /**
+             * Left Samples Mask
+             * @description Indices of samples that go to left child (<= threshold)
+             */
+            left_samples_mask: number[];
+            /**
+             * Right Samples Mask
+             * @description Indices of samples that go to right child (> threshold)
+             */
+            right_samples_mask: number[];
         };
         /** ValidationError */
         ValidationError: {
@@ -1030,6 +1456,105 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CacheInfoResponse"];
+                };
+            };
+        };
+    };
+    calculate_node_stats_api_dt_manual_node_stats_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualNodeStatsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualNodeStatsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    calculate_feature_stats_api_dt_manual_feature_stats_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualFeatureStatsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualFeatureStatsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    evaluate_manual_tree_api_dt_manual_evaluate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManualTreeEvaluateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ManualTreeEvaluateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

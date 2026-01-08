@@ -44,6 +44,7 @@ const BaseVisualisation: React.FC<BaseVisualisationProps> = ({
               enablePan: capabilities.zoomable.enablePan,
               contentBounds: capabilities.zoomable.contentBounds,
               panMargin: capabilities.zoomable.panMargin,
+              clickableSelector: capabilities.zoomable.clickableSelector,
               onZoomChange,
           })
         : undefined;

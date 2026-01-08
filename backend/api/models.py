@@ -9,6 +9,12 @@ from models import (
     KNNParameters,
     NeighborInfo,
     DecisionBoundaryData,
+    NodeStatParameters,
+    NodeStatistics,
+    SplitStatistics,
+    HistogramData,
+    ThresholdStatistics,
+    ManualFeatureStatsParameters,
 )
 
 
@@ -41,6 +47,89 @@ class DecisionTreePredictionResponse(BaseModel):
     """Response model for predictions."""
     predictions: list[str]
     prediction_indices: list[int]
+
+# Manual Decision Tree Builder Models
+
+
+class ManualNodeStatsRequest(NodeStatParameters):
+    """Request to calculate statistics for a potential node split."""
+
+    dataset: Optional[Dict[str, Any]] = Field(
+        None, description="Dataset to use for training")
+
+
+class ManualNodeStatsResponse(BaseModel):
+    """Response containing statistics for a potential split."""
+    feature: str
+    feature_index: int
+    threshold: float
+    split_stats: SplitStatistics
+    histogram_data: HistogramData
+    left_samples_mask: List[int] = Field(
+        description="Indices of samples that go to left child (<= threshold)"
+    )
+    right_samples_mask: List[int] = Field(
+        description="Indices of samples that go to right child (> threshold)"
+    )
+    available_features: List[str] = Field(
+        description="List of all available features"
+    )
+    class_names: List[str] = Field(
+        description="List of all class names in the dataset"
+    )
+
+
+class ManualFeatureStatsRequest(ManualFeatureStatsParameters):
+    """Request to calculate statistics for all thresholds of a feature."""
+
+    dataset: Optional[Dict[str, Any]] = Field(
+        None, description="Dataset to use for training")
+
+
+class ManualFeatureStatsResponse(BaseModel):
+    """Response containing statistics for all thresholds of a feature."""
+    feature: str
+    feature_index: int
+    thresholds: list[ThresholdStatistics] = Field(
+        description="Statistics for each threshold, sorted by threshold value"
+    )
+    best_threshold: float = Field(
+        description="Threshold with highest information gain"
+    )
+    best_threshold_index: int = Field(
+        description="Index of best threshold in the thresholds array"
+    )
+    feature_range: List[float] = Field(
+        description="[min, max] values of the feature"
+    )
+    histogram_data: HistogramData = Field(
+        description="Overall feature distribution at current node"
+    )
+    total_unique_values: int = Field(
+        description="Total number of unique feature values"
+    )
+    returned_threshold_count: int = Field(
+        description="Number of thresholds returned (may be capped)"
+    )
+    available_features: List[str] = Field(
+        description="List of all available features"
+    )
+    class_names: List[str] = Field(
+        description="List of all class names in the dataset"
+    )
+
+
+class ManualTreeEvaluateRequest(BaseModel):
+    """Request to evaluate a manually built tree."""
+    tree: TreeNode = Field(description="Root node of the manual tree")
+    dataset: Optional[Dict[str, Any]] = Field(
+        None, description="Dataset to use for evaluation (defaults to Iris)")
+
+
+class ManualTreeEvaluateResponse(BaseModel):
+    """Response containing evaluation metrics for a manual tree."""
+    scores: BaseMetrics = Field(description="Accuracy, precision, recall, F1 scores")
+    matrix: List[List[int]] = Field(description="Confusion matrix")
 
 
 class BaseParameterInfo(BaseModel):
