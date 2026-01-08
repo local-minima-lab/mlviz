@@ -14,6 +14,7 @@ interface UseZoomControlsOptions {
         margin?: { top: number; right: number; bottom: number; left: number };
     };
     panMargin?: number; // Fixed pixel margin around content bounds
+    clickableSelector?: string; // CSS selector for elements that should be clickable (not trigger zoom/pan)
 }
 
 export const useZoomControls = ({
@@ -22,6 +23,7 @@ export const useZoomControls = ({
     onZoomChange,
     contentBounds,
     panMargin = 200, // 200px margin around content bounds
+    clickableSelector,
 }: UseZoomControlsOptions = {}): ZoomControlState => {
     const zoomBehaviorRef = useRef<d3.ZoomBehavior<
         SVGSVGElement,
@@ -192,7 +194,17 @@ export const useZoomControls = ({
                 });
             }
 
-            // No filtering needed - zoom works normally for all plots
+            // Filter out events from clickable elements to allow them to receive clicks
+            if (clickableSelector) {
+                zoom.filter((event) => {
+                    // Don't handle zoom/pan for events on clickable elements
+                    const target = event.target as Element;
+                    if (target && target.closest(clickableSelector)) {
+                        return false;
+                    }
+                    return true;
+                });
+            }
 
             zoom.on("zoom", (event) => {
                 // Parse initial transform to get base translation and scale
@@ -237,7 +249,7 @@ export const useZoomControls = ({
 
             return zoom;
         },
-        [scaleExtent, enablePan, onZoomChange, contentBounds]
+        [scaleExtent, enablePan, onZoomChange, contentBounds, clickableSelector]
     );
 
     const resetZoom = useCallback(() => {

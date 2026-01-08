@@ -305,15 +305,15 @@ class DecisionTreeService:
         dataset = await self._resolve_dataset(dataset_param)
         dataset_info = await self.dataset_service.prepare_dataset_for_training(dataset)
         
-        # Make predictions using the manual tree
+        # Make predictions using the manual tree on TEST set
         predictions = self._predict_with_tree(
             tree,
-            dataset_info["X_train"],
+            dataset_info["X_test"],  # Use test set for evaluation
             dataset_info["feature_names"]
         )
         
-        # Calculate metrics
-        y_test = dataset_info["y_train"]
+        # Calculate metrics using TEST set
+        y_test = dataset_info["y_test"]  # Use test set labels
         metrics = BaseMetrics(
             accuracy=accuracy_score(y_test, predictions),
             precision=precision_score(y_test, predictions, average="weighted", zero_division=0),

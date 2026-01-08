@@ -284,29 +284,20 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
                 const datasetResponse = await loadDataset('iris'); // Default to iris
                 console.log('[ManualTree] Dataset loaded:', datasetResponse);
                 
-                // Transform dataset response to match DecisionTreeResponse format
-                // Combine X and y into matrix format
-                const matrix = datasetResponse.X.map((row: any, idx: number) => [
-                    ...row,
-                    datasetResponse.y[idx]
-                ]);
-                
                 // Calculate class distribution from dataset
                 const classes = datasetResponse.target_names;
                 const numClasses = classes.length;
                 
-                // Count samples per class
+                // Count samples per class from the target array
                 const classCounts = new Array(numClasses).fill(0);
-                matrix.forEach((row: any) => {
-                    const targetValue = row[row.length - 1]; // Last column is the target
-                    const classIndex = targetValue; // Assuming target is already class index
-                    if (classIndex >= 0 && classIndex < numClasses) {
-                        classCounts[classIndex]++;
+                datasetResponse.y.forEach((targetValue: number) => {
+                    if (targetValue >= 0 && targetValue < numClasses) {
+                        classCounts[targetValue]++;
                     }
                 });
                 
                 // Convert counts to proportions for the value array
-                const totalSamples = matrix.length;
+                const totalSamples = datasetResponse.y.length;
                 const classProportions = classCounts.map(count => count / totalSamples);
                 
                 const rootNode: TreeNode = {
@@ -316,6 +307,23 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
                     value: [classProportions], // Array of proportions for each class
                     samples_mask: Array.from({ length: totalSamples }, (_, i) => i), // [0, 1, 2, ..., n-1]
                 };
+                
+                // For a single leaf node, create initial confusion matrix
+                // This represents what happens when we predict the majority class for all samples
+                const majorityClassIndex = classCounts.indexOf(Math.max(...classCounts));
+                
+                // Initialize confusion matrix with zeros
+                const initialMatrix = Array(numClasses).fill(0).map(() => Array(numClasses).fill(0));
+                
+                // Fill the confusion matrix: all predictions go to majority class
+                // Row = actual class, Column = predicted class
+                classCounts.forEach((count, actualClassIndex) => {
+                    initialMatrix[actualClassIndex][majorityClassIndex] = count;
+                });
+                
+                // Calculate initial scores based on majority class prediction
+                const correctPredictions = classCounts[majorityClassIndex];
+                const initialAccuracy = correctPredictions / totalSamples;
                 
                 // Create tree data in manual mode
                 const manualTreeData: DecisionTreeModelData = {
@@ -327,12 +335,13 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
                     },
                     tree: rootNode,
                     classes: classes,
-                    matrix: matrix,
+                    // Initial confusion matrix represents single leaf predicting majority class
+                    matrix: initialMatrix,
                     scores: {
-                        accuracy: 0,
-                        precision: 0,
-                        recall: 0,
-                        f1: 0,
+                        accuracy: initialAccuracy,
+                        precision: initialAccuracy, // Simplified for single-class prediction
+                        recall: initialAccuracy,
+                        f1: initialAccuracy,
                     },
                     treeMode: 'manual',
                     selectedNodePath: null,

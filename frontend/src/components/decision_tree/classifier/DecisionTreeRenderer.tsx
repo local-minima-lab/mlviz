@@ -543,6 +543,7 @@ export const renderDecisionTree = ({
                 props.featureStats || null,
                 props.selectedFeature || null,
                 props.selectedThreshold || null,
+                colorScale,
                 props.manualCallbacks
             );
         } else {

@@ -561,6 +561,7 @@ export const renderInlineEditor = (
     featureStats: any | null,
     selectedFeature: string | null,
     selectedThreshold: number | null,
+    colorScale: d3.ScaleOrdinal<string, string>,
     callbacks: {
         onFeatureSelect?: (feature: string) => void;
         onThresholdChange?: (threshold: number) => void;
@@ -640,10 +641,17 @@ export const renderInlineEditor = (
         const histGroup = histSvg.append('g');
         const stackedData = prepareHistogramData(featureStats.histogram_data);
         const histWidth = editorWidth - 32;
+        
+        // Create color scheme from colorScale to match tree nodes
+        const colorScheme = Object.keys(featureStats.histogram_data.counts_by_class).map((cls) =>
+            colorScale(cls)
+        );
+        
         renderHistogramBars(histGroup, featureStats.histogram_data, stackedData, {
             width: histWidth,
             height: 100,
             showThreshold: false,
+            colorScheme,
         });
         
         // Add threshold line
