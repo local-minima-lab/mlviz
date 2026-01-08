@@ -23,39 +23,75 @@ import React, {
     useState,
     type ReactNode
 } from "react";
+import { createBaseModelContext, type BaseModelData } from "./BaseModelContext";
 
-const LOCAL_STORAGE_PARAMS_KEY = "dt_params";
 const LOCAL_STORAGE_MODE_KEY = "dt_tree_mode";
-const LOCAL_STORAGE_TREE_DATA_KEY = "dt_tree_data";
+
+// Define comprehensive DecisionTree model data type
+interface DecisionTreeModelData extends BaseModelData {
+    // Core tree data (from API response)
+    success: boolean;
+    model_key: string;
+    cached: boolean;
+    metadata: {
+        [key: string]: unknown;
+    };
+    tree: TreeNode;
+    classes: string[];
+    matrix?: number[][];
+    scores?: {
+        accuracy: number;
+        precision: number;
+        recall: number;
+        f1: number;
+    };
+    
+    // Tree mode tracking
+    treeMode: 'trained' | 'manual';
+    
+    // Manual tree building state
+    selectedNodePath: number[] | null;
+    manualFeatureStats: components["schemas"]["ManualFeatureStatsResponse"] | null;
+    selectedFeature: string | null;
+    selectedThreshold: number | null;
+}
+
+// Create base context instance for DecisionTree
+const { Provider: BaseProvider, useBaseModel } = createBaseModelContext<DecisionTreeModelData>({
+    localStorageKey: "dt_tree_data",
+    paramsStorageKey: "dt_params",
+});
+
+// Manual tree building interface
+interface ManualTreeInterface {
+    tree: TreeNode | null;
+    selectedNodePath: number[] | null;
+    featureStats: components["schemas"]["ManualFeatureStatsResponse"] | null;
+    selectedFeature: string | null;
+    selectedThreshold: number | null;
+    initialize: () => void;
+    selectNode: (path: number[] | null) => void;
+    loadFeatureStats: (feature: string) => Promise<void>;
+    updateThreshold: (threshold: number) => void;
+    splitNode: () => Promise<void>;
+    markAsLeaf: () => Promise<void>;
+    canSplit: () => boolean;
+    evaluate: () => Promise<void>;
+}
 
 interface DecisionTreeContextType {
     isModelLoading: boolean;
     modelError: string | null;
     treeMode: 'trained' | 'manual' | null;
-    currentModelData: DecisionTreeResponse | null;
+    currentModelData: DecisionTreeModelData | null;
     lastTrainedParams: Parameters;
     trainNewModel: (params: Parameters) => Promise<void>;
     clearStoredModelParams: () => void;
-    // Helper methods for prediction components
+    // Helper methods
     getFeatureNames: () => string[] | null;
     getClassNames: () => string[] | null;
-    getModelKey: () => string | null;
-    isModelReady: () => boolean;
-    getManualTreeData: () => { tree: TreeNode; model_metadata: { feature_names: string[] }; classes: string[] } | null;
     // Manual tree building
-    manualTree: TreeNode | null;
-    selectedNodePath: number[] | null;
-    manualFeatureStats: components["schemas"]["ManualFeatureStatsResponse"] | null;
-    selectedFeature: string | null;
-    selectedThreshold: number | null;
-    initializeManualTree: () => void;
-    selectManualNode: (path: number[] | null) => void;
-    loadManualFeatureStats: (feature: string) => Promise<void>;
-    updateManualThreshold: (threshold: number) => void;
-    splitManualNode: () => Promise<void>;
-    markNodeAsLeaf: () => Promise<void>;
-    canSplitManualNode: () => boolean;
-    evaluateManualTree: () => Promise<void>;
+    manualTree: ManualTreeInterface;
     resetModelData: () => void;
 }
 
@@ -72,47 +108,34 @@ interface DecisionTreeProviderProps {
 
 /**
  * Provides the DecisionTreeContext to its children components.
- * It manages the state and O tjointeractions with the Decision Tree API.
+ * It manages the state and interactions with the Decision Tree API.
  */
 export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
     children,
 }) => {
+    return (
+        <BaseProvider>
+            <DecisionTreeProviderInner>
+                {children}
+            </DecisionTreeProviderInner>
+        </BaseProvider>
+    );
+};
+
+const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
+    const baseContext = useBaseModel();
+    const { currentModelData, lastParams, setCurrentModelData, setLastParams, resetModelData: baseResetModelData } = baseContext;
+
     const [isModelLoading, setIsModelLoading] = useState<boolean>(false);
     const [modelError, setModelError] = useState<string | null>(null);
-    
-    // Unified tree data with mode tracking (persisted to localStorage)
-    const [treeMode, setTreeMode] = useState<'trained' | 'manual' | null>(() => {
-        const stored = localStorage.getItem(LOCAL_STORAGE_MODE_KEY);
-        return (stored as 'trained' | 'manual' | null) || null;
-    });
-    const [currentModelData, setCurrentModelData] = useState<DecisionTreeResponse | null>(() => {
-        const stored = localStorage.getItem(LOCAL_STORAGE_TREE_DATA_KEY);
-        if (stored) {
-            try {
-                console.log('[DecisionTreeContext] Loading tree data from localStorage');
-                return JSON.parse(stored);
-            } catch (e) {
-                console.error('[DecisionTreeContext] Failed to parse tree data:', e);
-                return null;
-            }
-        }
-        return null;
-    });
 
-    const [lastTrainedParams, setLastTrainedParams] = useState<Parameters>(
-        () => {
-            const storedParams = localStorage.getItem(LOCAL_STORAGE_PARAMS_KEY);
-            if (storedParams == null) return {};
-            else return JSON.parse(storedParams as string);
-        }
-    );
-
-    // Manual tree building state (UI state only)
+    // Extract commonly used values from currentModelData
+    const treeMode = currentModelData?.treeMode || null;
     const manualTree = treeMode === 'manual' ? currentModelData?.tree : null;
-    const [selectedNodePath, setSelectedNodePath] = useState<number[] | null>(null);
-    const [manualFeatureStats, setManualFeatureStats] = useState<components["schemas"]["ManualFeatureStatsResponse"] | null>(null);
-    const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
-    const [selectedThreshold, setSelectedThreshold] = useState<number | null>(null);
+    const selectedNodePath = currentModelData?.selectedNodePath || null;
+    const manualFeatureStats = currentModelData?.manualFeatureStats || null;
+    const selectedFeature = currentModelData?.selectedFeature || null;
+    const selectedThreshold = currentModelData?.selectedThreshold || null;
 
     // Helper functions for manual tree manipulation
     const getNodeByPath = useCallback((tree: TreeNode | null, path: number[]): TreeNode | null => {
@@ -168,13 +191,23 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
             const data: DecisionTreeResponse = await initiateTrainModel(params);
 
             if (data.success) {
-                setCurrentModelData(data);
-                setTreeMode('trained');
-                setLastTrainedParams(params);
-                localStorage.setItem(
-                    LOCAL_STORAGE_PARAMS_KEY,
-                    JSON.stringify(params)
-                );
+                const modelData: DecisionTreeModelData = {
+                    success: data.success,
+                    model_key: data.model_key,
+                    cached: data.cached,
+                    metadata: data.metadata,
+                    tree: data.tree,
+                    classes: data.classes,
+                    matrix: data.matrix,
+                    scores: data.scores,
+                    treeMode: 'trained',
+                    selectedNodePath: null,
+                    manualFeatureStats: null,
+                    selectedFeature: null,
+                    selectedThreshold: null,
+                };
+                setCurrentModelData(modelData);
+                setLastParams(params);
             } else {
                 throw new Error(
                     "Training failed - API returned success: false"
@@ -188,31 +221,16 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
                     : "Unknown error training model"
             );
             setCurrentModelData(null);
-            setTreeMode(null);
         } finally {
             setIsModelLoading(false);
         }
-    }, []);
-
-
+    }, [setCurrentModelData, setLastParams]);
 
     const clearStoredModelParams = useCallback(() => {
-        localStorage.removeItem(LOCAL_STORAGE_PARAMS_KEY);
-        setLastTrainedParams({});
-        setCurrentModelData(null);
-        setTreeMode(null);
+        baseResetModelData();
         setModelError(null);
         setIsModelLoading(false);
-    }, []);
-
-    // Persist treeMode to localStorage whenever it changes
-    useEffect(() => {
-        if (treeMode) {
-            localStorage.setItem(LOCAL_STORAGE_MODE_KEY, treeMode);
-        } else {
-            localStorage.removeItem(LOCAL_STORAGE_MODE_KEY);
-        }
-    }, [treeMode]);
+    }, [baseResetModelData]);
 
     // Track if we've attempted auto-load to prevent infinite loops
     const autoLoadAttempted = useRef(false);
@@ -229,24 +247,14 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
             !currentModelData &&
             !isModelLoading &&
             treeMode !== 'manual' &&
-            Object.keys(lastTrainedParams).length > 0
+            Object.keys(lastParams).length > 0
         ) {
-            console.log('[AutoLoad] Attempting to load stored model with params:', lastTrainedParams);
+            console.log('[AutoLoad] Attempting to load stored model with params:', lastParams);
             autoLoadAttempted.current = true;
-            trainNewModel(lastTrainedParams);
+            trainNewModel(lastParams);
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Empty array = run only once on mount
-
-    // Log and persist currentModelData to localStorage whenever it changes
-    useEffect(() => {
-        console.log('[DecisionTreeContext] currentModelData updated:', currentModelData);
-        if (currentModelData) {
-            localStorage.setItem(LOCAL_STORAGE_TREE_DATA_KEY, JSON.stringify(currentModelData));
-        } else {
-            localStorage.removeItem(LOCAL_STORAGE_TREE_DATA_KEY);
-        }
-    }, [currentModelData]);
 
     // Helper functions for prediction components
     const getFeatureNames = useCallback((): string[] | null => {
@@ -263,50 +271,10 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
         return currentModelData.classes;
     }, [currentModelData]);
 
-    const getModelKey = useCallback((): string | null => {
-        return currentModelData?.model_key || null;
-    }, [currentModelData]);
-
-    const isModelReady = useCallback((): boolean => {
-        const ready = !!(
-            currentModelData?.success &&
-            currentModelData?.metadata?.feature_names &&
-            currentModelData?.classes
-        );
-
-        return ready;
-    }, [currentModelData]);
-
-    const getManualTreeData = useCallback(() => {
-        // Return null if manual tree doesn't exist
-        if (!manualTree) {
-            return null;
-        }
-
-        // Get feature names and classes from the current model data
-        const featureNames = getFeatureNames();
-        const classNames = getClassNames();
-
-        // Return null if metadata is missing
-        if (!featureNames || !classNames) {
-            console.warn('[ManualTree] Cannot create prediction data - missing feature names or class names');
-            return null;
-        }
-
-        // Format the manual tree data for prediction component
-        return {
-            tree: manualTree,
-            model_metadata: {
-                feature_names: featureNames,
-            },
-            classes: classNames,
-        };
-    }, [manualTree, getFeatureNames, getClassNames]);
-
     // Manual tree building functions
     const initializeManualTree = useCallback(async () => {
         console.log('[ManualTree] initializeManualTree called');
-        console.log('[ManualTree] treeData:', currentModelData);
+        console.log('[ManualTree] currentModelData:', currentModelData);
         console.log('[ManualTree] treeMode:', treeMode);
         
         // If no tree data exists or not in manual mode, load dataset
@@ -350,7 +318,7 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
                 };
                 
                 // Create tree data in manual mode
-                const manualTreeData: DecisionTreeResponse = {
+                const manualTreeData: DecisionTreeModelData = {
                     success: true,
                     model_key: 'manual_tree',
                     cached: false,
@@ -366,37 +334,38 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
                         recall: 0,
                         f1: 0,
                     },
+                    treeMode: 'manual',
+                    selectedNodePath: null,
+                    manualFeatureStats: null,
+                    selectedFeature: null,
+                    selectedThreshold: null,
                 };
                 
                 console.log('[ManualTree] Created manual tree data:', manualTreeData);
                 
                 setCurrentModelData(manualTreeData);
-                setTreeMode('manual');
-                
-                // Clear training params when entering manual mode
-                localStorage.removeItem(LOCAL_STORAGE_PARAMS_KEY);
-                setLastTrainedParams({});
-                
-                setSelectedNodePath(null);
-                setSelectedFeature(null);
-                setManualFeatureStats(null);
-                setSelectedThreshold(null);
+                setLastParams({});
             } catch (error) {
                 console.error('[ManualTree] Failed to load dataset:', error);
             }
         }
-    }, [currentModelData, treeMode]);
+    }, [currentModelData, treeMode, setCurrentModelData, setLastParams]);
 
     const selectManualNode = useCallback((path: number[] | null) => {
-        setSelectedNodePath(path);
-        setSelectedFeature(null);
-        setManualFeatureStats(null);
-        setSelectedThreshold(null);
-    }, []);
+        if (!currentModelData) return;
+        
+        setCurrentModelData({
+            ...currentModelData,
+            selectedNodePath: path,
+            selectedFeature: null,
+            manualFeatureStats: null,
+            selectedThreshold: null,
+        });
+    }, [currentModelData, setCurrentModelData]);
 
     const loadManualFeatureStats = useCallback(async (feature: string) => {
-        setSelectedFeature(feature);
-        if (!selectedNodePath) return;
+        if (!currentModelData || !selectedNodePath) return;
+        
         const node = getNodeByPath(manualTree, selectedNodePath);
         if (!node) return;
         
@@ -407,19 +376,29 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
                 criterion: 'gini',
                 max_thresholds: 100,
             });
-            setManualFeatureStats(stats);
-            setSelectedThreshold(stats.best_threshold);
+            
+            setCurrentModelData({
+                ...currentModelData,
+                selectedFeature: feature,
+                manualFeatureStats: stats,
+                selectedThreshold: stats.best_threshold,
+            });
         } catch (error) {
             console.error('Failed to load feature stats:', error);
         }
-    }, [manualTree, selectedNodePath, getNodeByPath]);
+    }, [currentModelData, manualTree, selectedNodePath, getNodeByPath, setCurrentModelData]);
 
     const updateManualThreshold = useCallback((threshold: number) => {
-        setSelectedThreshold(threshold);
-    }, []);
+        if (!currentModelData) return;
+        
+        setCurrentModelData({
+            ...currentModelData,
+            selectedThreshold: threshold,
+        });
+    }, [currentModelData, setCurrentModelData]);
 
     const splitManualNode = useCallback(async () => {
-        if (!manualTree || !selectedFeature || selectedThreshold === null || !selectedNodePath) return;
+        if (!currentModelData || !manualTree || !selectedFeature || selectedThreshold === null || !selectedNodePath) return;
         
         const node = getNodeByPath(manualTree, selectedNodePath);
         if (!node) return;
@@ -483,50 +462,40 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
             
             const newTree = updateNodeAtPath(manualTree, selectedNodePath, splitNode);
             
-            // Update treeData with the new tree
-            if (currentModelData) {
-                const updatedModelData = {
-                    ...currentModelData,
-                    tree: newTree,
-                };
-                setCurrentModelData(updatedModelData);
-                
-                // Automatically evaluate the tree to get updated metrics
-                try {
-
-                    const result = await evaluateManualTreeAPI({
-                        tree: newTree,
-                        dataset: null, // Uses default Iris dataset
-                    });
-                    
-                    // Update with scores and matrix
-                    setCurrentModelData({
-                        ...updatedModelData,
-                        scores: result.scores,
-                        matrix: result.matrix,
-                    });
-
-                    console.log("Show everything: ",currentModelData)
-                } catch (error) {
-                    console.error('[ManualTree] Failed to evaluate tree after split:', error);
-                    console.log("request body ",{
-                        tree: newTree,
-                        dataset: null, // Uses default Iris dataset
-                    })
-                }
-            }
+            // Update with the new tree
+            const updatedModelData = {
+                ...currentModelData,
+                tree: newTree,
+                selectedNodePath: null,
+                selectedFeature: null,
+                manualFeatureStats: null,
+                selectedThreshold: null,
+            };
             
-            setSelectedNodePath(null);
-            setSelectedFeature(null);
-            setManualFeatureStats(null);
-            setSelectedThreshold(null);
+            // Automatically evaluate the tree to get updated metrics
+            try {
+                const result = await evaluateManualTreeAPI({
+                    tree: newTree,
+                    dataset: null, // Uses default Iris dataset
+                });
+                
+                // Update with scores and matrix
+                setCurrentModelData({
+                    ...updatedModelData,
+                    scores: result.scores,
+                    matrix: result.matrix,
+                });
+            } catch (error) {
+                console.error('[ManualTree] Failed to evaluate tree after split:', error);
+                setCurrentModelData(updatedModelData);
+            }
         } catch (error) {
             console.error('Failed to split node:', error);
         }
-    }, [manualTree, selectedNodePath, selectedFeature, selectedThreshold, getNodeByPath, updateNodeAtPath, currentModelData]);
+    }, [currentModelData, manualTree, selectedNodePath, selectedFeature, selectedThreshold, getNodeByPath, updateNodeAtPath, setCurrentModelData]);
 
     const markNodeAsLeaf = useCallback(async () => {
-        if (!manualTree || !selectedNodePath) return;
+        if (!currentModelData || !manualTree || !selectedNodePath) return;
         
         const node = getNodeByPath(manualTree, selectedNodePath);
         if (!node) return;
@@ -562,39 +531,35 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
         const updatedTree = updateNodeAtPath(manualTree, selectedNodePath, updatedNode);
         console.log('[ManualTree] Updated tree:', updatedTree);
         
-        // Update treeData with the new tree
-        if (currentModelData) {
-            const updatedModelData = {
-                ...currentModelData,
-                tree: updatedTree,
-            };
-            setCurrentModelData(updatedModelData);
+        // Update with the new tree
+        const updatedModelData = {
+            ...currentModelData,
+            tree: updatedTree,
+            selectedNodePath: null,
+            selectedFeature: null,
+            manualFeatureStats: null,
+            selectedThreshold: null,
+        };
 
-            // Automatically evaluate the tree to get updated metrics
-            try {
-                // Clean tree to remove frontend-only fields like 'terminal'
-                const result = await evaluateManualTreeAPI({
-                    tree: updatedTree,
-                    dataset: null, // Uses default Iris dataset
-                });
-                
-                // Update with scores and matrix
-                setCurrentModelData({
-                    ...updatedModelData,
-                    scores: result.scores,
-                    matrix: result.matrix,
-                });
-            } catch (error) {
-                console.error('[ManualTree] Failed to evaluate tree after marking as leaf:', error);
-            }
+        // Automatically evaluate the tree to get updated metrics
+        try {
+            // Clean tree to remove frontend-only fields like 'terminal'
+            const result = await evaluateManualTreeAPI({
+                tree: updatedTree,
+                dataset: null, // Uses default Iris dataset
+            });
+            
+            // Update with scores and matrix
+            setCurrentModelData({
+                ...updatedModelData,
+                scores: result.scores,
+                matrix: result.matrix,
+            });
+        } catch (error) {
+            console.error('[ManualTree] Failed to evaluate tree after marking as leaf:', error);
+            setCurrentModelData(updatedModelData);
         }
-        
-        // Deselect the node
-        setSelectedNodePath(null);
-        setSelectedFeature(null);
-        setManualFeatureStats(null);
-        setSelectedThreshold(null);
-    }, [manualTree, selectedNodePath, getNodeByPath, updateNodeAtPath, currentModelData]);
+    }, [currentModelData, manualTree, selectedNodePath, getNodeByPath, updateNodeAtPath, setCurrentModelData]);
 
     const canSplitManualNode = useCallback(() => {
         if (!selectedNodePath) return false;
@@ -626,23 +591,21 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
         } catch (error) {
             console.error('[ManualTree] Failed to evaluate tree:', error);
         }
-    }, [currentModelData, treeMode]);
+    }, [currentModelData, treeMode, setCurrentModelData]);
 
     const resetModelData = useCallback(() => {
         console.log('[Context] Resetting model data');
         
-        // Clear state
-        setCurrentModelData(null);
-        setTreeMode(null);
-        setSelectedNodePath(null);
-        setSelectedFeature(null);
-        setSelectedThreshold(null);
-        setManualFeatureStats(null);
+        // Call base reset to clear shared data
+        baseResetModelData();
         
-        // Clear localStorage
-        localStorage.removeItem(LOCAL_STORAGE_TREE_DATA_KEY);
+        // Clear DT-specific localStorage
         localStorage.removeItem(LOCAL_STORAGE_MODE_KEY);
-    }, []);
+        
+        // Clear local state
+        setModelError(null);
+        setIsModelLoading(false);
+    }, [baseResetModelData]);
 
     // Log the complete tree structure whenever it changes
     useEffect(() => {
@@ -657,29 +620,28 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
         modelError,
         treeMode,
         currentModelData: currentModelData,
-        lastTrainedParams,
+        lastTrainedParams: lastParams,
         trainNewModel,
         clearStoredModelParams,
-        // Helper methods for prediction components
+        // Helper methods
         getFeatureNames,
         getClassNames,
-        getModelKey,
-        isModelReady,
-        getManualTreeData,
         // Manual tree building
-        manualTree,
-        selectedNodePath,
-        manualFeatureStats,
-        selectedFeature,
-        selectedThreshold,
-        initializeManualTree,
-        selectManualNode,
-        loadManualFeatureStats,
-        updateManualThreshold,
-        splitManualNode,
-        markNodeAsLeaf,
-        canSplitManualNode,
-        evaluateManualTree,
+        manualTree: {
+            tree: manualTree,
+            selectedNodePath,
+            featureStats: manualFeatureStats,
+            selectedFeature,
+            selectedThreshold,
+            initialize: initializeManualTree,
+            selectNode: selectManualNode,
+            loadFeatureStats: loadManualFeatureStats,
+            updateThreshold: updateManualThreshold,
+            splitNode: splitManualNode,
+            markAsLeaf: markNodeAsLeaf,
+            canSplit: canSplitManualNode,
+            evaluate: evaluateManualTree,
+        },
         resetModelData,
     };
 

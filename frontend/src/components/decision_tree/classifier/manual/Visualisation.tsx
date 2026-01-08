@@ -8,60 +8,50 @@ import { useCallback, useEffect } from "react";
 const Visualisation: React.FC = () => {
     const {
         manualTree,
-        selectedNodePath,
-        manualFeatureStats,
-        selectedFeature,
-        selectedThreshold,
         getFeatureNames,
         getClassNames,
-        initializeManualTree,
-        selectManualNode,
-        loadManualFeatureStats,
-        updateManualThreshold,
-        splitManualNode,
-        markNodeAsLeaf,
     } = useDecisionTree();
 
 
     useEffect(() => {
-        initializeManualTree();
+        manualTree.initialize();
     }, []);
 
     // All hooks must be called before any early returns
     useEffect(() => {
-        console.log('[ManualTree] useEffect - manualTree:', manualTree);
-        if (!manualTree) {
+        console.log('[ManualTree] useEffect - manualTree:', manualTree.tree);
+        if (!manualTree.tree) {
             console.log('[ManualTree] Initializing manual tree');
-            initializeManualTree();
+            manualTree.initialize();
         }
-    }, [manualTree, initializeManualTree]);
+    }, [manualTree]);
     
     const handleNodeClick = useCallback((path: number[]) => {
         console.log('[ManualTree] handleNodeClick called with path:', path);
-        selectManualNode(path);
-    }, [selectManualNode]);
+        manualTree.selectNode(path);
+    }, [manualTree]);
     
     const renderManualDecisionTree = useCallback((props: RenderVisualisationProps) => {
         console.log('[ManualTree] renderManualDecisionTree called');
         console.log('[ManualTree] Props:', props);
-        console.log('[ManualTree] Selected path:', selectedNodePath);
-        console.log('[ManualTree] Feature stats:', manualFeatureStats);
+        console.log('[ManualTree] Selected path:', manualTree.selectedNodePath);
+        console.log('[ManualTree] Feature stats:', manualTree.featureStats);
         
         // Add manual-specific props to the render props
         const enhancedProps = {
             ...props.props,
-            selectedNodePath,
+            selectedNodePath: manualTree.selectedNodePath,
             featureNames: getFeatureNames() || [],
-            featureStats: manualFeatureStats,
-            selectedFeature,
-            selectedThreshold,
+            featureStats: manualTree.featureStats,
+            selectedFeature: manualTree.selectedFeature,
+            selectedThreshold: manualTree.selectedThreshold,
             manualCallbacks: {
                 onNodeClick: handleNodeClick,
-                onFeatureSelect: loadManualFeatureStats,
-                onThresholdChange: updateManualThreshold,
-                onSplit: splitManualNode,
-                onCancel: () => selectManualNode(null),
-                onMarkAsLeaf: markNodeAsLeaf,
+                onFeatureSelect: manualTree.loadFeatureStats,
+                onThresholdChange: manualTree.updateThreshold,
+                onSplit: manualTree.splitNode,
+                onCancel: () => manualTree.selectNode(null),
+                onMarkAsLeaf: manualTree.markAsLeaf,
             },
         };
         
@@ -72,9 +62,7 @@ const Visualisation: React.FC = () => {
             props: enhancedProps,
             mode: "manual" 
         });
-    }, [selectedNodePath, manualFeatureStats, selectedFeature, selectedThreshold, 
-        getFeatureNames, loadManualFeatureStats, updateManualThreshold, splitManualNode, 
-        selectManualNode, handleNodeClick, markNodeAsLeaf]);
+    }, [manualTree, getFeatureNames, handleNodeClick]);
     
     // Define transformTreeData before early return (hooks must be called in same order)
     const transformTreeData = useCallback((node: TreeNode, depth = 0): any => {
@@ -105,15 +93,15 @@ const Visualisation: React.FC = () => {
     }, []);
     
     // Early return after all hooks
-    console.log('[ManualTree] Render - manualTree:', manualTree);
-    if (!manualTree) {
+    console.log('[ManualTree] Render - manualTree:', manualTree.tree);
+    if (!manualTree.tree) {
         console.log('[ManualTree] No tree yet, returning empty');
         return <></>;
     }
     
     return (
         <BaseDecisionTreeVisualization
-            data={{ tree: manualTree, classes: getClassNames() || [] }}
+            data={{ tree: manualTree.tree, classes: getClassNames() || [] }}
             transformTreeData={transformTreeData}
             renderFunction={renderManualDecisionTree}
             disableZoom={true}
