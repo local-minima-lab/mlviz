@@ -36,7 +36,7 @@ jobs:
               run: |
                   gcloud builds submit \
                     --config=cloudbuild.yaml \
-                    --substitutions=_VITE_API_BASE_URL=${{ secrets.BACKEND_URL }}
+                    --substitutions=_VITE_API_BASE_URL=${{ secrets.BACKEND_URL }},_BACKEND_URL=${{ secrets.BACKEND_URL }}
 
             - name: Deploy to Cloud Run
               working-directory: ./frontend
@@ -47,7 +47,8 @@ jobs:
                     --allow-unauthenticated \
                     --platform managed \
                     --port 8080 \
-                    --memory 512Mi
+                    --memory 512Mi \
+                    --set-env-vars BACKEND_URL=${{ secrets.BACKEND_URL }}
 
             - name: Get service URL
               id: get-url

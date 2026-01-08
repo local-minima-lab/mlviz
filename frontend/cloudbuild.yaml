@@ -8,6 +8,8 @@ steps:
           - "build"
           - "--build-arg"
           - "VITE_API_BASE_URL=${_VITE_API_BASE_URL}"
+          - "--build-arg"
+          - "BACKEND_URL=${_BACKEND_URL}"
           - "-t"
           - "gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$BUILD_ID"
           - "-t"
@@ -29,6 +31,7 @@ steps:
 substitutions:
     _SERVICE_NAME: "frontend"
     _VITE_API_BASE_URL: "https://backend-124236563415.asia-southeast1.run.app"
+    _BACKEND_URL: "https://backend-124236563415.asia-southeast1.run.app"
 
 # Output the built image
 images:
