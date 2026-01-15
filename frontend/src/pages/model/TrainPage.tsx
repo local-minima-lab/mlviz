@@ -1,4 +1,3 @@
-import { getParameters } from "@/api/dt";
 import ClassifierResults from "@/components/ClassifierResults";
 import ModelOptionsForm from "@/components/input/ModelOptionsForm";
 import { TrainComponent } from "@/components/TrainComponent";
@@ -17,6 +16,7 @@ const TrainPage: React.FC<TrainPageProps> = ({ model_name, parameters }) => {
         currentModelData,
         lastTrainedParams,
         trainNewModel,
+        getParameters,
     } = useModel();
 
     const [options, setOptions] = useState<ModelOption[]>([]);

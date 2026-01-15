@@ -3,6 +3,7 @@
  * Provides shared data storage, persistence, and reset functionality for all model contexts
  */
 
+import type { ParameterInfo } from "@/api/types";
 import React, {
     createContext,
     useCallback,
@@ -25,6 +26,7 @@ export interface BaseModelData {
 interface BaseModelConfig {
     localStorageKey: string;
     paramsStorageKey: string;
+    getParameters: () => Promise<ParameterInfo[]>;
 }
 
 /**
@@ -37,6 +39,7 @@ interface BaseModelContextType<TModelData extends BaseModelData> {
     setLastParams: (params: Record<string, any>) => void;
     resetModelData: () => void;
     getLastParams: () => Record<string, any>;
+    getParameters: () => Promise<ParameterInfo[]>;
 }
 
 /**
@@ -130,6 +133,7 @@ export function createBaseModelContext<TModelData extends BaseModelData>(
             setLastParams,
             resetModelData,
             getLastParams,
+            getParameters: config.getParameters,
         };
 
         return (

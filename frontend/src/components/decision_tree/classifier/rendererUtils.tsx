@@ -554,6 +554,250 @@ export const renderExpandableLeafNode = (
     
 };
 
+/**
+ * Render information gain line graph that progressively reveals as threshold changes
+ */
+const renderInformationGainGraph = (
+    svgGroup: d3.Selection<SVGGElement, unknown, null, undefined>,
+    thresholds: Array<{ threshold: number; information_gain: number }>,
+    currentThreshold: number,
+    featureRange: [number, number],
+    width: number,
+    height: number
+): {
+    updateGraph: (newThreshold: number) => void;
+} => {
+    const margin = { top: 10, right: 10, bottom: 25, left: 45 };
+    const graphWidth = width - margin.left - margin.right;
+    const graphHeight = height - margin.top - margin.bottom;
+    
+    // Create main group with margins
+    const g = svgGroup
+        .append('g')
+        .attr('transform', `translate(${margin.left}, ${margin.top})`);
+    
+    // Set up scales
+    const xScale = d3.scaleLinear()
+        .domain(featureRange)
+        .range([0, graphWidth]);
+    
+    const maxGain = d3.max(thresholds, d => d.information_gain) || 1;
+    const yScale = d3.scaleLinear()
+        .domain([0, maxGain * 1.1]) // Add 10% padding
+        .range([graphHeight, 0]);
+    
+    // Add background
+    g.append('rect')
+        .attr('width', graphWidth)
+        .attr('height', graphHeight)
+        .attr('fill', '#f9fafb')
+        .attr('stroke', '#e5e7eb')
+        .attr('stroke-width', 1);
+    
+    // Add grid lines
+    const yTicks = yScale.ticks(4);
+    g.selectAll('.grid-line')
+        .data(yTicks)
+        .enter()
+        .append('line')
+        .attr('class', 'grid-line')
+        .attr('x1', 0)
+        .attr('x2', graphWidth)
+        .attr('y1', d => yScale(d))
+        .attr('y2', d => yScale(d))
+        .attr('stroke', '#e5e7eb')
+        .attr('stroke-width', 1)
+        .attr('stroke-dasharray', '2,2');
+    
+    // Add axes
+    const xAxis = d3.axisBottom(xScale).ticks(5);
+    const yAxis = d3.axisLeft(yScale).ticks(4);
+    
+    g.append('g')
+        .attr('transform', `translate(0, ${graphHeight})`)
+        .call(xAxis)
+        .style('font-size', '10px')
+        .style('color', '#6b7280');
+    
+    g.append('g')
+        .call(yAxis)
+        .style('font-size', '10px')
+        .style('color', '#6b7280');
+    
+    // Add axis labels
+    g.append('text')
+        .attr('x', graphWidth / 2)
+        .attr('y', graphHeight + 22)
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '10px')
+        .attr('fill', '#6b7280')
+        .text('Threshold');
+    
+    g.append('text')
+        .attr('transform', 'rotate(-90)')
+        .attr('x', -graphHeight / 2)
+        .attr('y', -35)
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '10px')
+        .attr('fill', '#6b7280')
+        .text('Information Gain');
+    
+    // Create line generator
+    const lineGenerator = d3.line<{ threshold: number; information_gain: number }>()
+        .x(d => xScale(d.threshold))
+        .y(d => yScale(d.information_gain))
+        .curve(d3.curveMonotoneX); // Smooth curve
+    
+    // Track explored thresholds (indices into the thresholds array)
+    const exploredIndices = new Set<number>();
+    
+    // Find the index of the threshold closest to a given value
+    const findClosestThresholdIndex = (targetThreshold: number): number => {
+        return thresholds.reduce((closestIdx, curr, idx) => {
+            const currentDist = Math.abs(curr.threshold - targetThreshold);
+            const closestDist = Math.abs(thresholds[closestIdx].threshold - targetThreshold);
+            return currentDist < closestDist ? idx : closestIdx;
+        }, 0);
+    };
+    
+    // Get all explored points (sorted by threshold value for line drawing)
+    const getExploredPoints = () => {
+        const indices = Array.from(exploredIndices).sort((a, b) => 
+            thresholds[a].threshold - thresholds[b].threshold
+        );
+        return indices.map(idx => thresholds[idx]);
+    };
+    
+    // Find best threshold among explored points
+    const getBestExploredThreshold = () => {
+        if (exploredIndices.size === 0) return null;
+        let bestIdx = Array.from(exploredIndices)[0];
+        for (const idx of exploredIndices) {
+            if (thresholds[idx].information_gain > thresholds[bestIdx].information_gain) {
+                bestIdx = idx;
+            }
+        }
+        return thresholds[bestIdx];
+    };
+    
+    // Add best threshold marker (vertical dashed line) - will be updated dynamically
+    const bestThresholdLine = g.append('line')
+        .attr('y1', 0)
+        .attr('y2', graphHeight)
+        .attr('stroke', '#10b981')
+        .attr('stroke-width', 1.5)
+        .attr('stroke-dasharray', '4,4')
+        .attr('opacity', 0);
+    
+    // Add best threshold label
+    const bestThresholdLabel = g.append('text')
+        .attr('y', -3)
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '9px')
+        .attr('fill', '#10b981')
+        .attr('font-weight', 'bold')
+        .text('Best')
+        .attr('opacity', 0);
+    
+    // Add the line path (will be updated)
+    const linePath = g.append('path')
+        .attr('class', 'info-gain-line')
+        .attr('fill', 'none')
+        .attr('stroke', '#4f46e5')
+        .attr('stroke-width', 2.5);
+    
+    // Add explored points as dots
+    const exploredDotsGroup = g.append('g').attr('class', 'explored-dots');
+    
+    // Add current threshold indicator (vertical line)
+    const currentLine = g.append('line')
+        .attr('class', 'current-threshold-line')
+        .attr('y1', 0)
+        .attr('y2', graphHeight)
+        .attr('stroke', '#4f46e5')
+        .attr('stroke-width', 2)
+        .attr('opacity', 0.5);
+    
+    // Add current point indicator (circle)
+    const currentPoint = g.append('circle')
+        .attr('class', 'current-point')
+        .attr('r', 5)
+        .attr('fill', '#4f46e5')
+        .attr('stroke', 'white')
+        .attr('stroke-width', 2);
+    
+    // Add current IG value label
+    const currentLabel = g.append('text')
+        .attr('class', 'current-label')
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '10px')
+        .attr('font-weight', 'bold')
+        .attr('fill', '#4f46e5');
+    
+    // Update function
+    const updateGraph = (newThreshold: number) => {
+        // Mark current threshold as explored
+        const currentIdx = findClosestThresholdIndex(newThreshold);
+        exploredIndices.add(currentIdx);
+        
+        const exploredPoints = getExploredPoints();
+        const currentData = thresholds[currentIdx];
+        
+        // Update line path with all explored points
+        if (exploredPoints.length > 0) {
+            linePath
+                .datum(exploredPoints)
+                .attr('d', lineGenerator);
+        }
+        
+        // Update explored dots
+        exploredDotsGroup
+            .selectAll('circle')
+            .data(exploredPoints)
+            .join('circle')
+            .attr('cx', d => xScale(d.threshold))
+            .attr('cy', d => yScale(d.information_gain))
+            .attr('r', 2.5)
+            .attr('fill', '#4f46e5')
+            .attr('opacity', 0.6);
+        
+        // Update current threshold line
+        currentLine
+            .attr('x1', xScale(newThreshold))
+            .attr('x2', xScale(newThreshold));
+        
+        // Update current point
+        currentPoint
+            .attr('cx', xScale(currentData.threshold))
+            .attr('cy', yScale(currentData.information_gain));
+        
+        // Update current label
+        const labelY = yScale(currentData.information_gain) - 10;
+        currentLabel
+            .attr('x', xScale(currentData.threshold))
+            .attr('y', labelY < 10 ? yScale(currentData.information_gain) + 20 : labelY)
+            .text(currentData.information_gain.toFixed(4));
+        
+        // Update best threshold marker based on explored points
+        const bestExplored = getBestExploredThreshold();
+        if (bestExplored) {
+            const bestX = xScale(bestExplored.threshold);
+            bestThresholdLine
+                .attr('x1', bestX)
+                .attr('x2', bestX)
+                .attr('opacity', 0.6);
+            bestThresholdLabel
+                .attr('x', bestX)
+                .attr('opacity', 1);
+        }
+    };
+    
+    // Initial render
+    updateGraph(currentThreshold);
+    
+    return { updateGraph };
+};
+
 export const renderInlineEditor = (
     container: d3.Selection<SVGGElement, unknown, null, undefined>,
     selectedNode: any,
@@ -654,8 +898,9 @@ export const renderInlineEditor = (
             colorScheme,
         });
         
-        // Add threshold line
-        const currentThreshold = selectedThreshold || featureStats.best_threshold;
+        // Add threshold line - start at median threshold to encourage exploration
+        const medianThreshold = selectedThreshold || featureStats.thresholds[Math.floor(featureStats.thresholds.length / 2)].threshold;
+        const currentThreshold = medianThreshold;
         const featureRange = featureStats.feature_range;
         const thresholdX = ((currentThreshold - featureRange[0]) / (featureRange[1] - featureRange[0])) * histWidth;
         
@@ -680,6 +925,40 @@ export const renderInlineEditor = (
             .attr('fill', '#4f46e5')
             .attr('font-weight', 'bold')
             .text(currentThreshold.toFixed(2));
+        
+        // Information Gain Graph
+        const graphHeight = 100;
+        const graphContainer = div
+            .append('div')
+            .style('margin-bottom', '12px')
+            .style('margin-top', '16px');
+        
+        // Add graph title
+        graphContainer
+            .append('div')
+            .style('font-size', '12px')
+            .style('font-weight', '600')
+            .style('color', '#374151')
+            .style('margin-bottom', '8px')
+            .text('Information Gain by Threshold');
+        
+        const graphSvg = graphContainer
+            .append('svg')
+            .attr('width', '100%')
+            .attr('height', graphHeight)
+            .style('display', 'block');
+        
+        const graphGroup = graphSvg.append('g');
+        
+        // Render the information gain line graph
+        const { updateGraph } = renderInformationGainGraph(
+            graphGroup,
+            featureStats.thresholds,
+            currentThreshold,
+            featureStats.feature_range as [number, number],
+            histWidth,
+            graphHeight
+        );
         
         // Threshold slider
         const sliderContainer = div
@@ -709,7 +988,7 @@ export const renderInlineEditor = (
             .attr('min', featureStats.feature_range[0])
             .attr('max', featureStats.feature_range[1])
             .attr('step', (featureStats.feature_range[1] - featureStats.feature_range[0]) / 100)
-            .attr('value', selectedThreshold || featureStats.best_threshold)
+            .attr('value', medianThreshold)
             .style('flex', '1')
             .style('min-width', '0');
         
@@ -721,11 +1000,11 @@ export const renderInlineEditor = (
             .style('color', '#1f2937')
             .style('min-width', '60px')
             .style('text-align', 'right')
-            .text((selectedThreshold || featureStats.best_threshold).toFixed(3));
+            .text(medianThreshold.toFixed(3));
 
         
         // Metrics - find information gain for current threshold
-        const initialThreshold = selectedThreshold || featureStats.best_threshold;
+        const initialThreshold = medianThreshold;
         
         // Find the threshold stats for the current threshold value
         let currentInformationGain = 0;
@@ -769,6 +1048,9 @@ export const renderInlineEditor = (
             
             // Update threshold value display
             thresholdValueDisplay.text(threshold.toFixed(3));
+            
+            // Update information gain graph
+            updateGraph(threshold);
         };
         
         // Helper function to find nearest valid threshold

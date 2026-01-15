@@ -104,7 +104,7 @@ const Visualisation: React.FC = () => {
             data={{ tree: manualTree.tree, classes: getClassNames() || [] }}
             transformTreeData={transformTreeData}
             renderFunction={renderManualDecisionTree}
-            clickableSelector=".node"
+            clickableSelector=".node, .inline-editor"
         />
     );
 };

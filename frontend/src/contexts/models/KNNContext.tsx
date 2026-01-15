@@ -12,6 +12,7 @@ import {
     type KNNVisualisationRequest,
     type KNNVisualisationResponse,
 } from "@/api/knn";
+import type { ParameterInfo } from "@/api/types";
 import React, {
     createContext,
     useCallback,
@@ -40,6 +41,11 @@ interface KNNModelData extends BaseModelData {
 const { Provider: BaseProvider, useBaseModel } = createBaseModelContext<KNNModelData>({
     localStorageKey: "knn_model_data",
     paramsStorageKey: "knn_params",
+    // TODO: Replace with actual getParameters from @/api/knn when backend endpoint is ready
+    getParameters: async () => {
+        console.warn('[KNNContext] getParameters API not yet implemented');
+        return [];
+    },
 });
 
 // ============================================================================
@@ -74,6 +80,7 @@ interface KNNContextType {
     getClassNames: () => string[] | null;
     getK: () => number | null;
     isVisualizationReady: () => boolean;
+    getParameters: () => Promise<ParameterInfo[]>;
     
     // Reset method
     resetModelData: () => void;
@@ -101,7 +108,7 @@ export const KNNProvider: React.FC<KNNProviderProps> = ({ children }) => {
 
 const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
     const baseContext = useBaseModel();
-    const { currentModelData, lastParams, setCurrentModelData, setLastParams, resetModelData: baseResetModelData } = baseContext;
+    const { currentModelData, lastParams, setCurrentModelData, setLastParams, resetModelData: baseResetModelData, getParameters } = baseContext;
 
     // Extract values from currentModelData or use defaults
     const visualizationData = currentModelData?.visualizationData || null;
@@ -373,6 +380,7 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
         getClassNames,
         getK,
         isVisualizationReady,
+        getParameters,
         
         // Reset method
         resetModelData,
