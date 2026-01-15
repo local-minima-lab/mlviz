@@ -8,6 +8,7 @@ import {
     calculateFeatureStats,
     calculateNodeStats,
     evaluateManualTree as evaluateManualTreeAPI,
+    getParameters as getParametersAPI,
     trainModel as initiateTrainModel,
     type DecisionTreeResponse,
 } from "@/api/dt";
@@ -60,6 +61,7 @@ interface DecisionTreeModelData extends BaseModelData {
 const { Provider: BaseProvider, useBaseModel } = createBaseModelContext<DecisionTreeModelData>({
     localStorageKey: "dt_tree_data",
     paramsStorageKey: "dt_params",
+    getParameters: getParametersAPI,
 });
 
 // Manual tree building interface
@@ -90,6 +92,7 @@ interface DecisionTreeContextType {
     // Helper methods
     getFeatureNames: () => string[] | null;
     getClassNames: () => string[] | null;
+    getParameters: () => Promise<import("@/api/types").ParameterInfo[]>;
     // Manual tree building
     manualTree: ManualTreeInterface;
     resetModelData: () => void;
@@ -124,7 +127,7 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
 
 const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
     const baseContext = useBaseModel();
-    const { currentModelData, lastParams, setCurrentModelData, setLastParams, resetModelData: baseResetModelData } = baseContext;
+    const { currentModelData, lastParams, setCurrentModelData, setLastParams, resetModelData: baseResetModelData, getParameters } = baseContext;
 
     const [isModelLoading, setIsModelLoading] = useState<boolean>(false);
     const [modelError, setModelError] = useState<string | null>(null);
@@ -635,6 +638,7 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
         // Helper methods
         getFeatureNames,
         getClassNames,
+        getParameters,
         // Manual tree building
         manualTree: {
             tree: manualTree,

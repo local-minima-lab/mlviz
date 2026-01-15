@@ -1,6 +1,7 @@
 import ManualPage from "@/pages/model/ManualPage";
 import PredictPage from "@/pages/model/PredictPage";
 import TrainPage from "@/pages/model/TrainPage";
+import VizOnlyPage from "@/pages/model/VizOnlyPage";
 import type { ModelPage as ModelPageType } from "@/types/story";
 
 type ModelPageProps = Omit<
@@ -30,6 +31,14 @@ const ModelPage: React.FC<ModelPageProps> = ({
     } else if (component_type == "manual") {
         return (
             <ManualPage
+                model_name={model_name}
+                parameters={parameters}
+            />
+        );
+    }
+    else if (component_type == "viz_only") {
+        return (
+            <VizOnlyPage
                 model_name={model_name}
                 parameters={parameters}
             />
