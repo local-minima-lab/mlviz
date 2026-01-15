@@ -1,0 +1,10 @@
+[project]
+name = "story-builder-streamlit"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.12.5",
+    "streamlit>=1.52.2",
+]
