@@ -72,5 +72,6 @@ Thumbs.db
 # frontend/src/types/api.ts
 
 # Temporary
-/config/
+/config/*
+!/config/story_builder_streamlit/
 .github/SERVICE_NAMES.md

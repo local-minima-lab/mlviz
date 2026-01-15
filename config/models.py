@@ -80,15 +80,17 @@ class BasePage(BaseModel):
     page_type: Literal["static", "dynamic"]
     parameters: dict[str, Any] = {}
 
+class StaticParameters(BaseModel):
+    text: Optional[str] = None
+    link: Optional[str] = None
 
 class StaticPage(BasePage):
     page_type: Literal["static"] = "static"
-
+    parameters: StaticParameters
 
 class DynamicPageAbstract(BasePage):
     page_type: Literal["dynamic"] = "dynamic"
     dynamic_type: Literal["model", "none"]
-
 
 class DynamicPage(DynamicPageAbstract):
     dynamic_type: Literal["none"] = "none"
@@ -96,7 +98,7 @@ class DynamicPage(DynamicPageAbstract):
 
 class ModelPage(DynamicPageAbstract):
     dynamic_type: Literal["model"] = "model"
-    model_name: str
+    model_name: Literal["decision_tree", "knn"]
     component_type: Literal["train", "predict", "manual"]
 
 
