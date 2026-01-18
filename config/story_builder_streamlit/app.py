@@ -34,6 +34,7 @@ Use the sidebar to navigate between different sections:
 
 - **📄 View Config** - See your current configuration
 - **➕ Add Story** - Create new stories with nodes and edges
+- **✏️ Edit Story** - Modify existing stories
 - **➕ Add Page** - Create static, model, or dynamic pages
 - **💾 Export** - Export your configuration to JSON
 - **📥 Import JSON** - Import configuration from JSON text

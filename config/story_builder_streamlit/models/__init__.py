@@ -45,6 +45,7 @@ from .knn_page import (
     KNNVizParameters,
     KNNPage,
     KNNVizPage,
+    KNNTrainPage,
     KNNPageUnion,
 )
 
@@ -77,6 +78,7 @@ model_pages = {
     "Decision Tree: Train": DTreeTrainPage,
     "Decision Tree: Predict": DTreePredictPage,
     "KNN: Viz": KNNVizPage,
+    "KNN: Train": KNNTrainPage
 }
 
 __all__ = [
