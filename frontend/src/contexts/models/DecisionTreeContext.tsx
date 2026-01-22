@@ -393,7 +393,7 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
                 ...currentModelData,
                 selectedFeature: feature,
                 manualFeatureStats: stats,
-                selectedThreshold: stats.best_threshold,
+                selectedThreshold: null, // Let renderer default to minimum threshold
             });
         } catch (error) {
             console.error('Failed to load feature stats:', error);

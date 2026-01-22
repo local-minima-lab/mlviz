@@ -27,6 +27,7 @@ export interface ScatterRenderOptions {
     showGrid?: boolean;
     showLegend?: boolean;
     showAxes?: boolean;
+    useNiceScales?: boolean;  // Whether to round scale domains to nice values (default: true)
     onPointClick?: (index: number, point: number[]) => void;
     onPointHover?: (index: number | null) => void;
 }

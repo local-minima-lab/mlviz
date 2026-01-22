@@ -218,13 +218,90 @@ export const useZoomControls = ({
                     ? parseFloat(transformMatch[2])
                     : 0;
 
-                // Apply zoom transform on top of initial transform
-                contentGroup.attr(
-                    "transform",
-                    `translate(${baseX + event.transform.x}, ${
-                        baseY + event.transform.y
-                    }) scale(${event.transform.k})`
-                );
+                // Apply zoom transform only to zoom-content group, not axes
+                // This allows axes to stay fixed while content zooms
+                const zoomContentGroup = contentGroup.select(".zoom-content");
+                if (!zoomContentGroup.empty()) {
+                    // Apply zoom to content group only
+                    zoomContentGroup.attr(
+                        "transform",
+                        `translate(${event.transform.x}, ${event.transform.y}) scale(${event.transform.k})`
+                    );
+
+                    // Update axes with rescaled domains
+                    const axesGroup = contentGroup.select(".axes-fixed");
+                    if (!axesGroup.empty()) {
+                        // Get original scales from data attributes (stored during render)
+                        const xAxisGroup = axesGroup.select(".x-axis");
+                        const yAxisGroup = axesGroup.select(".y-axis");
+
+                        if (!xAxisGroup.empty() && !yAxisGroup.empty()) {
+                            // Get stored scale info
+                            const xScaleData = (xAxisGroup.node() as any).__xScale__;
+                            const yScaleData = (yAxisGroup.node() as any).__yScale__;
+
+                            if (xScaleData && yScaleData) {
+                                // Rescale the axes
+                                const newXScale = event.transform.rescaleX(xScaleData);
+                                const newYScale = event.transform.rescaleY(yScaleData);
+
+                                // Update the axes
+                                xAxisGroup.call(d3.axisBottom(newXScale) as any);
+                                yAxisGroup.call(d3.axisLeft(newYScale) as any);
+
+                                // Update the grid to match rescaled axes
+                                const gridGroup = axesGroup.select(".grid");
+                                if (!gridGroup.empty()) {
+                                    // Get grid dimensions from stored data
+                                    const gridData = (gridGroup.node() as any).__gridDimensions__;
+                                    if (gridData) {
+                                        const { width, height } = gridData;
+
+                                        // Update X-axis grid
+                                        const gridX = gridGroup.select(".grid-x");
+                                        if (!gridX.empty()) {
+                                            gridX.call(
+                                                d3
+                                                    .axisBottom(newXScale)
+                                                    .tickSize(-height)
+                                                    .tickFormat(() => "") as any
+                                            );
+                                            // Preserve grid styling
+                                            gridX.select(".domain").remove();
+                                            gridX.selectAll(".tick line")
+                                                .attr("stroke", "#e5e7eb")
+                                                .attr("stroke-opacity", 0.7);
+                                        }
+
+                                        // Update Y-axis grid
+                                        const gridY = gridGroup.select(".grid-y");
+                                        if (!gridY.empty()) {
+                                            gridY.call(
+                                                d3
+                                                    .axisLeft(newYScale)
+                                                    .tickSize(-width)
+                                                    .tickFormat(() => "") as any
+                                            );
+                                            // Preserve grid styling
+                                            gridY.select(".domain").remove();
+                                            gridY.selectAll(".tick line")
+                                                .attr("stroke", "#e5e7eb")
+                                                .attr("stroke-opacity", 0.7);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Fallback: apply to entire contentGroup if no .zoom-content found
+                    contentGroup.attr(
+                        "transform",
+                        `translate(${baseX + event.transform.x}, ${
+                            baseY + event.transform.y
+                        }) scale(${event.transform.k})`
+                    );
+                }
 
                 // Notify external handlers
                 onZoomChange?.(event.transform);

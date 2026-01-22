@@ -1,27 +1,73 @@
 /**
  * KNN Training Visualization
  * Displays the training dataset with decision boundaries
- * Similar to DecisionTree training mode but for KNN
+ * Integrates with KNN context to load and display visualization data
  */
 
 import { renderKNNTraining } from "@/components/knn/classifier/KNNRenderer";
 import type { KNNVisualizationData } from "@/components/knn/classifier/types";
 import BaseVisualisation from "@/components/visualisation/BaseVisualisation";
 import type { VisualisationRenderContext } from "@/components/visualisation/types";
-import type { components } from "@/types/api";
+import { useKNN } from "@/contexts/models/KNNContext";
 import * as d3 from "d3";
-import { useCallback, useMemo } from "react";
-
-type KNNVisualisationResponse =
-    components["schemas"]["KNNVisualisationResponse"];
+import { useCallback, useEffect, useMemo } from "react";
 
 interface VisualisationProps {
-    data?: KNNVisualisationResponse;
+    data?: any; // Optional data prop for compatibility with component registry
 }
 
-const Visualisation: React.FC<VisualisationProps> = ({ data: knnData }) => {
-    if (!knnData) return <></>;
+const Visualisation: React.FC<VisualisationProps> = () => {
+    const {
+        visualizationData: knnData,
+        isVisualizationLoading,
+        visualizationError,
+        loadVisualization,
+        lastVisualizationParams,
+    } = useKNN();
 
+    // Auto-load visualization on mount if we have stored params
+    useEffect(() => {
+        if (!knnData && !isVisualizationLoading && Object.keys(lastVisualizationParams).length > 0) {
+            loadVisualization(lastVisualizationParams);
+        }
+    }, []); // Only run on mount
+
+    // Show loading state
+    if (isVisualizationLoading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading visualization...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show error state
+    if (visualizationError) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-center p-8">
+                    <p className="text-destructive mb-2">Error loading visualization</p>
+                    <p className="text-sm text-muted-foreground">{visualizationError}</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show empty state
+    if (!knnData) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-center p-8">
+                    <p className="text-muted-foreground">
+                        No visualization data available. Please configure and load a dataset.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     const dimensions = knnData.visualisation_feature_indices?.length || 0;
 
@@ -59,15 +105,12 @@ const Visualisation: React.FC<VisualisationProps> = ({ data: knnData }) => {
     );
 
     // Calculate content bounds for zoom restrictions
-    // Use decision boundary bounds if available, otherwise use training data bounds
     const contentBounds = useMemo(() => {
         if (!visualizationData.decisionBoundary) return undefined;
 
-        // Get all mesh points to calculate bounds
         const meshPoints = visualizationData.decisionBoundary.meshPoints;
         if (meshPoints.length === 0) return undefined;
 
-        // Calculate min/max for each dimension
         const xValues = meshPoints.map(p => p[0]);
         const yValues = meshPoints.map(p => p[1]);
 
@@ -76,7 +119,6 @@ const Visualisation: React.FC<VisualisationProps> = ({ data: knnData }) => {
         const yMin = Math.min(...yValues);
         const yMax = Math.max(...yValues);
 
-        // Return bounds in the format expected by zoom controls
         return {
             width: xMax - xMin,
             height: yMax - yMin,
@@ -110,11 +152,11 @@ const Visualisation: React.FC<VisualisationProps> = ({ data: knnData }) => {
             }}
             capabilities={{
                 zoomable: {
-                    scaleExtent: [1.0, 5],  // Min zoom 1.0 = can't zoom out beyond initial view
+                    scaleExtent: [1.0, 5],
                     enableReset: true,
                     enablePan: true,
                     panMargin: 50,
-                    contentBounds: contentBounds,  // Restrict panning to decision boundary area
+                    contentBounds: contentBounds,
                 },
             }}
             controlsConfig={{

@@ -1,4 +1,5 @@
 import DecisionTreePredictVisualization from "@/components/decision_tree/classifier/prediction/Visualisation";
+import KNNPredictVisualization from "@/components/knn/classifier/prediction/Visualisation";
 import React from "react";
 interface ComponentRegistryProps {
     componentName: string;
@@ -8,6 +9,7 @@ interface ComponentRegistryProps {
 
 const componentMap: Record<string, React.ComponentType<any>> = {
     decision_tree: DecisionTreePredictVisualization,
+    knn: KNNPredictVisualization,
 } as const;
 
 export const PredictComponent: React.FC<ComponentRegistryProps> = ({

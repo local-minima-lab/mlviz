@@ -15,9 +15,7 @@ import {
 } from "@/components/plots/utils/dataTransformers";
 import {
     renderScatter1D,
-    renderScatter2D,
-    renderScatter3D,
-    type Scatter3DRotation,
+    renderScatter2D
 } from "@/components/plots/utils/scatterRenderers";
 import {
     calculateInterpolationFactor,
@@ -66,7 +64,8 @@ export function renderKNNTraining({
 
     // Transform data to plot points
     const plotPoints = createPlotPoints(plotData, config);
-    const bounds = calculateCombinedBounds(plotData, decisionBoundary, 0.1);
+    // Use 0 padding when decision boundary exists (it already has 10% margin from backend)
+    const bounds = calculateCombinedBounds(plotData, decisionBoundary, decisionBoundary ? 0 : 0.1);
 
     // Render options
     const renderOptions = {
@@ -78,6 +77,7 @@ export function renderKNNTraining({
         showGrid: true,
         showLegend: true,
         showAxes: true,
+        useNiceScales: !decisionBoundary,  // Disable nice scales when decision boundary exists to avoid whitespace
     };
 
     // Render appropriate scatter plot based on dimensions
@@ -104,25 +104,9 @@ export function renderKNNTraining({
                 renderOptions
             );
             break;
-        case 3: {
-            // Get rotation from props, or use default
-            const rotation: Scatter3DRotation = props.rotation3D || {
-                alpha: 0.35,
-                beta: 0.25,
-            };
-            renderScatter3D(
-                container,
-                plotPoints,
-                bounds,
-                data.featureNames,
-                config,
-                decisionBoundary,
-                rotation,
-                renderOptions
-            );
-            break;
-        }
     }
+
+
 
     // Add custom tooltips to all training points
     addTrainingPointTooltips(container, data, plotPoints);

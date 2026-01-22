@@ -51,6 +51,7 @@ export function renderScatter2D(
         showGrid = true,
         showLegend = true,
         showAxes = true,
+        useNiceScales = true,  // Default to true for backward compatibility
         onPointClick,
         onPointHover,
     } = options;
@@ -73,14 +74,22 @@ export function renderScatter2D(
     const xScale = d3
         .scaleLinear()
         .domain([bounds.min[0], bounds.max[0]])
-        .range([0, innerWidth])
-        .nice();
+        .range([0, innerWidth]);
+    
+    // Only apply .nice() if useNiceScales is true
+    if (useNiceScales) {
+        xScale.nice();
+    }
 
     const yScale = d3
         .scaleLinear()
         .domain([bounds.min[1], bounds.max[1]])
-        .range([innerHeight, 0])
-        .nice();
+        .range([innerHeight, 0]);
+    
+    // Only apply .nice() if useNiceScales is true
+    if (useNiceScales) {
+        yScale.nice();
+    }
 
     console.log("[scatter2D] Scale info:", {
         xDomain: xScale.domain(),
@@ -99,10 +108,15 @@ export function renderScatter2D(
     // Create color scale
     const colorScale = createScatterColorScale(config);
 
-    // Render decision boundary if provided
+    // Create separate groups for axes (fixed) and content (zoomable)
+    // Axes group created FIRST so it renders below content
+    const axesGroup = container.append("g").attr("class", "axes-fixed");
+    const contentGroup = container.append("g").attr("class", "zoom-content");
+
+    // Render decision boundary if provided (in content group - zoomable)
     if (decisionBoundary && decisionBoundary.dimensions === 2) {
         renderDecisionBoundary2D(
-            container,
+            contentGroup,
             decisionBoundary,
             xScale,
             yScale,
@@ -110,26 +124,9 @@ export function renderScatter2D(
         );
     }
 
-    // Render grid
-    if (showGrid) {
-        renderGrid2D(container, xScale, yScale, innerWidth, innerHeight);
-    }
-
-    // Render axes
-    if (showAxes) {
-        renderAxes2D(
-            container,
-            xScale,
-            yScale,
-            featureNames,
-            innerWidth,
-            innerHeight
-        );
-    }
-
-    // Render data points
+    // Render data points (in content group - zoomable)
     renderDataPoints2D(
-        container,
+        contentGroup,
         plotPoints,
         xScale,
         yScale,
@@ -140,12 +137,37 @@ export function renderScatter2D(
         onPointHover
     );
 
-    // Render legend
-    if (showLegend) {
-        renderLegend2D(container, config, innerWidth);
+    // Render grid (in axes group - fixed, updates with zoom)
+    if (showGrid) {
+        renderGrid2D(axesGroup, xScale, yScale, innerWidth, innerHeight);
     }
 
-    return { xScale, yScale, colorScale };
+    // Render axes (in axes group - fixed, not zoomable)
+    if (showAxes) {
+        renderAxes2D(
+            axesGroup,
+            xScale,
+            yScale,
+            featureNames,
+            innerWidth,
+            innerHeight
+        );
+    }
+
+    // Render legend (in axes group - fixed)
+    if (showLegend) {
+        renderLegend2D(axesGroup, config, innerWidth);
+    }
+
+    // Return scales, groups, and bounds for zoom handling
+    return { 
+        xScale, 
+        yScale, 
+        colorScale, 
+        contentGroup, 
+        axesGroup,
+        bounds: { innerWidth, innerHeight }
+    };
 }
 
 // ============================================================================
@@ -244,6 +266,9 @@ function renderGrid2D(
 ) {
     const gridGroup = g.append("g").attr("class", "grid");
 
+    // Store grid dimensions for zoom rescaling
+    (gridGroup.node() as any).__gridDimensions__ = { width, height };
+
     // X-axis grid
     gridGroup
         .append("g")
@@ -297,6 +322,9 @@ function renderAxes2D(
         .attr("transform", `translate(0,${height})`)
         .call(d3.axisBottom(xScale));
 
+    // Store original scale on the axis element for zoom rescaling
+    (xAxis.node() as any).__xScale__ = xScale.copy();
+
     xAxis
         .append("text")
         .attr("x", width / 2)
@@ -312,6 +340,9 @@ function renderAxes2D(
         .append("g")
         .attr("class", "y-axis")
         .call(d3.axisLeft(yScale));
+
+    // Store original scale on the axis element for zoom rescaling
+    (yAxis.node() as any).__yScale__ = yScale.copy();
 
     yAxis
         .append("text")
