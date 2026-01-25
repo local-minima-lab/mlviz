@@ -122,11 +122,8 @@
     "knn": {
       "name": "knn",
       "description": "",
-      "start_page": 1,
+      "start_page": 0,
       "nodes": [
-        {
-          "index": 3514680251
-        },
         {
           "index": 2772640959
         },
@@ -154,20 +151,7 @@
             "story_name": null
           },
           "end": {
-            "local_index": 2,
-            "story_name": null
-          },
-          "condition": {
-            "condition_type": "Bypass"
-          }
-        },
-        {
-          "start": {
-            "local_index": 2,
-            "story_name": null
-          },
-          "end": {
-            "local_index": 1,
+            "local_index": 0,
             "story_name": null
           },
           "condition": {

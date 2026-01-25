@@ -25,6 +25,15 @@ const TrainPage: React.FC<TrainPageProps> = ({ model_name, parameters }) => {
         () => (model as any).lastParams || (model as any).lastTrainedParams || {},
         [(model as any).lastParams, (model as any).lastTrainedParams]
     );
+    
+    // Get feature names from model context (for KNN dynamic feature dropdowns)
+    const featureNames = useMemo(() => {
+        if (typeof (model as any).getFeatureNames === 'function') {
+            return (model as any).getFeatureNames();
+        }
+        // Fallback to metadata if available
+        return data?.metadata?.feature_names || null;
+    }, [(model as any).getFeatureNames, data?.metadata?.feature_names]);
 
     const [options, setOptions] = useState<ModelOption[]>([]);
     const context = useContext(CurrentStoryContext);
@@ -69,6 +78,7 @@ const TrainPage: React.FC<TrainPageProps> = ({ model_name, parameters }) => {
                     setParams={setTrainingParams}
                     onTrainModel={handleTrainModel}
                     isModelLoading={isLoading}
+                    featureNames={featureNames}
                 />
             </div>
             <div className="col-span-6 shadow-lg overflow-hidden">

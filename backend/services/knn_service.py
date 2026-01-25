@@ -508,11 +508,15 @@ class KNNService:
                 visualisation_features = [0, 1]
         
         if len(visualisation_features) < 1:
-            raise ValueError("visualization_features must have at least 1 feature")
-        if max(visualisation_features) >= n_features:
-            raise ValueError(
-                f"Feature index {max(visualisation_features)} out of range for dataset with {n_features} features"
-            )
+            visualisation_features = [0, 1] if n_features >= 2 else [0]
+            
+        # Validate and auto-correct visualisation_features if out of bounds
+        max_idx = max(visualisation_features)
+        if max_idx >= n_features:
+            # Fallback to defaults if indices are invalid for this dataset
+            # (e.g. switching from 4-feature dataset to 2-feature dataset)
+            print(f"Feature indices {visualisation_features} out of bounds for {n_features} features. Resetting to defaults.")
+            visualisation_features = [0, 1] if n_features >= 2 else [0]
         
         # Extract ONLY visualization features for WYSIWYG
         X_viz = X_full[:, visualisation_features]
@@ -542,9 +546,9 @@ class KNNService:
         )
         
         # Generate visualization data using training set only
-        # Instead of calling visualise (which would re-split the data), 
-        # directly prepare the visualization data from the training set
-        X_train_viz = X_train[:, visualisation_features]
+        # X_train is ALREADY the visualization features (sliced before split)
+        # So we use X_train directly, NO re-slicing needed
+        X_train_viz = X_train
         
         # Compute distance matrix and neighbor indices
         distance_matrix = self._compute_distance_matrix(
@@ -566,6 +570,9 @@ class KNNService:
             )
         
         # Create metadata to match DecisionTree service structure
+        # Ensure we return valid strings for feature names
+        viz_feature_names = [str(dataset.feature_names[i]) for i in visualisation_features]
+        
         metadata = ClassificationMetadata(
             feature_names=dataset.feature_names,
             class_names=dataset.target_names,

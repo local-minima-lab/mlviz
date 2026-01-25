@@ -24,6 +24,7 @@ const Visualisation: React.FC<VisualisationProps> = ({ points }) => {
         makePrediction,
         visualizationData,
         loadVisualization,
+        isVisualizationLoading,
     } = useKNN();
 
     // Make prediction when points change
@@ -43,18 +44,20 @@ const Visualisation: React.FC<VisualisationProps> = ({ points }) => {
 
     // Load visualization data if not already loaded
     useEffect(() => {
-        if (!visualizationData && !predictionData) {
+        if (!visualizationData && !predictionData && !isVisualizationLoading) {
             loadVisualization({});
         }
-    }, [visualizationData, predictionData, loadVisualization]);
+    }, [visualizationData, predictionData, loadVisualization, isVisualizationLoading]);
 
     // Show loading state
-    if (isPredictionLoading) {
+    if (isPredictionLoading || isVisualizationLoading) {
         return (
             <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">Making prediction...</p>
+                    <p className="text-muted-foreground">
+                        {isPredictionLoading ? "Making prediction..." : "Loading visualization..."}
+                    </p>
                 </div>
             </div>
         );

@@ -18,12 +18,14 @@ interface ModelOptionWrapperProps<T extends Record<string, any>> {
     option: ModelOption;
     params: T;
     setParams: (newParams: T) => void;
+    featureNames?: string[] | null;
 }
 
 const ModelOptionWrapper = <T extends Record<string, any>>({
     option,
     params,
     setParams,
+    featureNames,
 }: ModelOptionWrapperProps<T>) => {
     const handleValueChange = useCallback(
         (key: string, value: any) => {
@@ -40,12 +42,46 @@ const ModelOptionWrapper = <T extends Record<string, any>>({
     const renderInput = () => {
         switch (option.type) {
             case "select":
+                // Handle dynamic feature options
+                let selectOption = option as SelectOption;
+                let displayFeatureNames: string[] | undefined = undefined;
+                let isDynamicFeature = false;
+                
+                // Check if this is a dynamic feature select
+                if ((option as any).options === "dynamic:features") {
+                    if (featureNames) {
+                        // Convert feature names to select options with indices as values
+                        selectOption = {
+                            ...selectOption,
+                            options: featureNames.map((_, index) => index.toString()),
+                        };
+                        displayFeatureNames = featureNames;
+                        isDynamicFeature = true;
+                    } else {
+                        // Fallback if feature names not loaded yet
+                        selectOption = {
+                            ...selectOption,
+                            options: [], // Empty options to prevent crash
+                        };
+                    }
+                }
+                
+                // Create a custom value change handler for feature selects
+                const selectValueChange = (key: string, value: string | undefined) => {
+                    // Convert to integer for feature indices
+                    const finalValue = isDynamicFeature && value !== undefined 
+                        ? parseInt(value, 10) 
+                        : value;
+                    handleValueChange(key, finalValue);
+                };
+                
                 return (
                     <SelectInput
-                        option={option as SelectOption}
-                        currentValue={params[option.name] as string | undefined}
-                        onValueChange={handleValueChange}
+                        option={selectOption}
+                        currentValue={params[option.name]?.toString()}
+                        onValueChange={selectValueChange}
                         id={inputId}
+                        featureNames={displayFeatureNames}
                     />
                 );
             case "int":

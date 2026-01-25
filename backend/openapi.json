@@ -1079,9 +1079,7 @@
             "title": "Cached"
           },
           "metadata": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Metadata"
+            "$ref": "#/components/schemas/ClassificationMetadata"
           },
           "tree": {
             "anyOf": [
@@ -2433,8 +2431,15 @@
             "title": "Type"
           },
           "options": {
-            "items": {},
-            "type": "array",
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "title": "Options"
           }
         },

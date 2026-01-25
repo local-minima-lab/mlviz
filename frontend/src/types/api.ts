@@ -660,10 +660,7 @@ export interface components {
             model_key: string;
             /** Cached */
             cached: boolean;
-            /** Metadata */
-            metadata: {
-                [key: string]: unknown;
-            };
+            metadata: components["schemas"]["ClassificationMetadata"];
             /** Tree */
             tree: components["schemas"]["SplitNode-Output"] | components["schemas"]["LeafNode"];
             metrics: components["schemas"]["ClassificationMetrics"];
@@ -1310,7 +1307,7 @@ export interface components {
              */
             type: "select";
             /** Options */
-            options: unknown[];
+            options: unknown[] | string;
         };
         /**
          * SplitNode

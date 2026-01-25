@@ -48,19 +48,17 @@
     },
     {
       "name": "feature_1",
-      "type": "int",
+      "type": "select",
       "default": 0,
-      "min": 0,
-      "max": 10,
-      "description": "First feature index for training and visualization. For Iris: 0=sepal length, 1=sepal width, 2=petal length, 3=petal width."
+      "options": "dynamic:features",
+      "description": "First feature for training and visualization"
     },
     {
       "name": "feature_2",
-      "type": "int",
+      "type": "select",
       "default": 1,
-      "min": 0,
-      "max": 10,
-      "description": "Second feature index for training and visualization (optional for 1D). For Iris: 0=sepal length, 1=sepal width, 2=petal length, 3=petal width."
+      "options": "dynamic:features",
+      "description": "Second feature for training and visualization (optional)"
     }
   ]
 }

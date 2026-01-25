@@ -31,7 +31,7 @@ class DecisionTreeTrainingResponse(BaseModel):
     success: bool
     model_key: str
     cached: bool
-    metadata: Dict[str, Any]
+    metadata: ClassificationMetadata
     tree: TreeNode
     metrics: ClassificationMetrics
 
@@ -141,7 +141,8 @@ class BaseParameterInfo(BaseModel):
 class SelectParameterInfo(BaseParameterInfo):
     """Select parameter with predefined options."""
     type: Literal["select"]
-    options: list[Any]
+    options: Union[list[Any], str]  # Allow string for dynamic options like "dynamic:features"
+
 
 
 class IntParameterInfo(BaseParameterInfo):

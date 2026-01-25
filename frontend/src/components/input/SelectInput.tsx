@@ -12,6 +12,7 @@ interface SelectInputProps {
     currentValue: string | undefined;
     onValueChange: (key: string, value: string | undefined) => void;
     id: string;
+    featureNames?: string[];
 }
 
 const SelectInput = ({
@@ -19,6 +20,7 @@ const SelectInput = ({
     currentValue,
     onValueChange,
     id,
+    featureNames,
 }: SelectInputProps) => {
     return (
         <Select
@@ -32,12 +34,14 @@ const SelectInput = ({
                 <SelectValue placeholder={String(option.default)} />
             </SelectTrigger>
             <SelectContent>
-                {(option.options as string[]).map((optionValue) => (
+                {Array.isArray(option.options) && (option.options as string[]).map((optionValue, index) => (
                     <SelectItem
                         value={optionValue}
                         key={optionValue}
                     >
-                        {optionValue}
+                        {featureNames && featureNames[index] 
+                            ? `${featureNames[index]} (${optionValue})`
+                            : optionValue}
                     </SelectItem>
                 ))}
             </SelectContent>
