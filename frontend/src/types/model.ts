@@ -7,11 +7,13 @@
 import type { components } from "./api";
 
 // Core tree structure types (auto-synced with backend)
-export type TreeNode = components["schemas"]["TreeNode"];
+// Note: TreeNode is a Union type in Python but OpenAPI exports the individual types
+export type TreeNode = components["schemas"]["SplitNode-Output"] | components["schemas"]["LeafNode"];
 export type HistogramData = components["schemas"]["HistogramData"];
 
 // Metrics/scores types
-export type ModelScores = components["schemas"]["BaseMetrics"];
+export type ClassificationMetrics = components["schemas"]["ClassificationMetrics"];
+export type ClassificationMetadata = components["schemas"]["ClassificationMetadata"];
 
 export interface ModelMetadata {
     created_at: string;
@@ -28,7 +30,7 @@ export interface ModelMetadata {
 }
 
 // Training response type (auto-synced with backend DecisionTreeTrainingResponse)
-export type TrainModelResponse = components["schemas"]["DecisionTreeTrainingResponse"];
+export type TrainModelResponse = components["schemas"]["DecisionTreeTrainingResponse"] | components["schemas"]["KNNTrainingResponse"];
 
 export interface PredictionProps {
     data?: Record<string, any>;

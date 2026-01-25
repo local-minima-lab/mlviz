@@ -7,7 +7,7 @@ from pathlib import Path
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score
 
-from models import TreeNode, BaseMetrics, HistogramData, Dataset, PredefinedDataset, DecisionTreeParameters
+from models import TreeNode, ClassificationMetrics, ClassificationMetadata, HistogramData, Dataset, PredefinedDataset, DecisionTreeParameters
 from .model_cache import cache_service
 from .dataset_service import dataset_service
 
@@ -135,8 +135,8 @@ class DecisionTreeService:
         )
 
     def _calculate_metrics(self, model: DecisionTreeClassifier,
-                           X_test: np.ndarray, y_test: np.ndarray) -> BaseMetrics:
-        """Calculates the accuracy, precision, recall, and f1-score of a model.
+                           X_test: np.ndarray, y_test: np.ndarray) -> ClassificationMetrics:
+        """Calculates the accuracy, precision, recall, f1-score, and confusion matrix of a model.
 
         Args:
             model (DecisionTreeClassifier): The model to assess
@@ -144,11 +144,13 @@ class DecisionTreeService:
             y_test (np.ndarray): Y test data
 
         Returns:
-            BaseMetrics: accuracy, precision, recall and f1 scores
+            ClassificationMetrics: confusion matrix, accuracy, precision, recall and f1 scores
         """
         predictions = model.predict(X_test)
+        conf_matrix = confusion_matrix(y_test, predictions).tolist()
 
-        return BaseMetrics(
+        return ClassificationMetrics(
+            confusion_matrix=conf_matrix,
             accuracy=accuracy_score(y_test, predictions),
             precision=precision_score(
                 y_test, predictions, average="weighted", zero_division=0),
@@ -223,10 +225,6 @@ class DecisionTreeService:
             model, dataset_info["X_test"], dataset_info["y_test"]
         )
 
-        y_test = dataset_info["y_test"]
-        predictions = model.predict(dataset_info["X_test"])
-        conf_matrix = confusion_matrix(y_test, predictions).tolist()
-
         response_data = {
             "success": True,
             "model_key": model_key,
@@ -239,9 +237,7 @@ class DecisionTreeService:
                 **sklearn_params
             },
             "tree": tree_node.model_dump(),
-            "classes": dataset_info["target_names"],
-            "matrix": conf_matrix,
-            "scores": metrics.model_dump()
+            "metrics": metrics.model_dump()
         }
 
         await self.cache.set(model_key, response_data)
@@ -312,21 +308,30 @@ class DecisionTreeService:
             dataset_info["feature_names"]
         )
         
-        # Calculate metrics using TEST set
+        # Calculate metrics using TEST set (includes confusion matrix)
         y_test = dataset_info["y_test"]  # Use test set labels
-        metrics = BaseMetrics(
+        conf_matrix = confusion_matrix(y_test, predictions).tolist()
+        
+        metrics = ClassificationMetrics(
+            confusion_matrix=conf_matrix,
             accuracy=accuracy_score(y_test, predictions),
             precision=precision_score(y_test, predictions, average="weighted", zero_division=0),
             recall=recall_score(y_test, predictions, average="weighted", zero_division=0),
             f1=f1_score(y_test, predictions, average="weighted", zero_division=0)
         )
         
-        # Calculate confusion matrix
-        conf_matrix = confusion_matrix(y_test, predictions).tolist()
+        # Create metadata
+        metadata = ClassificationMetadata(
+            feature_names=dataset_info["feature_names"],
+            class_names=dataset_info["target_names"],
+            n_features=len(dataset_info["feature_names"]),
+            n_classes=len(dataset_info["target_names"]),
+            dataset_name=dataset.name if hasattr(dataset, 'name') else None
+        )
         
         return {
-            "scores": metrics.model_dump(),
-            "matrix": conf_matrix
+            "metrics": metrics.model_dump(),
+            "metadata": metadata.model_dump()
         }
 
 

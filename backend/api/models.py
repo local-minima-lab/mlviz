@@ -3,7 +3,8 @@ from pydantic import BaseModel, Field
 
 from models import (
     TreeNode,
-    BaseMetrics,
+    ClassificationMetrics,
+    ClassificationMetadata,
     DatasetInfo,
     DecisionTreeParameters,
     KNNParameters,
@@ -32,9 +33,7 @@ class DecisionTreeTrainingResponse(BaseModel):
     cached: bool
     metadata: Dict[str, Any]
     tree: TreeNode
-    classes: list[str]
-    matrix: list[list[int]]
-    scores: BaseMetrics
+    metrics: ClassificationMetrics
 
 
 class DecisionTreePredictionRequest(BaseModel):
@@ -128,8 +127,8 @@ class ManualTreeEvaluateRequest(BaseModel):
 
 class ManualTreeEvaluateResponse(BaseModel):
     """Response containing evaluation metrics for a manual tree."""
-    scores: BaseMetrics = Field(description="Accuracy, precision, recall, F1 scores")
-    matrix: List[List[int]] = Field(description="Confusion matrix")
+    metrics: ClassificationMetrics = Field(description="Classification metrics including confusion matrix and scores")
+    metadata: ClassificationMetadata = Field(description="Classifier metadata including feature and class information")
 
 
 class BaseParameterInfo(BaseModel):
@@ -263,15 +262,62 @@ class KNNVisualisationResponse(BaseModel):
     )
 
     # Metadata
-    feature_names: list[str]
-    class_names: list[str]
-    n_dimensions: int
+    metadata: ClassificationMetadata = Field(description="Classifier metadata")
+    
+    # Visualisation-specific info
     visualisation_feature_indices: Optional[list[int]] = Field(
         None, description="Feature indices used for visualisation"
     )
     visualisation_feature_names: Optional[list[str]] = Field(
         None, description="Names of features used for visualisation"
     )
+
+
+class KNNTrainingRequest(BaseModel):
+    """Request model for KNN training with evaluation."""
+    parameters: KNNParameters = Field(
+        default_factory=KNNParameters,
+        description="KNN algorithm parameters"
+    )
+    dataset: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Training dataset. Defaults to Iris dataset."
+    )
+    visualisation_features: Optional[List[int]] = Field(
+        None,
+        description="Feature indices to visualise (1-3 features)"
+    )
+    include_boundary: bool = Field(
+        True, description="Whether to include decision boundary"
+    )
+    boundary_resolution: int = Field(
+        50, ge=10, le=200, description="Resolution of boundary mesh"
+    )
+
+
+class KNNTrainingResponse(BaseModel):
+    """Response model for KNN training with evaluation metrics."""
+    success: bool
+    
+    # Visualization data (same as KNNVisualisationResponse)
+    training_points: list[list[float]]
+    training_labels: list[str]
+    distance_matrix: list[list[float]]
+    neighbor_indices: list[list[int]]
+    decision_boundary: Optional[DecisionBoundaryData]
+    
+    # Metadata
+    metadata: ClassificationMetadata = Field(description="Classifier metadata")
+    
+    # Visualisation-specific info
+    visualisation_feature_indices: Optional[list[int]]
+    visualisation_feature_names: Optional[list[str]]
+    
+    # Evaluation metrics (matching DecisionTree)
+    metrics: ClassificationMetrics = Field(
+        description="Classification metrics including confusion matrix and scores"
+    )
+
 
 
 class KNNPredictionRequest(BaseModel):

@@ -261,12 +261,30 @@ export const renderDecisionTree = ({
     const { width, height, margin } = dimensions;
     const { currentStep = 0 } = state;
 
-    const colorScale =
-        externalColorScale ||
-        d3
-            .scaleOrdinal<string>()
-            .domain(data.classes || [])
-            .range(d3.schemeDark2.slice(0, (data.classes || []).length));
+    console.log('[DecisionTreeRenderer] data.classes:', data.classes);
+    
+    // Use external color scale if provided, otherwise create a stable mapping
+    let colorScale: (className: string) => string;
+    
+    if (externalColorScale) {
+        colorScale = externalColorScale;
+    } else {
+        const classColors = new Map<string, string>();
+        const classes = data.classes || [];
+        const colors = d3.schemeDark2.slice(0, classes.length);
+        
+        classes.forEach((className: string, index: number) => {
+            classColors.set(className, colors[index] || '#cccccc');
+            // Also map the index as a string for histogram data compatibility
+            classColors.set(index.toString(), colors[index] || '#cccccc');
+        });
+        
+        colorScale = (className: string) => {
+            return classColors.get(className) || '#cccccc';
+        };
+    }
+    
+    console.log('[DecisionTreeRenderer] Color scale initialized');
 
     const root = d3.hierarchy(transformTreeData(data.tree, 0, currentStep));
     const contentWidth = width - margin.left - margin.right;
@@ -315,7 +333,7 @@ export const renderDecisionTree = ({
             null,
             undefined
         >;
-        const distribution = getClassDistribution(d, data.classes);
+        const distribution = getClassDistribution(d, data.classes || []);
 
         // Add interpolation factor for path highlighting
         const interpolationFactor = d.data.isOnPath
@@ -377,7 +395,7 @@ export const renderDecisionTree = ({
             null,
             undefined
         >;
-        const distribution = getClassDistribution(d, data.classes);
+        const distribution = getClassDistribution(d, data.classes || []);
 
         // In manual mode, render expandable leaf nodes
         if (mode === "manual") {
@@ -544,6 +562,7 @@ export const renderDecisionTree = ({
                 props.selectedFeature || null,
                 props.selectedThreshold || null,
                 colorScale,
+                data.classes || [],
                 props.manualCallbacks
             );
         } else {

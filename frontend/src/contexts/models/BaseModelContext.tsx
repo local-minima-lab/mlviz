@@ -32,7 +32,7 @@ interface BaseModelConfig {
 /**
  * Base context type that all model contexts will use
  */
-interface BaseModelContextType<TModelData extends BaseModelData> {
+export interface BaseModelContextType<TModelData extends BaseModelData> {
     currentModelData: TModelData | null;
     lastParams: Record<string, any>;
     setCurrentModelData: (data: TModelData | null) => void;
@@ -40,6 +40,42 @@ interface BaseModelContextType<TModelData extends BaseModelData> {
     resetModelData: () => void;
     getLastParams: () => Record<string, any>;
     getParameters: () => Promise<ParameterInfo[]>;
+}
+
+/**
+ * TrainPage capability interface
+ * Models that support training/visualization pages should extend this
+ */
+export interface TrainableModelContext<TModelData extends BaseModelData> 
+    extends BaseModelContextType<TModelData> {
+    isLoading: boolean;
+    error: string | null;
+    data: TModelData | null;        // Alias for currentModelData
+    train: (params: Record<string, any>) => Promise<void>;
+}
+
+/**
+ * PredictPage capability interface
+ * Models that support prediction pages should extend this
+ */
+export interface PredictableModelContext<TModelData extends BaseModelData>
+    extends BaseModelContextType<TModelData> {
+    isPredicting: boolean;
+    predictionError: string | null;
+    predictionData: any | null;
+    predict: (input: any) => Promise<void>;
+}
+
+/**
+ * VizOnlyPage capability interface
+ * Models that support visualization-only pages should extend this
+ */
+export interface VisualizableModelContext<TModelData extends BaseModelData>
+    extends BaseModelContextType<TModelData> {
+    isVisualizing: boolean;
+    visualizationError: string | null;
+    visualizationData: any | null;
+    loadVisualization: (params?: any) => Promise<void>;
 }
 
 /**

@@ -62,7 +62,7 @@ export const renderIntegratedSplitNode = (
     d: d3.HierarchyNode<TransformedNode>,
     distribution: ClassDistribution[],
     totalWidth: number,
-    colorScale?: d3.ScaleOrdinal<string, string>,
+    colorScale?: ((className: string) => string) | d3.ScaleOrdinal<string, string>,
     interpolationFactor?: number
 ) => {
     const histogramHeight = 40;
@@ -127,7 +127,7 @@ export const renderLeafNode = (
     d: d3.HierarchyNode<TransformedNode>,
     distribution: ClassDistribution[],
     totalWidth: number,
-    colorScale?: d3.ScaleOrdinal<string, string>,
+    colorScale?: ((className: string) => string) | d3.ScaleOrdinal<string, string>,
     interpolationFactor?: number
 ) => {
     const leafHeight = 40;
@@ -286,7 +286,7 @@ const renderHistogramComponent = (
     height: number,
     xOffset: number,
     yOffset: number,
-    colorScale?: d3.ScaleOrdinal<string, string>
+    colorScale?: ((className: string) => string) | d3.ScaleOrdinal<string, string>
 ) => {
     if (!histogramData.bins || histogramData.bins.length < 2) return;
 
@@ -319,7 +319,7 @@ const renderDistributionBar = (
     width: number,
     height: number,
     yOffset: number,
-    colorScale?: d3.ScaleOrdinal<string, string>
+    colorScale?: ((className: string) => string) | d3.ScaleOrdinal<string, string>
 ) => {
     let currentX = -width / 2;
 
@@ -480,7 +480,7 @@ export const renderExpandableLeafNode = (
     d: any,
     distribution: ClassDistribution[],
     nodeWidth: number,
-    colorScale: d3.ScaleOrdinal<string, string, never>,
+    colorScale: ((className: string) => string) | d3.ScaleOrdinal<string, string, never>,
     isSelected: boolean
 ): void => {
     const nodeHeight = 40;
@@ -770,7 +770,8 @@ export const renderInlineEditor = (
     featureStats: any | null,
     selectedFeature: string | null,
     selectedThreshold: number | null,
-    colorScale: d3.ScaleOrdinal<string, string>,
+    colorScale: ((className: string) => string) | d3.ScaleOrdinal<string, string>,
+    classNames: string[],
     callbacks: {
         onFeatureSelect?: (feature: string) => void;
         onThresholdChange?: (threshold: number) => void;
@@ -820,7 +821,9 @@ export const renderInlineEditor = (
         .style('font-size', '14px')
         .on('change', function() {
             const value = (this as HTMLSelectElement).value;
+            console.log('[Feature Selector] Changed to:', value);
             callbacks.onFeatureSelect?.(value);
+            console.log('[Feature Selector] Callback called');
         });
     
     select.append('option').attr('value', '').text('Select feature...');
@@ -864,9 +867,11 @@ export const renderInlineEditor = (
         const stackedData = prepareHistogramData(featureStats.histogram_data);
         
         // Create color scheme from colorScale to match tree nodes
-        const colorScheme = Object.keys(featureStats.histogram_data.counts_by_class).map((cls) =>
-            colorScale(cls)
-        );
+        // Map class indices to class names for proper color lookup
+        const colorScheme = Object.keys(featureStats.histogram_data.counts_by_class).map((classIndex) => {
+            const className = classNames[parseInt(classIndex)];
+            return colorScale(className);
+        });
         
         // Adjust histogram width to account for margins
         const adjustedHistWidth = histWidth - leftMargin - 10; // 10 for right margin
@@ -1076,7 +1081,7 @@ export const renderInlineEditor = (
         .style('font-size', '14px')
         .style('font-weight', '500')
         .text('Split')
-        .on('click', () => callbacks.onSplit?.());
+        .on('click', (event) => { event.preventDefault(); callbacks.onSplit?.(); });
     
     buttonGroup
         .append('button')
@@ -1090,7 +1095,7 @@ export const renderInlineEditor = (
         .style('font-size', '14px')
         .style('font-weight', '500')
         .text('Mark as Leaf')
-        .on('click', () => callbacks.onMarkAsLeaf?.());
+        .on('click', (event) => { event.preventDefault(); callbacks.onMarkAsLeaf?.(); });
     
     buttonGroup
         .append('button')
@@ -1104,5 +1109,5 @@ export const renderInlineEditor = (
         .style('font-size', '14px')
         .style('font-weight', '500')
         .text('Cancel')
-        .on('click', () => callbacks.onCancel?.());
+        .on('click', (event) => { event.preventDefault(); callbacks.onCancel?.(); });
 };

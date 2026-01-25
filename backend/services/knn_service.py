@@ -9,6 +9,8 @@ from models import (
     KNNParameters,
     NeighborInfo,
     DecisionBoundaryData,
+    ClassificationMetrics,
+    ClassificationMetadata,
     Dataset,
     PredefinedDataset,
 )
@@ -445,12 +447,150 @@ class KNNService:
             "decision_boundary": (
                 decision_boundary.model_dump() if decision_boundary else None
             ),
-            "feature_names": feature_names_full,
-            "class_names": class_names,
-            "n_dimensions": n_features,
+            "metadata": {
+                "feature_names": feature_names_full,
+                "class_names": class_names,
+                "n_features": n_features,
+                "n_classes": len(class_names),
+            },
             "visualisation_feature_indices": visualisation_features,
             "visualisation_feature_names": viz_feature_names,
         }
+
+    async def train(
+        self,
+        parameters: KNNParameters,
+        dataset_param: Optional[Union[Dict[str, Any], PredefinedDataset, Dataset]] = None,
+        visualisation_features: Optional[List[int]] = None,
+        include_boundary: bool = True,
+        boundary_resolution: int = 50,
+    ) -> Dict[str, Any]:
+        """Train KNN and return visualization data + evaluation metrics.
+        
+        WYSIWYG: Trains and evaluates ONLY on the visualization features.
+        This ensures the model metrics match what's displayed in the visualization.
+        
+        This combines visualization (like visualise()) with evaluation metrics
+        (like DecisionTree's train()). It:
+        1. Loads and splits dataset (train/test)
+        2. Determines visualization features (defaults to first 2)
+        3. Trains KNN on ONLY visualization features
+        4. Evaluates on test set using ONLY visualization features → confusion matrix + scores
+        5. Generates visualization data (decision boundary, etc.)
+        
+        Args:
+            parameters: KNN algorithm parameters
+            dataset_param: Dataset to use (defaults to Iris)
+            visualisation_features: Feature indices for visualization (defaults to [0, 1])
+            include_boundary: Whether to include decision boundary
+            boundary_resolution: Resolution of boundary mesh
+            
+        Returns:
+            Dict containing visualization data AND metrics (matrix, scores)
+        """
+        from sklearn.model_selection import train_test_split
+        from sklearn.metrics import (
+            confusion_matrix,
+            accuracy_score,
+            precision_score,
+            recall_score,
+            f1_score,
+        )
+        
+        # Load full dataset
+        dataset = await self._resolve_dataset(dataset_param)
+        X_full = np.array(dataset.X)
+        y_full = np.array(dataset.y)
+        n_features = X_full.shape[1]
+        
+        # Determine visualization features (default to first 2)
+        if visualisation_features is None:
+                visualisation_features = [0, 1]
+        
+        if len(visualisation_features) < 1:
+            raise ValueError("visualization_features must have at least 1 feature")
+        if max(visualisation_features) >= n_features:
+            raise ValueError(
+                f"Feature index {max(visualisation_features)} out of range for dataset with {n_features} features"
+            )
+        
+        # Extract ONLY visualization features for WYSIWYG
+        X_viz = X_full[:, visualisation_features]
+        
+        # Split into train/test (80/20) using ONLY visualization features
+        X_train, X_test, y_train, y_test = train_test_split(
+            X_viz, y_full, test_size=0.2, random_state=42, stratify=y_full
+        )
+        
+        # Train KNN model on visualization features ONLY
+        sklearn_params = parameters.to_sklearn_params()
+        model = KNeighborsClassifier(**sklearn_params)
+        model.fit(X_train, y_train)
+        
+        # Evaluate on test set (using visualization features)
+        y_pred = model.predict(X_test)
+        
+        # Calculate confusion matrix and metrics
+        cm = confusion_matrix(y_test, y_pred)
+        
+        metrics = ClassificationMetrics(
+            confusion_matrix=cm.tolist(),
+            accuracy=float(accuracy_score(y_test, y_pred)),
+            precision=float(precision_score(y_test, y_pred, average='weighted', zero_division=0)),
+            recall=float(recall_score(y_test, y_pred, average='weighted', zero_division=0)),
+            f1=float(f1_score(y_test, y_pred, average='weighted', zero_division=0)),
+        )
+        
+        # Generate visualization data using training set only
+        # Instead of calling visualise (which would re-split the data), 
+        # directly prepare the visualization data from the training set
+        X_train_viz = X_train[:, visualisation_features]
+        
+        # Compute distance matrix and neighbor indices
+        distance_matrix = self._compute_distance_matrix(
+            X_train_viz, parameters.metric, parameters.p
+        )
+        neighbor_indices = self._compute_neighbor_indices(
+            X_train_viz, parameters.n_neighbors, parameters.metric, parameters.p
+        )
+        
+        # Generate decision boundary if requested
+        decision_boundary = None
+        if include_boundary:
+            sklearn_params = parameters.to_sklearn_params()
+            model_viz = KNeighborsClassifier(**sklearn_params)
+            model_viz.fit(X_train_viz, y_train)
+            
+            decision_boundary = self._generate_decision_boundary(
+                model_viz, X_train_viz, dataset.target_names, boundary_resolution
+            )
+        
+        # Create metadata to match DecisionTree service structure
+        metadata = ClassificationMetadata(
+            feature_names=dataset.feature_names,
+            class_names=dataset.target_names,
+            n_features=len(dataset.feature_names),
+            n_classes=len(dataset.target_names),
+            dataset_name=dataset.name if hasattr(dataset, 'name') else None
+        )
+        
+        # Return visualization data + metrics + metadata
+        return {
+            "success": True,
+            "training_points": X_train_viz.tolist(),
+            "training_labels": [dataset.target_names[int(idx)] for idx in y_train],
+            "distance_matrix": distance_matrix,
+            "neighbor_indices": neighbor_indices,
+            "decision_boundary": (
+                decision_boundary.model_dump() if decision_boundary else None
+            ),
+            "metadata": metadata.model_dump(),
+            "visualisation_feature_indices": visualisation_features,
+            "visualisation_feature_names": [dataset.feature_names[i] for i in visualisation_features],
+            "metrics": metrics.model_dump(),
+        }
+
+
 
 
 # Global service instance

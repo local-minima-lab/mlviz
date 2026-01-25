@@ -13,8 +13,19 @@ class BaseMLResponse(BaseModel):
     metadata: Dict[str, Any]
 
 
-class BaseMetrics(BaseModel):
+class ClassificationMetrics(BaseModel):
+    confusion_matrix: list[list[int]]
     accuracy: float
     precision: float
     recall: float
     f1: float
+
+
+class ClassificationMetadata(BaseModel):
+    """Metadata for classifier responses."""
+    feature_names: list[str]
+    class_names: list[str]
+    n_features: int
+    n_classes: int
+    dataset_name: Optional[str] = None
+

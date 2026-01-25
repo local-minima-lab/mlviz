@@ -20,12 +20,22 @@ interface VisualisationProps {
 }
 
 const Visualisation: React.FC<VisualisationProps> = ({ data: knnData }) => {
-    if (!knnData) return <></>;
-
-
-    const dimensions = knnData.visualisation_feature_indices?.length || 0;
+    const dimensions = knnData?.visualisation_feature_indices?.length || 0;
 
     const visualizationData: KNNVisualizationData = useMemo(() => {
+        if (!knnData) {
+            return {
+                trainingPoints: [],
+                trainingLabels: [],
+                decisionBoundary: undefined,
+                featureNames: [],
+                classNames: [],
+                nDimensions: 0,
+                k: 5,
+                queries: undefined,
+            };
+        }
+
         const decisionBoundary = knnData.decision_boundary
             ? {
                   meshPoints: knnData.decision_boundary.mesh_points,
@@ -38,8 +48,8 @@ const Visualisation: React.FC<VisualisationProps> = ({ data: knnData }) => {
             trainingPoints: knnData.training_points,
             trainingLabels: knnData.training_labels,
             decisionBoundary,
-            featureNames: knnData.feature_names,
-            classNames: knnData.class_names,
+            featureNames: knnData.metadata?.feature_names || [],
+            classNames: knnData.metadata?.class_names || [],
             nDimensions: dimensions,
             k: 5, // Default K, can be made configurable
             queries: undefined,
@@ -101,6 +111,9 @@ const Visualisation: React.FC<VisualisationProps> = ({ data: knnData }) => {
         },
         [visualizationData, colorScale]
     );
+
+    // Early return AFTER all hooks
+    if (!knnData) return <></>;
 
     return (
         <BaseVisualisation

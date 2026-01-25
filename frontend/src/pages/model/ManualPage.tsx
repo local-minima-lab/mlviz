@@ -18,6 +18,7 @@ const ManualPage: React.FC<ManualPageProps> = ({ model_name }) => {
         resetModelData();
     }, []);
     
+    console.log(currentModelData)
     return (
         <div className="grid grid-cols-10 mx-auto w-full h-full">
             <div className="col-span-8 shadow-lg overflow-hidden">
@@ -25,7 +26,12 @@ const ManualPage: React.FC<ManualPageProps> = ({ model_name }) => {
             </div>
 
             <div className="col-span-2 p-4 shadow-lg bg-gradient-to-br from-blue-50 to-purple-50">
-                <ClassifierResults data={currentModelData} />
+                {currentModelData && (
+                    <ClassifierResults 
+                        metrics={currentModelData.metrics} 
+                        metadata={currentModelData.metadata} 
+                    />
+                )}
             </div>
         </div>
     );

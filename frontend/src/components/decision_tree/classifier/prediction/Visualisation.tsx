@@ -49,7 +49,8 @@ const Visualisation: React.FC<VisualisationProps> = ({
         const newPath = [...path, node];
         if (node.type === "leaf") return newPath;
 
-        if (!node.feature || node.threshold === null || node.threshold === undefined) return newPath;
+        // Type narrowing: node is now SplitNode
+        if (node.threshold === null || node.threshold === undefined) return newPath;
         const featureValue = points[node.feature];
         if (featureValue === undefined) return newPath;
 
@@ -102,7 +103,7 @@ const Visualisation: React.FC<VisualisationProps> = ({
             feature: node.type === "split" ? node.feature : undefined,
             threshold: node.type === "split" ? node.threshold : undefined,
             value: node.value || undefined,
-            histogram_data: node.histogram_data,
+            histogram_data: (node as any).histogram_data,
         };
 
         if (node.type === "split") {
@@ -175,7 +176,7 @@ const Visualisation: React.FC<VisualisationProps> = ({
 
     return (
         <BaseDecisionTreeVisualization
-            data={data}
+            data={{ ...data, classes: data.metadata?.class_names || [] }}
             points={points}
             nodeStyleConfig={{
                 pathLineColor,

@@ -123,7 +123,8 @@ class ManualTreeService:
                                X_values: np.ndarray,
                                y_labels: np.ndarray,
                                threshold: float,
-                               feature_idx: int) -> HistogramData:
+                               feature_idx: int,
+                               num_bins: int = 10) -> HistogramData:
         """Generate histogram data for visualization."""
         if len(X_values) == 0:
             return HistogramData(
@@ -140,7 +141,7 @@ class ManualTreeService:
         if min_val == max_val:
             bins = [min_val - 0.1, min_val + 0.1]
         else:
-            bins = np.linspace(min_val, max_val, min(10, len(X_values)) + 1)
+            bins = np.linspace(min_val, max_val, min(num_bins, len(X_values)) + 1)
 
         # Count samples per bin per class
         unique_classes = np.unique(y_labels)
@@ -353,11 +354,13 @@ class ManualTreeService:
         best_threshold = threshold_stats_list[best_idx].threshold
 
         # Create overall histogram data (using best threshold for visualization)
+        # Use number of thresholds as bin count for better granularity
         histogram_data = self._create_histogram_data(
             feature_values,
             y_node,
             best_threshold,
-            feature_idx
+            feature_idx,
+            num_bins=len(threshold_stats_list)
         )
 
         # Get feature range

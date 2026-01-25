@@ -87,12 +87,24 @@ const Visualisation: React.FC<VisualisationProps> = ({ points }) => {
 
     // Use prediction data if available, otherwise fall back to visualization data
     const knnData = predictionData || visualizationData;
-    if (!knnData) return null;
 
     // Get dimensions from visualisation_feature_indices if available, otherwise from n_dimensions
-    const dimensions = (knnData as any).visualisation_feature_indices?.length || (knnData as any).n_dimensions || 2;
+    const dimensions = (knnData as any)?.visualisation_feature_indices?.length || (knnData as any)?.n_dimensions || 2;
 
     const visualizationData_transformed: KNNVisualizationData = useMemo(() => {
+        if (!knnData) {
+            return {
+                trainingPoints: [],
+                trainingLabels: [],
+                decisionBoundary: undefined,
+                featureNames: [],
+                classNames: [],
+                nDimensions: 0,
+                k: 5,
+                queries: undefined,
+            };
+        }
+
         const decisionBoundary = knnData.decision_boundary
             ? {
                   meshPoints: knnData.decision_boundary.mesh_points,
@@ -122,8 +134,8 @@ const Visualisation: React.FC<VisualisationProps> = ({ points }) => {
             trainingPoints: knnData.training_points,
             trainingLabels: knnData.training_labels,
             decisionBoundary,
-            featureNames: knnData.feature_names,
-            classNames: knnData.class_names,
+            featureNames: (knnData as any).metadata?.feature_names || (knnData as any).feature_names || [],
+            classNames: (knnData as any).metadata?.class_names || (knnData as any).class_names || [],
             nDimensions: dimensions,
             k: predictionData?.neighbors_info?.[0]?.length || 5,
             queries,
@@ -191,6 +203,9 @@ const Visualisation: React.FC<VisualisationProps> = ({ points }) => {
         },
         [visualizationData_transformed, colorScale]
     );
+
+    // Early return AFTER all hooks
+    if (!knnData) return null;
 
     return (
         <BaseVisualisation

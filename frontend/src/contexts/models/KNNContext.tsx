@@ -5,12 +5,15 @@
  */
 
 import {
+    getParameters as getParametersAPI,
     getVisualisation,
     predict,
+    train as trainKNN,
     type KNNPredictionRequest,
     type KNNPredictionResponse,
+    type KNNTrainingRequest,
     type KNNVisualisationRequest,
-    type KNNVisualisationResponse,
+    type KNNVisualisationResponse
 } from "@/api/knn";
 import type { ParameterInfo } from "@/api/types";
 import React, {
@@ -41,11 +44,7 @@ interface KNNModelData extends BaseModelData {
 const { Provider: BaseProvider, useBaseModel } = createBaseModelContext<KNNModelData>({
     localStorageKey: "knn_model_data",
     paramsStorageKey: "knn_params",
-    // TODO: Replace with actual getParameters from @/api/knn when backend endpoint is ready
-    getParameters: async () => {
-        console.warn('[KNNContext] getParameters API not yet implemented');
-        return [];
-    },
+    getParameters: getParametersAPI,
 });
 
 // ============================================================================
@@ -53,6 +52,18 @@ const { Provider: BaseProvider, useBaseModel } = createBaseModelContext<KNNModel
 // ============================================================================
 
 interface KNNContextType {
+    // Unified properties for page compatibility
+    // TrainPage properties
+    isLoading: boolean;              // Alias for isVisualizationLoading
+    error: string | null;            // Alias for visualizationError
+    data: KNNVisualisationResponse | null;  // Alias for visualizationData
+    train: (params?: Partial<KNNVisualisationRequest>) => Promise<void>;  // Alias for loadVisualization
+    
+    // PredictPage properties
+    isPredicting: boolean;           // Alias for isPredictionLoading
+    predict: (request: Partial<KNNPredictionRequest>) => Promise<void>;  // Alias for makePrediction
+    
+    // Original KNN-specific properties (backward compatibility)
     // Visualization (training) state
     isVisualizationLoading: boolean;
     visualizationError: string | null;
@@ -206,6 +217,62 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
     }, [currentModelData, setCurrentModelData, setLastParams]);
 
     // ========================================================================
+    // Training (with metrics)
+    // ========================================================================
+
+    const trainModel = useCallback(
+        async (params?: Partial<KNNVisualisationRequest>) => {
+            // Structure the request properly - params should go in the parameters field
+            const request: Partial<KNNTrainingRequest> = {
+                parameters: params as any, // params contains the KNN parameters (n_neighbors, feature_1, etc.)
+            };
+
+            setCurrentModelData({
+                visualizationData: null,
+                isVisualizationLoading: true,
+                visualizationError: null,
+                predictionData: null,
+                isPredictionLoading: false,
+                predictionError: null,
+                queryPoints: null,
+            });
+
+            try {
+                const data = await trainKNN(request);
+
+                if (data.success) {
+                    console.log("Training successful:", data);
+                    setCurrentModelData({
+                        visualizationData: data,  // Includes matrix and scores!
+                        isVisualizationLoading: false,
+                        visualizationError: null,
+                        predictionData: null,
+                        isPredictionLoading: false,
+                        predictionError: null,
+                        queryPoints: null,
+                    });
+                    setLastParams(params || {});
+                }
+            } catch (error) {
+                console.error("Error training KNN:", error);
+                setCurrentModelData({
+                    visualizationData: null,
+                    isVisualizationLoading: false,
+                    visualizationError:
+                        error instanceof Error
+                            ? error.message
+                            : "Unknown error training KNN",
+                    predictionData: null,
+                    isPredictionLoading: false,
+                    predictionError: null,
+                    queryPoints: null,
+                });
+            }
+        },
+        [setCurrentModelData, setLastParams]
+    );
+
+    // ========================================================================
     // Prediction Methods
     // ========================================================================
 
@@ -316,7 +383,7 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
 
     const getFeatureNames = useCallback((): string[] | null => {
         return (
-            visualizationData?.feature_names ||
+            visualizationData?.metadata?.feature_names ||
             predictionData?.feature_names ||
             null
         );
@@ -324,7 +391,7 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
 
     const getClassNames = useCallback((): string[] | null => {
         return (
-            visualizationData?.class_names ||
+            visualizationData?.metadata?.class_names ||
             predictionData?.class_names ||
             null
         );
@@ -340,8 +407,8 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
     const isVisualizationReady = useCallback((): boolean => {
         return !!(
             visualizationData?.success &&
-            visualizationData?.feature_names &&
-            visualizationData?.class_names
+            visualizationData?.metadata?.feature_names &&
+            visualizationData?.metadata?.class_names
         );
     }, [visualizationData]);
 
@@ -355,6 +422,15 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
     // ========================================================================
 
     const contextValue: KNNContextType = {
+        // Unified properties (for TrainPage/PredictPage compatibility)
+        isLoading: isVisualizationLoading,
+        error: visualizationError,
+        data: visualizationData,
+        train: trainModel,  // Use trainModel to get metrics
+        isPredicting: isPredictionLoading,
+        predict: makePrediction,
+        
+        // Original KNN-specific properties (backward compatibility)
         // Visualization state
         isVisualizationLoading,
         visualizationError,

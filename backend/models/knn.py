@@ -28,10 +28,27 @@ class KNNParameters(BaseModel):
         "minkowski",
         description="Distance metric to use"
     )
+    
+    # Feature selection parameters (not passed to sklearn)
+    feature_1: int = Field(
+        0, ge=0, le=10,
+        description="First feature index for training and visualization"
+    )
+    feature_2: Optional[int] = Field(
+        1, ge=0, le=10,
+        description="Second feature index for training and visualization (optional)"
+    )
 
     def to_sklearn_params(self) -> Dict[str, Any]:
-        """Convert to sklearn KNeighborsClassifier parameters."""
-        return self.model_dump()
+        """Convert to sklearn KNeighborsClassifier parameters.
+        
+        Excludes feature_1 and feature_2 as they're not sklearn parameters.
+        """
+        params = self.model_dump()
+        # Remove feature selection params (not sklearn params)
+        params.pop('feature_1', None)
+        params.pop('feature_2', None)
+        return params
 
 
 class NeighborInfo(BaseModel):

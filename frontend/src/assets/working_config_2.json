@@ -118,63 +118,6 @@
           }
         }
       ]
-    },
-    "knn": {
-      "name": "knn",
-      "description": "",
-      "start_page": 1,
-      "nodes": [
-        {
-          "index": 3514680251
-        },
-        {
-          "index": 2772640959
-        },
-        {
-          "index": 4216325597
-        }
-      ],
-      "edges": [
-        {
-          "start": {
-            "local_index": 0,
-            "story_name": null
-          },
-          "end": {
-            "local_index": 1,
-            "story_name": null
-          },
-          "condition": {
-            "condition_type": "Bypass"
-          }
-        },
-        {
-          "start": {
-            "local_index": 1,
-            "story_name": null
-          },
-          "end": {
-            "local_index": 2,
-            "story_name": null
-          },
-          "condition": {
-            "condition_type": "Bypass"
-          }
-        },
-        {
-          "start": {
-            "local_index": 2,
-            "story_name": null
-          },
-          "end": {
-            "local_index": 1,
-            "story_name": null
-          },
-          "condition": {
-            "condition_type": "Bypass"
-          }
-        }
-      ]
     }
   },
   "pages": {
@@ -189,10 +132,10 @@
     "3408163045": {
       "name": "dtree: manual",
       "page_type": "dynamic",
+      "parameters": {},
       "dynamic_type": "model",
       "model_name": "decision_tree",
-      "component_type": "manual",
-      "parameters": {}
+      "component_type": "manual"
     },
     "3170219703": {
       "name": "static: dtree/prediction",
@@ -205,10 +148,10 @@
     "413280384": {
       "name": "dtree: predict",
       "page_type": "dynamic",
+      "parameters": {},
       "dynamic_type": "model",
       "model_name": "decision_tree",
-      "component_type": "predict",
-      "parameters": {}
+      "component_type": "predict"
     },
     "1452535": {
       "name": "static: dtree/end",
@@ -216,48 +159,6 @@
       "parameters": {
         "text": null,
         "link": "dtree/end.md"
-      }
-    },
-    "2026121186": {
-      "name": "",
-      "page_type": "dynamic",
-      "dynamic_type": "model",
-      "model_name": "knn",
-      "component_type": "viz_only",
-      "parameters": {
-        "visualisation_features": [
-          0,
-          1
-        ],
-        "include_boundary": false
-      }
-    },
-    "2772640959": {
-      "name": "",
-      "page_type": "dynamic",
-      "dynamic_type": "model",
-      "model_name": "knn",
-      "component_type": "train"
-    },
-    "4216325597": {
-      "name": "",
-      "page_type": "dynamic",
-      "dynamic_type": "model",
-      "model_name": "knn",
-      "component_type": "predict"
-    },
-    "3514680251": {
-      "name": "",
-      "page_type": "dynamic",
-      "dynamic_type": "model",
-      "model_name": "knn",
-      "component_type": "viz_only",
-      "parameters": {
-        "visualisation_features": [
-          0,
-          1
-        ],
-        "include_boundary": true
       }
     }
   }

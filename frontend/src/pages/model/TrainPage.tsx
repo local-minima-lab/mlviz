@@ -6,18 +6,25 @@ import { CurrentStoryContext } from "@/contexts/StoryContext";
 import type { ModelOption } from "@/types/parameters";
 import type { ModelPage as ModelPageProps, Parameters } from "@/types/story";
 import { filterParameters } from "@/utils/conditions";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 
 type TrainPageProps = Pick<ModelPageProps, "model_name" | "parameters">;
 
 const TrainPage: React.FC<TrainPageProps> = ({ model_name, parameters }) => {
+    const model = useModel();
     const {
-        isModelLoading,
-        currentModelData,
-        lastTrainedParams,
-        trainNewModel,
+        isLoading,
+        data,
+        train,
         getParameters,
-    } = useModel();
+    } = model;
+    
+    // Try to get lastParams from context (different models use different names)
+    // Use useMemo to maintain stable reference
+    const lastParams = useMemo(
+        () => (model as any).lastParams || (model as any).lastTrainedParams || {},
+        [(model as any).lastParams, (model as any).lastTrainedParams]
+    );
 
     const [options, setOptions] = useState<ModelOption[]>([]);
     const context = useContext(CurrentStoryContext);
@@ -34,21 +41,24 @@ const TrainPage: React.FC<TrainPageProps> = ({ model_name, parameters }) => {
     }, []);
 
     const [trainingParams, setTrainingParams] = useState<Parameters>(
-        parameters == null ? lastTrainedParams : parameters
+        parameters == null ? lastParams : parameters
     );
 
     useEffect(() => {
-        if (parameters == null) setTrainingParams(lastTrainedParams);
-    }, [lastTrainedParams]);
+        if (parameters == null) {
+            setTrainingParams(lastParams);
+        }
+    }, [lastParams, parameters]);
 
     useEffect(() => {
-        trainNewModel(parameters || {});
-    }, [parameters]);
+        train(parameters || {});
+    }, [parameters, train]);
 
     const handleTrainModel = () => {
-        trainNewModel(trainingParams);
+        train(trainingParams);
         updateParams({ trainParams: trainingParams });
     };
+
 
     return (
         <div className="grid grid-cols-10 mx-auto w-full h-full">
@@ -58,18 +68,21 @@ const TrainPage: React.FC<TrainPageProps> = ({ model_name, parameters }) => {
                     params={trainingParams}
                     setParams={setTrainingParams}
                     onTrainModel={handleTrainModel}
-                    isModelLoading={isModelLoading}
+                    isModelLoading={isLoading}
                 />
             </div>
             <div className="col-span-6 shadow-lg overflow-hidden">
                 <TrainComponent
-                    data={currentModelData}
+                    data={data}
                     componentName={model_name}
                 />
             </div>
 
             <div className="col-span-2 p-4 shadow-lg bg-gradient-to-br from-blue-50 to-purple-50">
-                <ClassifierResults data={currentModelData} />
+                <ClassifierResults 
+                metrics={data?.metrics}
+                metadata={data?.metadata} 
+                />
             </div>
         </div>
     );

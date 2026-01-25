@@ -32,46 +32,22 @@ const Visualisation: React.FC<VisualisationProps> = () => {
         }
     }, []); // Only run on mount
 
-    // Show loading state
-    if (isVisualizationLoading) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">Loading visualization...</p>
-                </div>
-            </div>
-        );
-    }
-
-    // Show error state
-    if (visualizationError) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <div className="text-center p-8">
-                    <p className="text-destructive mb-2">Error loading visualization</p>
-                    <p className="text-sm text-muted-foreground">{visualizationError}</p>
-                </div>
-            </div>
-        );
-    }
-
-    // Show empty state
-    if (!knnData) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <div className="text-center p-8">
-                    <p className="text-muted-foreground">
-                        No visualization data available. Please configure and load a dataset.
-                    </p>
-                </div>
-            </div>
-        );
-    }
-
-    const dimensions = knnData.visualisation_feature_indices?.length || 0;
+    const dimensions = knnData?.visualisation_feature_indices?.length || 0;
 
     const visualizationData: KNNVisualizationData = useMemo(() => {
+        if (!knnData) {
+            return {
+                trainingPoints: [],
+                trainingLabels: [],
+                decisionBoundary: undefined,
+                featureNames: [],
+                classNames: [],
+                nDimensions: 0,
+                k: 5,
+                queries: undefined,
+            };
+        }
+
         const decisionBoundary = knnData.decision_boundary
             ? {
                   meshPoints: knnData.decision_boundary.mesh_points,
@@ -84,8 +60,8 @@ const Visualisation: React.FC<VisualisationProps> = () => {
             trainingPoints: knnData.training_points,
             trainingLabels: knnData.training_labels,
             decisionBoundary,
-            featureNames: knnData.feature_names,
-            classNames: knnData.class_names,
+            featureNames: (knnData as any).metadata?.feature_names || [],
+            classNames: (knnData as any).metadata?.class_names || [],
             nDimensions: dimensions,
             k: 5, // Default K, can be made configurable
             queries: undefined,
@@ -143,6 +119,44 @@ const Visualisation: React.FC<VisualisationProps> = () => {
         },
         [visualizationData, colorScale]
     );
+
+    // Early returns AFTER all hooks
+    // Show loading state
+    if (isVisualizationLoading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">Loading visualization...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show error state
+    if (visualizationError) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-center p-8">
+                    <p className="text-destructive mb-2">Error loading visualization</p>
+                    <p className="text-sm text-muted-foreground">{visualizationError}</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show empty state
+    if (!knnData) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-center p-8">
+                    <p className="text-muted-foreground">
+                        No visualization data available. Please configure and load a dataset.
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <BaseVisualisation
