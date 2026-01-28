@@ -1,0 +1,90 @@
+name: Initial Deployment Setup
+
+on:
+    workflow_dispatch:
+
+env:
+    PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+    REGION: ${{ secrets.GCP_REGION }}
+
+jobs:
+    initial-deploy:
+        name: First Time Deployment
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Authenticate to Google Cloud
+              uses: google-github-actions/auth@v2
+              with:
+                  credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+            - name: Set up Cloud SDK
+              uses: google-github-actions/setup-gcloud@v2
+
+            - name: Configure Docker for GCR
+              run: gcloud auth configure-docker
+
+            - name: Deploy Backend
+              working-directory: ./backend
+              run: |
+                  IMAGE_NAME="gcr.io/${{ env.PROJECT_ID }}/mlviz-backend-test"
+                  docker build -t "${IMAGE_NAME}:latest" .
+                  docker push "${IMAGE_NAME}:latest"
+
+                  gcloud run deploy mlviz-backend-test \
+                    --image "${IMAGE_NAME}:latest" \
+                    --region ${{ env.REGION }} \
+                    --allow-unauthenticated \
+                    --platform managed \
+                    --port 8080 \
+                    --set-env-vars DEBUG=false
+
+            - name: Get Backend URL
+              id: backend
+              run: |
+                  BACKEND_URL=$(gcloud run services describe mlviz-backend-test \
+                    --region ${{ env.REGION }} \
+                    --format 'value(status.url)')
+                  echo "url=${BACKEND_URL}" >> $GITHUB_OUTPUT
+                  echo "📍 Backend URL: ${BACKEND_URL}"
+
+            - name: Build and Deploy Frontend
+              working-directory: ./frontend
+              run: |
+                  gcloud builds submit \
+                    --config=cloudbuild.yaml \
+                    --substitutions=_VITE_API_BASE_URL=${{ steps.backend.outputs.url }},_BACKEND_URL=${{ steps.backend.outputs.url }}
+
+                  gcloud run deploy mlviz-frontend-test \
+                    --image gcr.io/${{ env.PROJECT_ID }}/frontend:latest \
+                    --region ${{ env.REGION }} \
+                    --allow-unauthenticated \
+                    --platform managed \
+                    --port 8080 \
+                    --set-env-vars BACKEND_URL=${{ steps.backend.outputs.url }}
+
+            - name: Get Frontend URL
+              id: frontend
+              run: |
+                  FRONTEND_URL=$(gcloud run services describe mlviz-frontend-test \
+                    --region ${{ env.REGION }} \
+                    --format 'value(status.url)')
+                  echo "url=${FRONTEND_URL}" >> $GITHUB_OUTPUT
+                  echo "📍 Frontend URL: ${FRONTEND_URL}"
+
+            - name: Update Backend CORS
+              run: |
+                  gcloud run services update mlviz-backend-test \
+                    --region ${{ env.REGION }} \
+                    --set-env-vars FRONTEND_URL=${{ steps.frontend.outputs.url }}
+
+            - name: Summary
+              run: |
+                  echo "✅ Initial deployment complete!"
+                  echo ""
+                  echo "Add these to GitHub Secrets:"
+                  echo "TEST_BACKEND_URL=${{ steps.backend.outputs.url }}"
+                  echo "TEST_FRONTEND_URL=${{ steps.frontend.outputs.url }}"
