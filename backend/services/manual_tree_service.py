@@ -138,8 +138,22 @@ class ManualTreeService:
 
         # Create bins for histogram
         min_val, max_val = X_values.min(), X_values.max()
+        
         if min_val == max_val:
             bins = [min_val - 0.1, min_val + 0.1]
+        elif thresholds is not None and len(thresholds) > 0:
+            # Create bins that align with threshold values
+            # This makes each bar represent data between consecutive split points
+            unique_thresholds = sorted(set(thresholds))
+            
+            # Filter thresholds to only those within the data range
+            valid_thresholds = [t for t in unique_thresholds if min_val < t < max_val]
+            
+            # Create bin edges: [min, threshold1, threshold2, ..., max]
+            bins = [min_val] + valid_thresholds + [max_val]
+            
+            # Ensure bins are unique and sorted
+            bins = sorted(set(bins))
         else:
             bins = np.linspace(min_val, max_val, min(num_bins, len(X_values)) + 1)
 
@@ -156,7 +170,7 @@ class ManualTreeService:
         return HistogramData(
             feature_values=X_values.tolist(),
             class_labels=y_labels.tolist(),
-            bins=bins.tolist(),
+            bins=bins.tolist() if isinstance(bins, np.ndarray) else bins,
             counts_by_class=counts_by_class,
             threshold=threshold,
             total_samples=len(X_values)
