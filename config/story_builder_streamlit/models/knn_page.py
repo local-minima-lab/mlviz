@@ -18,12 +18,15 @@ class KNNVizParameters(BaseModel):
 class KNNPage(ModelPage):
     model_name: Literal["knn"] = "knn"
 
+class KNNTrainPage(KNNPage):
+    component_type: Literal["train"] = "train"
+
 class KNNVizPage(KNNPage):
     component_type: Literal["viz_only"] = "viz_only"
     parameters: KNNVizParameters = Field(default_factory=KNNVizParameters)
 
 # Union
 KNNPageUnion = Annotated[
-    Union[KNNVizPage],
+    Union[KNNTrainPage, KNNVizPage],
     Field(discriminator="component_type")
 ]
