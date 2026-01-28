@@ -229,7 +229,7 @@ class KNNService:
             parameters: KNN algorithm parameters
             dataset_param: Training dataset
             query_points: Points to classify
-            visualization_features: Feature indices for visualization (1-3 features)
+            visualization_features: Feature indices for visualization (1-2 features)
             include_boundary: Whether to generate decision boundary
             boundary_resolution: Resolution of boundary mesh
 
@@ -249,12 +249,12 @@ class KNNService:
 
         # Determine visualization features
         if visualisation_features is None:
-            if n_features <= 3:
-                # Use all features for <=3D
+            if n_features <= 2:
+                # Use all features for <=2d
                 visualisation_features = list(range(n_features))
             else:
-                # Use first 3 features for >3D
-                visualisation_features = [0, 1, 2]
+                # Use first 2 features for 2D
+                visualisation_features = [0, 1]
 
         # Validate visualization_features
         if len(visualisation_features) > 3:
@@ -276,36 +276,55 @@ class KNNService:
         if len(visualisation_features) > 3:
             include_boundary = False
 
-        # Create and fit KNN model on FULL feature set
-        sklearn_params = parameters.to_sklearn_params()
-        model = KNeighborsClassifier(**sklearn_params)
-        model.fit(X_train_full, y_train)
-
         # Extract data for visualization (subset of features)
         X_train_viz = X_train_full[:, visualisation_features]
 
-        # Make predictions on FULL feature set (accurate predictions)
-        query_array = np.array(query_points)
-        predictions_idx = model.predict(query_array)
+        # Fit KNN model. 
+        # If visualisation_features provided, we fit ONLY on those features for consistency 
+        # with the WYSIWYG model shown in the TrainPage and visualization.
+        sklearn_params = parameters.to_sklearn_params()
+        model = KNeighborsClassifier(**sklearn_params)
+        
+        if visualisation_features is not None:
+            model.fit(X_train_viz, y_train)
+        else:
+            model.fit(X_train_full, y_train)
+
+
+        # Make predictions
+        # Handle query points slicing if they were provided as full vectors
+
+        query_points = np.array(query_points)
+        if query_points.shape[1] == n_features:
+            query_array_viz = query_points[:, visualisation_features]
+            query_array_predict = query_array_viz if visualisation_features is not None else query_array
+            query_array_for_neighbors = query_array_predict
+        else:
+            # Assume query points are already the subset
+            query_array_viz = query_points
+            query_array_predict = query_points
+            query_array_for_neighbors = query_points
+
+        predictions_idx = model.predict(query_array_predict)
         predictions = [class_names[int(idx)] for idx in predictions_idx]
 
-        # Extract query points for visualization (subset of features)
-        query_array_viz = query_array[:, visualisation_features]
+        # Use the appropriate training set for neighbor calculations
+        X_train_for_neighbors = X_train_viz if visualisation_features is not None else X_train_full
 
-        # Get neighbor information for each query point (using FULL features)
+        # Get neighbor information for each query point
         neighbors_info = []
         all_distances = []
 
-        for query_point in query_array:
-            # Get K-nearest neighbors info (full features for accurate neighbors)
+        for query_point in query_array_for_neighbors:
+            # Get K-nearest neighbors info
             neighbor_info = self._get_neighbor_info(
-                model, query_point, X_train_full, y_train, class_names
+                model, query_point, X_train_for_neighbors, y_train, class_names
             )
             neighbors_info.append(neighbor_info)
 
-            # Get distances to all training points (full features)
+            # Get distances to all training points
             distances = self._get_all_distances(
-                query_point, X_train_full, parameters.metric, parameters.p
+                query_point, X_train_for_neighbors, parameters.metric, parameters.p
             )
             all_distances.append(distances)
 

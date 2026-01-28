@@ -40,6 +40,7 @@ export function renderKNNTraining({
     const { dimensions, state } = context;
     const { width, height, margin } = dimensions;
     const { currentStep = 0 } = state;
+    const dimensions_to_render = data.nDimensions;
 
     // Clear previous render
     container.selectAll("*").remove();
@@ -81,9 +82,10 @@ export function renderKNNTraining({
     };
 
     // Render appropriate scatter plot based on dimensions
-    switch (data.nDimensions) {
+    let renderResult: any;
+    switch (dimensions_to_render) {
         case 1:
-            renderScatter1D(
+            renderResult = renderScatter1D(
                 container,
                 plotPoints,
                 bounds,
@@ -94,7 +96,7 @@ export function renderKNNTraining({
             );
             break;
         case 2:
-            renderScatter2D(
+            renderResult = renderScatter2D(
                 container,
                 plotPoints,
                 bounds,
@@ -106,6 +108,8 @@ export function renderKNNTraining({
             break;
     }
 
+    const targetGroup = renderResult?.contentGroup || container;
+
 
 
     // Add custom tooltips to all training points
@@ -114,17 +118,14 @@ export function renderKNNTraining({
     // If there are queries (selected points), render neighbor visualization
     if (data.queries && data.queries.length > 0) {
         const query = data.queries[0]; // Use first query (only one for training mode)
-        const innerWidth = width - margin.left - margin.right;
-        const innerHeight = height - margin.top - margin.bottom;
 
-        if (data.nDimensions === 2) {
+        if (dimensions_to_render === 2) {
             render2DQueryVisualization(
-                container,
+                targetGroup,
                 query,
                 data,
-                bounds,
-                innerWidth,
-                innerHeight,
+                renderResult.xScale,
+                renderResult.yScale,
                 {
                     colorScale: props.colorScale,
                     k: props.k,
@@ -137,14 +138,14 @@ export function renderKNNTraining({
                     interpolationFactor: 1,
                 }
             );
-        } else if (data.nDimensions === 1) {
+        } else if (dimensions_to_render === 1) {
+            const innerHeight = height - margin.top - margin.bottom;
             render1DQueryVisualization(
-                container,
+                targetGroup,
                 query,
                 data,
-                bounds,
-                innerWidth,
-                innerHeight,
+                renderResult.xScale,
+                innerHeight / 2,
                 {
                     colorScale: props.colorScale,
                     k: props.k,
@@ -166,6 +167,8 @@ export function renderKNNTraining({
     if (currentStep !== undefined && maxSteps > 0) {
         applyInterpolation(container, currentStep, context);
     }
+
+    return renderResult;
 }
 
 /**
@@ -189,14 +192,15 @@ export function renderKNNPrediction({
         highlightColor = "#ff6b6b",
     } = props;
     const { dimensions, state } = context;
-    const { width, height, margin } = dimensions;
+    const { height, margin } = dimensions;
     const { currentStep = 0 } = state;
 
     // Clear previous render
     container.selectAll("*").remove();
 
     // First, render the base visualization (training data + decision boundary)
-    renderKNNTraining({ container, data, context, props });
+    const baseRenderResult = renderKNNTraining({ container, data, context, props });
+    const targetGroup = baseRenderResult?.contentGroup || container;
 
     // If no queries, we're done
     if (!data.queries || data.queries.length === 0) {
@@ -219,20 +223,15 @@ export function renderKNNPrediction({
     }
 
     // Setup for rendering query-specific elements
-    const innerWidth = width - margin.left - margin.right;
-    const innerHeight = height - margin.top - margin.bottom;
+    const dimensions_to_render = data.nDimensions;
 
-    // Create scales based on dimension
-    const bounds = calculateCombinedBounds(data.trainingPoints, undefined, 0.1);
-
-    if (data.nDimensions === 2) {
+    if (dimensions_to_render === 2) {
         render2DQueryVisualization(
-            container,
+            targetGroup,
             currentQuery,
             data,
-            bounds,
-            innerWidth,
-            innerHeight,
+            baseRenderResult.xScale,
+            baseRenderResult.yScale,
             {
                 colorScale,
                 k,
@@ -245,14 +244,14 @@ export function renderKNNPrediction({
                 interpolationFactor,
             }
         );
-    } else if (data.nDimensions === 1) {
+    } else if (dimensions_to_render === 1) {
+        const innerHeight = height - margin.top - margin.bottom;
         render1DQueryVisualization(
-            container,
+            targetGroup,
             currentQuery,
             data,
-            bounds,
-            innerWidth,
-            innerHeight,
+            baseRenderResult.xScale,
+            innerHeight / 2,
             {
                 colorScale,
                 k,
@@ -276,9 +275,8 @@ function render2DQueryVisualization(
     container: d3.Selection<SVGGElement, unknown, null, undefined>,
     query: any,
     data: KNNVisualizationData,
-    bounds: { min: number[]; max: number[] },
-    width: number,
-    height: number,
+    xScale: d3.ScaleLinear<number, number>,
+    yScale: d3.ScaleLinear<number, number>,
     options: {
         colorScale: d3.ScaleOrdinal<string, string>;
         k: number;
@@ -302,20 +300,32 @@ function render2DQueryVisualization(
         interpolationFactor,
     } = options;
 
-    // Create scales
-    const xScale = d3
-        .scaleLinear()
-        .domain([bounds.min[0], bounds.max[0]])
-        .range([0, width])
-        .nice();
+    if (!xScale || !yScale) {
+        console.error("[KNNRenderer] Missing scales for 2D query visualization");
+        return;
+    }
 
-    const yScale = d3
-        .scaleLinear()
-        .domain([bounds.min[1], bounds.max[1]])
-        .range([height, 0])
-        .nice();
+    if (!query?.queryPoint || query.queryPoint.length < 2) {
+        console.warn("[KNNRenderer] Malformed query point for 2D visualization:", query);
+        return;
+    }
+
+    const qX = xScale(query.queryPoint[0]);
+    const qY = yScale(query.queryPoint[1]);
+
+    if (isNaN(qX) || isNaN(qY)) {
+        console.warn("[KNNRenderer] Query point resulted in NaN coordinates:", {
+            point: query.queryPoint,
+            qX,
+            qY,
+            xDomain: xScale.domain(),
+            yDomain: yScale.domain()
+        });
+        return;
+    }
 
     const queryGroup = container.append("g").attr("class", "knn-query");
+    const tooltip = setupKNNTooltip();
 
     // Draw distance circle if enabled
     if (showDistanceCircles && query.neighbors.length > 0) {
@@ -373,18 +383,23 @@ function render2DQueryVisualization(
             const isNeighbor = neighborSet.has(idx);
             const distance = query.allDistances[idx];
 
+            const tx = xScale(trainingPoint[0]);
+            const ty = yScale(trainingPoint[1]);
+
+            if (isNaN(tx) || isNaN(ty)) return;
+
             // Calculate angle from query point to training point
-            const dx = xScale(trainingPoint[0]) - xScale(query.queryPoint[0]);
-            const dy = yScale(trainingPoint[1]) - yScale(query.queryPoint[1]);
+            const dx = tx - qX;
+            const dy = ty - qY;
             const angle = Math.atan2(dy, dx);
 
             // Calculate edge points (offset by circle radius)
-            const x1 =
-                xScale(query.queryPoint[0]) + pointRadius * Math.cos(angle);
-            const y1 =
-                yScale(query.queryPoint[1]) + pointRadius * Math.sin(angle);
-            const x2 = xScale(trainingPoint[0]) - pointRadius * Math.cos(angle);
-            const y2 = yScale(trainingPoint[1]) - pointRadius * Math.sin(angle);
+            const x1 = qX + pointRadius * Math.cos(angle);
+            const y1 = qY + pointRadius * Math.sin(angle);
+            const x2 = tx - pointRadius * Math.cos(angle);
+            const y2 = ty - pointRadius * Math.sin(angle);
+
+            if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) return;
 
             // Create line
             const line = linesGroup
@@ -415,38 +430,15 @@ function render2DQueryVisualization(
 
         lineData.forEach(
             ({ trainingPoint, idx, isNeighbor, distance, line }) => {
-                // Distance label group (hidden by default)
-                const textGroup = queryGroup
-                    .append("g")
-                    .style("display", "none");
-
-                const textBg = textGroup
-                    .append("rect")
-                    .attr("fill", "white")
-                    .attr("stroke", "#333")
-                    .attr("stroke-width", 1)
-                    .attr("rx", 3);
-
-                const distanceText = textGroup
-                    .append("text")
-                    .attr("text-anchor", "middle")
-                    .attr("dominant-baseline", "middle")
-                    .attr("font-size", "11px")
-                    .attr("font-weight", "500")
-                    .attr("fill", "#333")
-                    .text(`d = ${distance.toFixed(2)}`);
-
                 // Get the class label for this point
                 const classLabel = data.trainingLabels[idx];
 
-                // Create tooltip text with point details
-                const tooltipLines = [
-                    `Point: (${trainingPoint[0].toFixed(
-                        2
-                    )}, ${trainingPoint[1].toFixed(2)})`,
-                    `Class: ${classLabel}`,
-                    `Distance: ${distance.toFixed(2)}`,
-                ];
+                // Create tooltip content
+                const tooltipContent = `
+                    <div class="font-semibold text-gray-900 mb-1">Neighbor Point</div>
+                    <div class="text-sm text-gray-700">Class: <span class="font-semibold">${classLabel}</span></div>
+                    <div class="text-sm text-gray-700">Distance: ${distance.toFixed(4)}</div>
+                `;
 
                 // Create invisible larger circle for hover detection
                 const hoverCircle = hoverGroup
@@ -461,47 +453,21 @@ function render2DQueryVisualization(
 
                 // Hover behavior - show tooltip
                 hoverCircle
-                    .on("mouseenter", function () {
+                    .on("mousemove", function (event: any) {
                         // Highlight the line
                         line.attr(
                             "stroke-width",
                             isNeighbor ? neighborLineWidth + 1 : 1.5
                         ).attr("opacity", 0.9);
 
-                        // Position tooltip near the hovered point
-                        const cx = xScale(trainingPoint[0]);
-                        const cy = yScale(trainingPoint[1]);
-
-                        // Clear previous text and add new lines
-                        distanceText.text("");
-                        tooltipLines.forEach((line, i) => {
-                            distanceText
-                                .append("tspan")
-                                .attr("x", 0)
-                                .attr("dy", i === 0 ? 0 : "1.2em")
-                                .text(line);
-                        });
-
-                        // Get text dimensions and set background
-                        const bbox = (
-                            distanceText.node() as SVGTextElement
-                        ).getBBox();
-                        const padding = 6;
-                        const labelX = cx;
-                        const labelY =
-                            cy - pointRadius - bbox.height - padding * 2 - 5;
-
-                        textBg
-                            .attr("x", labelX - bbox.width / 2 - padding)
-                            .attr("y", labelY - padding)
-                            .attr("width", bbox.width + padding * 2)
-                            .attr("height", bbox.height + padding * 2);
-
-                        distanceText
-                            .attr("x", labelX)
-                            .attr("y", labelY + bbox.height / 2);
-
-                        textGroup.style("display", null).raise();
+                        // Show HTML tooltip
+                        tooltip.html(tooltipContent);
+                        tooltip
+                            .style("background-color", "white")
+                            .style("color", "black")
+                            .style("opacity", 0.8)
+                            .style("left", event.pageX + 15 + "px")
+                            .style("top", event.pageY - 10 + "px");
                     })
                     .on("mouseleave", function () {
                         // Reset line
@@ -513,7 +479,7 @@ function render2DQueryVisualization(
                             (isNeighbor ? 0.7 : 0.15) * interpolationFactor
                         );
 
-                        textGroup.style("display", "none");
+                        tooltip.style("opacity", 0);
                     });
             }
         );
@@ -536,7 +502,7 @@ function render2DQueryVisualization(
     });
 
     // Draw query point
-    queryGroup
+    const queryPointCircle = queryGroup
         .append("circle")
         .attr("class", "knn-query-point")
         .attr("cx", xScale(query.queryPoint[0]))
@@ -561,6 +527,59 @@ function render2DQueryVisualization(
         .attr("pointer-events", "none")
         .text("?")
         .attr("opacity", interpolationFactor);
+
+    // Create an invisible larger circle for better hover interaction
+    const queryHoverTarget = queryGroup
+        .append("circle")
+        .attr("class", "knn-query-hover-target")
+        .attr("cx", xScale(query.queryPoint[0]))
+        .attr("cy", yScale(query.queryPoint[1]))
+        .attr("r", queryPointSize + 5)
+        .attr("fill", "transparent")
+        .style("cursor", "pointer")
+        .style("pointer-events", "all");
+
+    // Ensure the query point and its hover target are on top
+    queryPointCircle.raise();
+    queryGroup.select(".knn-query-marker").raise();
+    queryHoverTarget.raise();
+
+    // Use prediction name or fallback
+    const predictionLabel = query.prediction || "Not yet calculated";
+
+    // Add interactive tooltip for query point
+    const queryTooltipContent = `
+        <div class="font-semibold text-gray-900 mb-1">Prediction: <span class="text-blue-600">${predictionLabel}</span></div>
+        <div class="text-xs text-gray-500 mb-2">Nearest Neighbors (k=${k}):</div>
+        <div class="space-y-1 max-h-40 overflow-y-auto">
+            ${query.neighbors && query.neighbors.length > 0 ? 
+                query.neighbors.slice(0, k).map((n: any, i: number) => `
+                <div class="flex justify-between items-center text-xs border-b border-gray-100 pb-1">
+                    <span class="text-gray-700">#${i + 1} ${n.label}</span>
+                    <span class="font-mono text-gray-400">d=${n.distance.toFixed(3)}</span>
+                </div>
+            `).join("") : '<div class="text-xs text-gray-400 italic">No neighbors available</div>'}
+        </div>
+    `;
+
+    queryHoverTarget
+        .on("mouseover", function (event: any) {
+            tooltip.html(queryTooltipContent);
+            tooltip
+                .style("background-color", "white")
+                .style("color", "black")
+                .style("opacity", 0.95)
+                .style("left", event.pageX + 15 + "px")
+                .style("top", event.pageY - 10 + "px");
+        })
+        .on("mousemove", function (event: any) {
+            tooltip
+                .style("left", event.pageX + 15 + "px")
+                .style("top", event.pageY - 10 + "px");
+        })
+        .on("mouseout", function () {
+            tooltip.style("opacity", 0);
+        });
 }
 
 // ============================================================================
@@ -571,9 +590,8 @@ function render1DQueryVisualization(
     container: d3.Selection<SVGGElement, unknown, null, undefined>,
     query: any,
     data: KNNVisualizationData,
-    bounds: { min: number[]; max: number[] },
-    width: number,
-    height: number,
+    xScale: d3.ScaleLinear<number, number>,
+    stripCenter: number,
     options: {
         colorScale: d3.ScaleOrdinal<string, string>;
         k: number;
@@ -595,16 +613,28 @@ function render1DQueryVisualization(
         interpolationFactor,
     } = options;
 
-    // Create scale
-    const xScale = d3
-        .scaleLinear()
-        .domain([bounds.min[0], bounds.max[0]])
-        .range([0, width])
-        .nice();
+    if (!xScale) {
+        console.error("[KNNRenderer] Missing xScale for 1D query visualization");
+        return;
+    }
 
-    const stripCenter = height / 2;
+    if (!query?.queryPoint || query.queryPoint.length < 1) {
+        console.warn("[KNNRenderer] Malformed query point for 1D visualization:", query);
+        return;
+    }
+
+    const qX = xScale(query.queryPoint[0]);
+    if (isNaN(qX)) {
+        console.warn("[KNNRenderer] Query point resulted in NaN coordinates (1D):", {
+            point: query.queryPoint,
+            qX,
+            domain: xScale.domain()
+        });
+        return;
+    }
 
     const queryGroup = container.append("g").attr("class", "knn-query");
+    const tooltip = setupKNNTooltip();
 
     // Draw lines to ALL points
     if (showNeighborLines) {
@@ -673,36 +703,15 @@ function render1DQueryVisualization(
 
         lineData.forEach(
             ({ trainingPoint, idx, isNeighbor, distance, line }) => {
-                // Distance label group (hidden by default)
-                const textGroup = queryGroup
-                    .append("g")
-                    .style("display", "none");
-
-                const textBg = textGroup
-                    .append("rect")
-                    .attr("fill", "white")
-                    .attr("stroke", "#333")
-                    .attr("stroke-width", 1)
-                    .attr("rx", 3);
-
-                const distanceText = textGroup
-                    .append("text")
-                    .attr("text-anchor", "middle")
-                    .attr("dominant-baseline", "middle")
-                    .attr("font-size", "11px")
-                    .attr("font-weight", "500")
-                    .attr("fill", "#333")
-                    .text(`d = ${distance.toFixed(2)}`);
-
                 // Get the class label for this point
                 const classLabel = data.trainingLabels[idx];
 
-                // Create tooltip text with point details
-                const tooltipLines = [
-                    `Point: ${trainingPoint[0].toFixed(2)}`,
-                    `Class: ${classLabel}`,
-                    `Distance: ${distance.toFixed(2)}`,
-                ];
+                // Create tooltip content
+                const tooltipContent = `
+                    <div class="font-semibold text-gray-900 mb-1">Neighbor Point</div>
+                    <div class="text-sm text-gray-700">Class: <span class="font-semibold">${classLabel}</span></div>
+                    <div class="text-sm text-gray-700">Distance: ${distance.toFixed(4)}</div>
+                `;
 
                 // Create invisible larger circle for hover detection
                 const hoverCircle = hoverGroup
@@ -717,50 +726,21 @@ function render1DQueryVisualization(
 
                 // Hover behavior - show tooltip
                 hoverCircle
-                    .on("mouseenter", function () {
+                    .on("mousemove", function (event: any) {
                         // Highlight the line
                         line.attr(
                             "stroke-width",
                             isNeighbor ? neighborLineWidth + 1 : 1.5
                         ).attr("opacity", 0.9);
 
-                        // Position tooltip near the hovered point
-                        const cx = xScale(trainingPoint[0]);
-
-                        // Clear previous text and add new lines
-                        distanceText.text("");
-                        tooltipLines.forEach((line, i) => {
-                            distanceText
-                                .append("tspan")
-                                .attr("x", 0)
-                                .attr("dy", i === 0 ? 0 : "1.2em")
-                                .text(line);
-                        });
-
-                        // Get text dimensions and set background
-                        const bbox = (
-                            distanceText.node() as SVGTextElement
-                        ).getBBox();
-                        const padding = 6;
-                        const labelX = cx;
-                        const labelY =
-                            stripCenter -
-                            pointRadius -
-                            bbox.height -
-                            padding * 2 -
-                            5;
-
-                        textBg
-                            .attr("x", labelX - bbox.width / 2 - padding)
-                            .attr("y", labelY - padding)
-                            .attr("width", bbox.width + padding * 2)
-                            .attr("height", bbox.height + padding * 2);
-
-                        distanceText
-                            .attr("x", labelX)
-                            .attr("y", labelY + bbox.height / 2);
-
-                        textGroup.style("display", null).raise();
+                        // Show HTML tooltip
+                        tooltip.html(tooltipContent);
+                        tooltip
+                            .style("background-color", "white")
+                            .style("color", "black")
+                            .style("opacity", 0.8)
+                            .style("left", event.pageX + 15 + "px")
+                            .style("top", event.pageY - 10 + "px");
                     })
                     .on("mouseleave", function () {
                         // Reset line
@@ -772,7 +752,7 @@ function render1DQueryVisualization(
                             (isNeighbor ? 0.7 : 0.15) * interpolationFactor
                         );
 
-                        textGroup.style("display", "none");
+                        tooltip.style("opacity", 0);
                     });
             }
         );
@@ -795,7 +775,7 @@ function render1DQueryVisualization(
     });
 
     // Draw query point
-    queryGroup
+    const queryPointCircle = queryGroup
         .append("circle")
         .attr("class", "knn-query-point")
         .attr("cx", xScale(query.queryPoint[0]))
@@ -820,6 +800,59 @@ function render1DQueryVisualization(
         .attr("pointer-events", "none")
         .text("?")
         .attr("opacity", interpolationFactor);
+
+    // Create an invisible larger circle for better hover interaction
+    const queryHoverTarget = queryGroup
+        .append("circle")
+        .attr("class", "knn-query-hover-target")
+        .attr("cx", xScale(query.queryPoint[0]))
+        .attr("cy", stripCenter)
+        .attr("r", queryPointSize + 5)
+        .attr("fill", "transparent")
+        .style("cursor", "pointer")
+        .style("pointer-events", "all");
+
+    // Ensure the query point and its hover target are on top
+    queryPointCircle.raise();
+    queryGroup.select(".knn-query-marker").raise();
+    queryHoverTarget.raise();
+
+    // Use prediction name or fallback
+    const predictionLabel = query.prediction || "Not yet calculated";
+
+    // Add interactive tooltip for query point
+    const queryTooltipContent = `
+        <div class="font-semibold text-gray-900 mb-1">Prediction: <span class="text-blue-600">${predictionLabel}</span></div>
+        <div class="text-xs text-gray-500 mb-2">Nearest Neighbors (k=${k}):</div>
+        <div class="space-y-1 max-h-40 overflow-y-auto">
+            ${query.neighbors && query.neighbors.length > 0 ? 
+                query.neighbors.slice(0, k).map((n: any, i: number) => `
+                <div class="flex justify-between items-center text-xs border-b border-gray-100 pb-1">
+                    <span class="text-gray-700">#${i + 1} ${n.label}</span>
+                    <span class="font-mono text-gray-400">d=${n.distance.toFixed(3)}</span>
+                </div>
+            `).join("") : '<div class="text-xs text-gray-400 italic">No neighbors available</div>'}
+        </div>
+    `;
+
+    queryHoverTarget
+        .on("mouseover", function (event: any) {
+            tooltip.html(queryTooltipContent);
+            tooltip
+                .style("background-color", "white")
+                .style("color", "black")
+                .style("opacity", 0.95)
+                .style("left", event.pageX + 15 + "px")
+                .style("top", event.pageY - 10 + "px");
+        })
+        .on("mousemove", function (event: any) {
+            tooltip
+                .style("left", event.pageX + 15 + "px")
+                .style("top", event.pageY - 10 + "px");
+        })
+        .on("mouseout", function () {
+            tooltip.style("opacity", 0);
+        });
 }
 
 // ============================================================================
@@ -849,7 +882,6 @@ function setupKNNTooltip(): d3.Selection<
             )
             .style("transition", "opacity 0.3s");
     } else {
-        existingTooltip.style("opacity", 0);
         return existingTooltip as unknown as d3.Selection<
             HTMLDivElement,
             unknown,
@@ -880,26 +912,8 @@ function addTrainingPointTooltips(
 
         // Prepare tooltip content based on dimensions
         const getTooltipContent = () => {
-            let content = `<div class="font-semibold text-base mb-2">Training Point</div>`;
-
-            if (data.nDimensions === 1) {
-                content += `<div class="text-sm">Position: ${point.coordinates[0].toFixed(
-                    2
-                )}</div>`;
-            } else if (data.nDimensions === 2) {
-                content += `<div class="text-sm">Position: (${point.coordinates[0].toFixed(
-                    2
-                )}, ${point.coordinates[1].toFixed(2)})</div>`;
-            } else {
-                content += `<div class="text-sm">Position: (${point.coordinates[0].toFixed(
-                    2
-                )}, ${point.coordinates[1].toFixed(
-                    2
-                )}, ${point.coordinates[2].toFixed(2)})</div>`;
-            }
-
-            content += `<div class="text-sm">Class: <span class="font-semibold">${classLabel}</span></div>`;
-
+            let content = `<div class="font-semibold text-gray-900 mb-1">Training Point</div>`;
+            content += `<div class="text-sm text-gray-700">Class: <span class="font-semibold">${classLabel}</span></div>`;
             return content;
         };
 
@@ -912,7 +926,7 @@ function addTrainingPointTooltips(
                 tooltip
                     .style("background-color", "white")
                     .style("color", "black")
-                    .style("opacity", 0.95)
+                    .style("opacity", 0.8)
                     .style("left", event.pageX + 15 + "px")
                     .style("top", event.pageY - 10 + "px");
             })

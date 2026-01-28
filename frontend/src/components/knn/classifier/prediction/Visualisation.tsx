@@ -21,26 +21,12 @@ const Visualisation: React.FC<VisualisationProps> = ({ points }) => {
         predictionData,
         isPredictionLoading,
         predictionError,
-        makePrediction,
         visualizationData,
         loadVisualization,
         isVisualizationLoading,
     } = useKNN();
 
-    // Make prediction when points change
-    useEffect(() => {
-        if (points && Object.keys(points).length > 0) {
-            // Convert points object to array format expected by API
-            const featureNames = Object.keys(points);
-            const queryPoint = featureNames.map(name => points[name]);
 
-            makePrediction({
-                query_points: [queryPoint],
-                // Parameters are optional, defaults will be used
-                parameters: undefined,
-            });
-        }
-    }, [points, makePrediction]);
 
     // Load visualization data if not already loaded
     useEffect(() => {
@@ -49,50 +35,15 @@ const Visualisation: React.FC<VisualisationProps> = ({ points }) => {
         }
     }, [visualizationData, predictionData, loadVisualization, isVisualizationLoading]);
 
-    // Show loading state
-    if (isPredictionLoading || isVisualizationLoading) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">
-                        {isPredictionLoading ? "Making prediction..." : "Loading visualization..."}
-                    </p>
-                </div>
-            </div>
-        );
-    }
-
-    // Show error state
-    if (predictionError) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <div className="text-center p-8">
-                    <p className="text-destructive mb-2">Error making prediction</p>
-                    <p className="text-sm text-muted-foreground">{predictionError}</p>
-                </div>
-            </div>
-        );
-    }
-
-    // Show empty state
-    if (!predictionData && !visualizationData) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <div className="text-center p-8">
-                    <p className="text-muted-foreground">
-                        No data available. Please enter query points to make a prediction.
-                    </p>
-                </div>
-            </div>
-        );
-    }
-
     // Use prediction data if available, otherwise fall back to visualization data
     const knnData = predictionData || visualizationData;
 
-    // Get dimensions from visualisation_feature_indices if available, otherwise from n_dimensions
-    const dimensions = (knnData as any)?.visualisation_feature_indices?.length || (knnData as any)?.n_dimensions || 2;
+
+    // Get dimensions robustly from visualization-specific data only:
+    const dimensions = 
+        (knnData as any)?.visualisation_feature_indices?.length || 
+        (knnData?.training_points?.[0]?.length) || 
+        2;
 
     const visualizationData_transformed: KNNVisualizationData = useMemo(() => {
         if (!knnData) {
@@ -116,43 +67,88 @@ const Visualisation: React.FC<VisualisationProps> = ({ points }) => {
               }
             : undefined;
 
+        // Resolve the effective feature names for visualization
+        const allFeatureNames = 
+             ((knnData as any).metadata?.feature_names as string[]) ||
+             ((knnData as any).feature_names as string[]) ||
+             [];
+             
+        const vizIndices = (knnData as any).visualisation_feature_indices as number[];
+        const explicitVizNames = (knnData as any).visualisation_feature_names as string[];
+        
+        // Infer features from points if provided and no explicit visualization features are set
+        const pointsFeatures = points ? Object.keys(points).filter(k => allFeatureNames.includes(k)) : [];
+        const inferredVizNames = pointsFeatures.length > 0 ? pointsFeatures : [];
+
+        const effectiveVizFeatureNames = 
+            (explicitVizNames && explicitVizNames.length > 0) ? explicitVizNames :
+            (vizIndices && vizIndices.length > 0 && allFeatureNames.length > 0) ? vizIndices.map(i => allFeatureNames[i]) :
+            (inferredVizNames.length > 0) ? inferredVizNames :
+            allFeatureNames.slice(0, dimensions);
+
+        console.log("[KNN Visualisation] Feature debug:", {
+            allFeatureNames,
+            vizIndices,
+            explicitVizNames,
+            effectiveVizFeatureNames,
+            points,
+            dimensions
+        });
+
+        const featureNames = effectiveVizFeatureNames;
+
+        const classNames =
+            ((knnData as any).metadata?.class_names as string[]) ||
+            ((knnData as any).class_names as string[]) ||
+            [];
+
         // Transform prediction data to include queries
         const queries = predictionData
-            ? predictionData.predictions.map((prediction, idx) => ({
-                  queryPoint: points
-                      ? Object.keys(points).map(name => points[name])
-                      : [],
-                  neighbors: predictionData.neighbors_info[idx].map(n => ({
-                      index: n.index,
-                      distance: n.distance,
-                      label: n.label,
-                  })),
-                  prediction: prediction,
-                  predictionIndex: predictionData.prediction_indices[idx],
-                  allDistances: predictionData.all_distances[idx],
-              }))
+            ? predictionData.predictions.map((prediction, idx) => {
+                  // Construct query point vector strictly from the visualized features
+                  const queryPoint = effectiveVizFeatureNames.map((name: string) => {
+                      const val = Number(points?.[name]);
+                      console.log(`[KNN Viz] Mapping feature '${name}':`, points?.[name], "->", val);
+                      return isNaN(val) ? 0 : val;
+                  });
+
+                  return {
+                      queryPoint,
+                      neighbors: predictionData.neighbors_info[idx].map((n) => ({
+                          index: n.index,
+                          distance: n.distance,
+                          label: n.label,
+                      })),
+                      prediction: prediction,
+                      predictionIndex: predictionData.prediction_indices[idx],
+                      allDistances: predictionData.all_distances[idx],
+                  };
+              })
             : undefined;
 
         return {
-            trainingPoints: knnData.training_points,
-            trainingLabels: knnData.training_labels,
+            trainingPoints: knnData.training_points || [],
+            trainingLabels: knnData.training_labels || [],
             decisionBoundary,
-            featureNames: (knnData as any).metadata?.feature_names || (knnData as any).feature_names || [],
-            classNames: (knnData as any).metadata?.class_names || (knnData as any).class_names || [],
+            featureNames,
+            classNames,
             nDimensions: dimensions,
-            k: predictionData?.neighbors_info?.[0]?.length || 5,
+            k:
+                (predictionData as any)?.neighbors_info?.[0]?.length ||
+                ((knnData as any).metadata as any)?.trained_k ||
+                5,
             queries,
         };
     }, [knnData, predictionData, dimensions, points]);
 
-    // Create color scale
+    // Create color scale - Use category10 to match the renderer's default
     const colorScale = useMemo(
         () =>
             d3
                 .scaleOrdinal<string>()
                 .domain(visualizationData_transformed.classNames)
                 .range(
-                    d3.schemeDark2.slice(
+                    d3.schemeCategory10.slice(
                         0,
                         visualizationData_transformed.classNames.length
                     )
@@ -207,7 +203,43 @@ const Visualisation: React.FC<VisualisationProps> = ({ points }) => {
         [visualizationData_transformed, colorScale]
     );
 
-    // Early return AFTER all hooks
+    // Move early returns AFTER all hooks
+    if (isPredictionLoading || isVisualizationLoading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                    <p className="text-muted-foreground">
+                        {isPredictionLoading ? "Making prediction..." : "Loading visualization..."}
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    if (predictionError) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-center p-8">
+                    <p className="text-destructive mb-2">Error making prediction</p>
+                    <p className="text-sm text-muted-foreground">{predictionError}</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!predictionData && !visualizationData) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-center p-8">
+                    <p className="text-muted-foreground">
+                        No data available. Please enter query points to make a prediction.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     if (!knnData) return null;
 
     return (

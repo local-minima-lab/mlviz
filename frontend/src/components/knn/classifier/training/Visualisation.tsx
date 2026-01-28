@@ -32,7 +32,11 @@ const Visualisation: React.FC<VisualisationProps> = () => {
         }
     }, []); // Only run on mount
 
-    const dimensions = knnData?.visualisation_feature_indices?.length || 0;
+    // Get dimensions robustly from visualization-specific data only:
+    const dimensions = 
+        knnData?.visualisation_feature_indices?.length || 
+        (knnData?.training_points?.[0]?.length) || 
+        2; // Default to 2 if no data yet
 
     const visualizationData: KNNVisualizationData = useMemo(() => {
         if (!knnData) {
@@ -57,25 +61,35 @@ const Visualisation: React.FC<VisualisationProps> = () => {
             : undefined;
 
         return {
-            trainingPoints: knnData.training_points,
-            trainingLabels: knnData.training_labels,
+            trainingPoints: knnData.training_points || [],
+            trainingLabels: knnData.training_labels || [],
             decisionBoundary,
-            featureNames: (knnData as any).metadata?.feature_names || [],
-            classNames: (knnData as any).metadata?.class_names || [],
+            featureNames:
+                ((knnData as any).visualisation_feature_names as string[]) ||
+                (knnData.metadata?.feature_names as string[]) ||
+                ((knnData as any).feature_names as string[]) ||
+                [],
+            classNames:
+                (knnData.metadata?.class_names as string[]) ||
+                ((knnData as any).class_names as string[]) ||
+                [],
             nDimensions: dimensions,
-            k: 5, // Default K, can be made configurable
+            k: (lastVisualizationParams.parameters as any)?.n_neighbors || 5,
             queries: undefined,
         };
-    }, [knnData, dimensions]);
+    }, [knnData, dimensions, lastVisualizationParams.parameters]);
 
-    // Create color scale
+    // Create color scale - Use category10 to match renderer
     const colorScale = useMemo(
         () =>
             d3
                 .scaleOrdinal<string>()
                 .domain(visualizationData.classNames)
                 .range(
-                    d3.schemeDark2.slice(0, visualizationData.classNames.length)
+                    d3.schemeCategory10.slice(
+                        0,
+                        visualizationData.classNames.length
+                    )
                 ),
         [visualizationData.classNames]
     );

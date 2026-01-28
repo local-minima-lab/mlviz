@@ -48,7 +48,8 @@ export const getClassDistribution = (
         .sort(
             (a: ClassDistribution, b: ClassDistribution) => b.count - a.count
         ); // Sort by count descending
-
+    console.log('[getClassDistribution] Called with d:', d, 'classNames:', classNames);
+    console.log('[getClassDistribution] Result:', result);
     return result;
 };
 
@@ -297,10 +298,20 @@ const renderHistogramComponent = (
 
     const stackedData = prepareHistogramData(histogramData);
 
+    // Debug logging for color scheme issues
+    const keys = Object.keys(histogramData.counts_by_class);
+    // Sort keys to match renderHistogramBars logic
+    const sortedKeys = [...keys].sort(); 
+    
+    console.log('[renderHistogramComponent] Keys:', keys);
+    console.log('[renderHistogramComponent] Sorted Keys:', sortedKeys);
+    
     const colorScheme = colorScale
-        ? Object.keys(histogramData.counts_by_class).map((cls) =>
-              colorScale(cls)
-          )
+        ? sortedKeys.map((cls) => {
+              const color = colorScale(cls);
+              console.log(`[renderHistogramComponent] Mapping class "${cls}" to color:`, color);
+              return color;
+          })
         : undefined;
 
     renderHistogramBars(histogramGroup, histogramData, stackedData, {
@@ -514,26 +525,27 @@ export const renderExpandableLeafNode = (
         .attr("stroke-width", isSelected ? 2 : 1);
     
     // Display class distribution
-    const barGroup = nodeGroup.append("g");
+    // Reusing renderDistributionBar ensures consistent visualization and correct color mapping
+    // (using class name instead of potentially incorrect loop index)
     const barWidth = nodeWidth - 20;
     const barHeight = 8;
-    const barX = -barWidth / 2;
     const barY = -nodeHeight / 4;
     
-    let xOffset = 0;
-    const totalSamples = d.data.samples;
-    distribution.forEach((classDistribution, i) => {
-        const segmentWidth = (classDistribution.count / totalSamples) * barWidth;
-        barGroup
-            .append("rect")
-            .attr("x", barX + xOffset)
-            .attr("y", barY)
-            .attr("width", segmentWidth)
-            .attr("height", barHeight)
-            .attr("fill", colorScale(i.toString()))
-            .attr("rx", 2);
-        xOffset += segmentWidth;
-    });
+    // Add a group positioned at the start of the bar area
+    const barGroup = nodeGroup.append("g");
+    
+    // renderDistributionBar expects to draw centered on 0, so we pass the correct yOffset
+    // AND we must not translate the group if we want it to align with how renderDistributionBar works
+    // (which draws from -width/2 to +width/2)
+    
+    renderDistributionBar(
+        barGroup,
+        distribution,
+        barWidth,
+        barHeight,
+        barY,
+        colorScale
+    );
     
     // Show "+" icon or "Selected" text
     if (isSelected) {

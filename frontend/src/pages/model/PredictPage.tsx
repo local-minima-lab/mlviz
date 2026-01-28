@@ -3,7 +3,7 @@ import { PredictComponent } from "@/components/PredictComponent";
 import { useModel } from "@/contexts/ModelContext";
 import { CurrentStoryContext } from "@/contexts/StoryContext";
 import type { ModelPage as ModelPageProps } from "@/types/story";
-import { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 
 type PredictPageProps = Pick<ModelPageProps, "model_name" | "parameters">;
 
@@ -15,14 +15,22 @@ const PredictPage: React.FC<PredictPageProps> = ({
     if (!context) throw new Error("No context found.");
     const { updateParams } = context;
 
-    const { currentModelData, getFeatureNames } = useModel();
-    console.log("Current model data: ", currentModelData)
+    const {
+        currentModelData,
+        getFeatureNames,
+        getPredictiveFeatureNames,
+        predict,
+        predictionResult,
+        isPredicting,
+    } = useModel();
 
     const [predictionInputPoints, setPredictionInputPoints] = useState<
         Record<string, number>
     >(parameters?.presetPoints || {});
 
-    const currentFeatures: string[] = getFeatureNames() || [];
+    const currentFeatures: string[] = (typeof getPredictiveFeatureNames === 'function' 
+        ? getPredictiveFeatureNames() 
+        : getFeatureNames()) || [];
 
     useEffect(() => {
         if (currentFeatures.length > 0) {
@@ -42,7 +50,7 @@ const PredictPage: React.FC<PredictPageProps> = ({
 
                 const prevFeatures = Object.keys(prevPoints);
                 const hasRemovedFeatures = prevFeatures.some(
-                    (feature) => !currentFeatures.includes(feature)
+                    (feature) => !currentFeatures.includes(feature),
                 );
 
                 if (
@@ -67,6 +75,30 @@ const PredictPage: React.FC<PredictPageProps> = ({
         }
     }, [currentFeatures]);
 
+    const lastPredictedPointsRef = useRef<string>("");
+
+    const handlePredict = (newPoints: Record<string, number>) => {
+        setPredictionInputPoints(newPoints);
+        updateParams({ predictParams: newPoints });
+        // Trigger prediction immediately on user action
+        predict(newPoints);
+        lastPredictedPointsRef.current = JSON.stringify(newPoints) + currentFeatures.join(",");
+    };
+
+    // Auto-predict on mount, when features change, or when inputs change
+    useEffect(() => {
+        const pointsStr = JSON.stringify(predictionInputPoints) + currentFeatures.join(",");
+        const hasValidPoints =
+            currentFeatures.length > 0 &&
+            Object.keys(predictionInputPoints).length > 0 &&
+            Object.values(predictionInputPoints).every((v) => v !== undefined);
+
+        if (hasValidPoints && currentModelData && !isPredicting && pointsStr !== lastPredictedPointsRef.current) {
+            predict(predictionInputPoints);
+            lastPredictedPointsRef.current = pointsStr;
+        }
+    }, [predictionInputPoints, predict, currentModelData, isPredicting, currentFeatures]);
+
     if (!currentModelData) {
         return (
             <div>
@@ -74,11 +106,6 @@ const PredictPage: React.FC<PredictPageProps> = ({
             </div>
         );
     }
-
-    const handlePredict = (newPoints: Record<string, number>) => {
-        setPredictionInputPoints(newPoints);
-        updateParams({ predictParams: newPoints });
-    };
 
     return (
         <div className="grid grid-cols-10 w-full h-full">
@@ -94,6 +121,8 @@ const PredictPage: React.FC<PredictPageProps> = ({
                     componentName={model_name}
                     data={currentModelData}
                     points={predictionInputPoints}
+                    predictionResult={predictionResult}
+                    isPredicting={isPredicting}
                 />
             </div>
         </div>

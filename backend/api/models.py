@@ -131,6 +131,24 @@ class ManualTreeEvaluateResponse(BaseModel):
     metadata: ClassificationMetadata = Field(description="Classifier metadata including feature and class information")
 
 
+class DecisionTreeTraversalPredictRequest(BaseModel):
+    """Request for decision tree prediction with traversal instructions."""
+    tree: TreeNode = Field(description="Root node of the decision tree")
+    points: Dict[str, float] = Field(description="Feature name to value mapping for prediction")
+    class_names: Optional[List[str]] = Field(
+        None, description="Class names for the prediction result (optional)")
+
+
+class DecisionTreeTraversalPredictResponse(BaseModel):
+    """Response containing prediction result with traversal instructions."""
+    predicted_class: str = Field(description="Predicted class label")
+    predicted_class_index: int = Field(description="Index of the predicted class")
+    confidence: float = Field(description="Confidence score (proportion of samples at leaf)")
+    instructions: List[Literal["left", "right", "stop"]] = Field(
+        description="Traversal instructions from root to leaf"
+    )
+
+
 class BaseParameterInfo(BaseModel):
     """Base parameter information."""
     name: str

@@ -262,29 +262,11 @@ export const renderDecisionTree = ({
     const { currentStep = 0 } = state;
 
     console.log('[DecisionTreeRenderer] data.classes:', data.classes);
-    
-    // Use external color scale if provided, otherwise create a stable mapping
-    let colorScale: (className: string) => string;
-    
-    if (externalColorScale) {
-        colorScale = externalColorScale;
-    } else {
-        const classColors = new Map<string, string>();
-        const classes = data.classes || [];
-        const colors = d3.schemeDark2.slice(0, classes.length);
-        
-        classes.forEach((className: string, index: number) => {
-            classColors.set(className, colors[index] || '#cccccc');
-            // Also map the index as a string for histogram data compatibility
-            classColors.set(index.toString(), colors[index] || '#cccccc');
-        });
-        
-        colorScale = (className: string) => {
-            return classColors.get(className) || '#cccccc';
-        };
-    }
+    // Use external color scale if provided (which should always be the case from BaseVisualisation)
+    const colorScale = externalColorScale || ((_className: string) => '#cccccc');
     
     console.log('[DecisionTreeRenderer] Color scale initialized');
+
 
     const root = d3.hierarchy(transformTreeData(data.tree, 0, currentStep));
     const contentWidth = width - margin.left - margin.right;
@@ -339,12 +321,14 @@ export const renderDecisionTree = ({
         const interpolationFactor = d.data.isOnPath
             ? calculateInterpolationFactor(d.depth, context)
             : 0;
+
+        console.log("colorScale", externalColorScale)
         renderIntegratedSplitNode(
             nodeGroup,
             d,
             distribution,
             120,
-            colorScale,
+            externalColorScale,
             interpolationFactor
         );
         

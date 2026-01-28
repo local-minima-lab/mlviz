@@ -143,3 +143,34 @@ export const evaluateManualTree = async (
 
     return response.json();
 };
+
+// Type aliases for prediction with traversal instructions
+export type PredictWithInstructionsRequest =
+    components["schemas"]["DecisionTreeTraversalPredictRequest"];
+export type PredictWithInstructionsResponse =
+    components["schemas"]["DecisionTreeTraversalPredictResponse"];
+
+/**
+ * Makes a prediction using the decision tree and returns traversal instructions.
+ * The instructions can be used by the frontend to animate the prediction path.
+ * @param request Prediction request with tree, feature values, and optional class names
+ * @returns A promise resolving to prediction result with traversal instructions
+ */
+export const predictWithInstructions = async (
+    request: PredictWithInstructionsRequest
+): Promise<PredictWithInstructionsResponse> => {
+    const response = await fetch(`${API_BASE_URL}/predict`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+};

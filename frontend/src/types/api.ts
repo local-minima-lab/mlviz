@@ -88,6 +88,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dt/predict": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Predict With Instructions
+         * @description Make a prediction and return traversal instructions for visualization.
+         *
+         *     This endpoint traverses the provided decision tree using the input feature
+         *     values and returns:
+         *     - The predicted class and confidence
+         *     - A list of traversal instructions ("left", "right", "stop") that can be
+         *       used by the frontend to animate the prediction path through the tree
+         *
+         *     Args:
+         *         request: Contains the tree structure, feature values, and optional class names
+         *
+         *     Raises:
+         *         HTTPException: If prediction fails (e.g., missing feature value)
+         *
+         *     Returns:
+         *         DecisionTreeTraversalPredictResponse: Prediction result with instructions
+         */
+        post: operations["predict_with_instructions_api_dt_predict_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dt/cache": {
         parameters: {
             query?: never;
@@ -664,6 +699,55 @@ export interface components {
             /** Tree */
             tree: components["schemas"]["SplitNode-Output"] | components["schemas"]["LeafNode"];
             metrics: components["schemas"]["ClassificationMetrics"];
+        };
+        /**
+         * DecisionTreeTraversalPredictRequest
+         * @description Request for decision tree prediction with traversal instructions.
+         */
+        DecisionTreeTraversalPredictRequest: {
+            /**
+             * Tree
+             * @description Root node of the decision tree
+             */
+            tree: components["schemas"]["SplitNode-Input"] | components["schemas"]["LeafNode"];
+            /**
+             * Points
+             * @description Feature name to value mapping for prediction
+             */
+            points: {
+                [key: string]: number;
+            };
+            /**
+             * Class Names
+             * @description Class names for the prediction result (optional)
+             */
+            class_names?: string[] | null;
+        };
+        /**
+         * DecisionTreeTraversalPredictResponse
+         * @description Response containing prediction result with traversal instructions.
+         */
+        DecisionTreeTraversalPredictResponse: {
+            /**
+             * Predicted Class
+             * @description Predicted class label
+             */
+            predicted_class: string;
+            /**
+             * Predicted Class Index
+             * @description Index of the predicted class
+             */
+            predicted_class_index: number;
+            /**
+             * Confidence
+             * @description Confidence score (proportion of samples at leaf)
+             */
+            confidence: number;
+            /**
+             * Instructions
+             * @description Traversal instructions from root to leaf
+             */
+            instructions: ("left" | "right" | "stop")[];
         };
         /**
          * FloatParameterInfo
@@ -1518,6 +1602,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": string[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    predict_with_instructions_api_dt_predict_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionTreeTraversalPredictRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecisionTreeTraversalPredictResponse"];
                 };
             };
             /** @description Validation Error */

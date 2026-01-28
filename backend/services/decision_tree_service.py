@@ -288,13 +288,71 @@ class DecisionTreeService:
             "prediction_indices": predictions.tolist()
         }
 
+    async def predict_with_instructions(
+        self,
+        tree: TreeNode,
+        points: Dict[str, float],
+        class_names: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """Predict using a tree and return traversal instructions.
+
+        Args:
+            tree: Root node of the decision tree
+            points: Feature name to value mapping
+            class_names: Optional list of class names
+
+        Returns:
+            Dictionary with prediction and traversal instructions
+        """
+        instructions: List[str] = []
+        node = tree
+
+        # Traverse tree until we reach a leaf
+        while node.type == 'split':
+            feature_value = points.get(node.feature)
+            if feature_value is None:
+                raise ValueError(f"Missing feature value for: {node.feature}")
+
+            if feature_value <= node.threshold:
+                instructions.append("left")
+                node = node.left
+            else:
+                instructions.append("right")
+                node = node.right
+
+        # Reached leaf node
+        instructions.append("stop")
+
+        # Calculate prediction from leaf node values
+        values = node.value[0] if node.value else []
+        if not values:
+            raise ValueError("Leaf node has no value array")
+
+        max_value = max(values)
+        predicted_index = values.index(max_value)
+        total = sum(values)
+        confidence = max_value / total if total > 0 else 0.0
+
+        # Determine class name
+        if class_names and predicted_index < len(class_names):
+            predicted_class = class_names[predicted_index]
+        else:
+            predicted_class = f"Class {predicted_index}"
+
+        return {
+            "predicted_class": predicted_class,
+            "predicted_class_index": predicted_index,
+            "confidence": confidence,
+            "instructions": instructions,
+        }
+
     async def evaluate_manual_tree(self, tree: TreeNode, dataset_param: Optional[Union[Dict[str, Any], PredefinedDataset, Dataset]] = None) -> Dict[str, Any]:
         """Evaluate a manually built tree against test data.
-        
+
         Args:
             tree: Root node of the manual tree
             dataset_param: Dataset to use for evaluation (defaults to Iris)
-            
+
         Returns:
             Dictionary with scores and confusion matrix
         """

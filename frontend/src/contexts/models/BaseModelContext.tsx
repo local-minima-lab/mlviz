@@ -55,15 +55,37 @@ export interface TrainableModelContext<TModelData extends BaseModelData>
 }
 
 /**
- * PredictPage capability interface
- * Models that support prediction pages should extend this
+ * Generic prediction result with model-specific data in additionalData
+ * - Common fields: predictedClass, predictedClassIndex, confidence (optional)
+ * - Model-specific data accessed via additionalData with type narrowing
  */
-export interface PredictableModelContext<TModelData extends BaseModelData>
+export interface PredictionResult<T = unknown> {
+    predictedClass: string;
+    predictedClassIndex: number;
+    confidence?: number;
+    additionalData: T;  // Model-specific data (type-safe via generics)
+}
+
+/**
+ * PredictPage capability interface
+ * Models that support prediction pages should extend this.
+ * Abstracts the prediction mechanism (client-side vs server-side).
+ */
+export interface PredictableModelContext<TModelData extends BaseModelData, TResult = unknown>
     extends BaseModelContextType<TModelData> {
+    // Required helpers
+    getFeatureNames: () => string[] | null;
+    getClassNames: () => string[] | null;
+    getPredictiveFeatureNames?: () => string[] | null; // Optional: for models using feature subsets
+
+    // Prediction state
     isPredicting: boolean;
     predictionError: string | null;
-    predictionData: any | null;
-    predict: (input: any) => Promise<void>;
+    predictionResult: PredictionResult<TResult> | null;
+
+    // Unified predict method - takes feature values as input
+    predict: (points: Record<string, number>) => Promise<void>;
+    clearPrediction: () => void;
 }
 
 /**

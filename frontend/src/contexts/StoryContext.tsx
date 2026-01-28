@@ -71,13 +71,18 @@ export function StoryProvider({ children }: { children: ReactNode }) {
     };
 
     const addEdge = (storyId: string, edge: EdgeNode) => {
-        setStories((prev) => ({
-            ...prev,
-            [storyId]: {
-                ...getStoryState(storyId),
-                path: [...getStoryState(storyId).path, edge],
-            },
-        }));
+        setStories((prev) => {
+            const currentState = prev[storyId] || generateDefaultStoryState();
+            const currentPath = Array.isArray(currentState.path) ? currentState.path : [];
+            
+            return {
+                ...prev,
+                [storyId]: {
+                    ...currentState,
+                    path: [...currentPath, edge],
+                },
+            };
+        });
     };
 
     const resetStoryState = (storyId: string) => {

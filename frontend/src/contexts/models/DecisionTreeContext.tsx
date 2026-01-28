@@ -9,6 +9,7 @@ import {
     calculateNodeStats,
     evaluateManualTree as evaluateManualTreeAPI,
     getParameters as getParametersAPI,
+    predictWithInstructions,
     trainModel as initiateTrainModel,
     type DecisionTreeResponse,
 } from "@/api/dt";
@@ -24,7 +25,22 @@ import React, {
     useState,
     type ReactNode
 } from "react";
-import { createBaseModelContext, type BaseModelData, type TrainableModelContext } from "./BaseModelContext";
+import { createBaseModelContext, type BaseModelData, type PredictableModelContext, type PredictionResult, type TrainableModelContext } from "./BaseModelContext";
+
+/**
+ * DT-specific prediction additional data
+ * Contains traversal instructions for visualization
+ */
+export interface DTPredictionAdditionalData {
+    /**
+     * List of traversal instructions from root to leaf
+     * Each instruction indicates which direction to go at each split node
+     * - "left": go to left child (feature value <= threshold)
+     * - "right": go to right child (feature value > threshold)
+     * - "stop": reached a leaf node
+     */
+    instructions: Array<"left" | "right" | "stop">;
+}
 
 const LOCAL_STORAGE_MODE_KEY = "dt_tree_mode";
 
@@ -74,21 +90,19 @@ interface ManualTreeInterface {
     evaluate: () => Promise<void>;
 }
 
-interface DecisionTreeContextType extends TrainableModelContext<DecisionTreeModelData> {
+interface DecisionTreeContextType extends
+    TrainableModelContext<DecisionTreeModelData>,
+    PredictableModelContext<DecisionTreeModelData, DTPredictionAdditionalData> {
     // DT-specific properties
     treeMode: 'trained' | 'manual' | null;
     manualTree: ManualTreeInterface;
-    
+
     // Keep existing method names for backward compatibility
     isModelLoading: boolean;        // = isLoading
     modelError: string | null;      // = error
     trainNewModel: (params: Parameters) => Promise<void>;  // = train
     lastTrainedParams: Parameters;  // = lastParams
     clearStoredModelParams: () => void;
-    
-    // Helper methods
-    getFeatureNames: () => string[] | null;
-    getClassNames: () => string[] | null;
 }
 
 const DecisionTreeContext = createContext<DecisionTreeContextType | undefined>(
@@ -124,6 +138,11 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
 
     const [isModelLoading, setIsModelLoading] = useState<boolean>(false);
     const [modelError, setModelError] = useState<string | null>(null);
+
+    // Prediction state (for PredictableModelContext)
+    const [isPredicting, setIsPredicting] = useState<boolean>(false);
+    const [predictionError, setPredictionError] = useState<string | null>(null);
+    const [predictionResult, setPredictionResult] = useState<PredictionResult<DTPredictionAdditionalData> | null>(null);
 
     // Extract commonly used values from currentModelData
     const treeMode = currentModelData?.treeMode || null;
@@ -271,6 +290,47 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
         console.log('[getClassNames] currentModelData:', currentModelData);
         return currentModelData.metadata.class_names as string[];
     }, [currentModelData]);
+
+    // Prediction method (PredictableModelContext) - calls backend API
+    const predict = useCallback(async (points: Record<string, number>) => {
+        if (!currentModelData?.tree) {
+            setPredictionError("No tree available for prediction");
+            return;
+        }
+
+        setIsPredicting(true);
+        setPredictionError(null);
+
+        try {
+            const classNames = getClassNames() || undefined;
+
+            // Call backend API for prediction with traversal instructions
+            const result = await predictWithInstructions({
+                tree: currentModelData.tree,
+                points,
+                class_names: classNames,
+            });
+
+            setPredictionResult({
+                predictedClass: result.predicted_class,
+                predictedClassIndex: result.predicted_class_index,
+                confidence: result.confidence,
+                additionalData: {
+                    instructions: result.instructions,
+                }
+            });
+        } catch (error) {
+            setPredictionError(error instanceof Error ? error.message : "Prediction failed");
+        } finally {
+            setIsPredicting(false);
+        }
+    }, [currentModelData, getClassNames]);
+
+    // Clear prediction (PredictableModelContext)
+    const clearPrediction = useCallback(() => {
+        setPredictionResult(null);
+        setPredictionError(null);
+    }, []);
 
     // Manual tree building functions
     const initializeManualTree = useCallback(async () => {
@@ -635,13 +695,22 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
         resetModelData,
         getLastParams,
         getParameters,
-        
+
         // TrainableModelContext (for TrainPage)
         isLoading: isModelLoading,
         error: modelError,
         data: currentModelData,
         train: trainNewModel,
-        
+
+        // PredictableModelContext (for PredictPage)
+        isPredicting,
+        predictionError,
+        predictionResult,
+        predict,
+        clearPrediction,
+        getFeatureNames,
+        getClassNames,
+
         // DT-specific (backward compatibility)
         isModelLoading,
         modelError,
@@ -649,9 +718,7 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
         lastTrainedParams: lastParams,
         trainNewModel,
         clearStoredModelParams,
-        getFeatureNames,
-        getClassNames,
-        
+
         // Manual tree building
         manualTree: {
             tree: manualTree || null,

@@ -155,6 +155,48 @@
         }
       }
     },
+    "/api/dt/predict": {
+      "post": {
+        "tags": [
+          "Decision Tree"
+        ],
+        "summary": "Predict With Instructions",
+        "description": "Make a prediction and return traversal instructions for visualization.\n\nThis endpoint traverses the provided decision tree using the input feature\nvalues and returns:\n- The predicted class and confidence\n- A list of traversal instructions (\"left\", \"right\", \"stop\") that can be\n  used by the frontend to animate the prediction path through the tree\n\nArgs:\n    request: Contains the tree structure, feature values, and optional class names\n\nRaises:\n    HTTPException: If prediction fails (e.g., missing feature value)\n\nReturns:\n    DecisionTreeTraversalPredictResponse: Prediction result with instructions",
+        "operationId": "predict_with_instructions_api_dt_predict_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionTreeTraversalPredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionTreeTraversalPredictResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/dt/cache": {
       "delete": {
         "tags": [
@@ -1107,6 +1149,93 @@
         ],
         "title": "DecisionTreeTrainingResponse",
         "description": "Response model for Decision Tree."
+      },
+      "DecisionTreeTraversalPredictRequest": {
+        "properties": {
+          "tree": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SplitNode-Input"
+              },
+              {
+                "$ref": "#/components/schemas/LeafNode"
+              }
+            ],
+            "title": "Tree",
+            "description": "Root node of the decision tree"
+          },
+          "points": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Points",
+            "description": "Feature name to value mapping for prediction"
+          },
+          "class_names": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Names",
+            "description": "Class names for the prediction result (optional)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tree",
+          "points"
+        ],
+        "title": "DecisionTreeTraversalPredictRequest",
+        "description": "Request for decision tree prediction with traversal instructions."
+      },
+      "DecisionTreeTraversalPredictResponse": {
+        "properties": {
+          "predicted_class": {
+            "type": "string",
+            "title": "Predicted Class",
+            "description": "Predicted class label"
+          },
+          "predicted_class_index": {
+            "type": "integer",
+            "title": "Predicted Class Index",
+            "description": "Index of the predicted class"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence",
+            "description": "Confidence score (proportion of samples at leaf)"
+          },
+          "instructions": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "left",
+                "right",
+                "stop"
+              ]
+            },
+            "type": "array",
+            "title": "Instructions",
+            "description": "Traversal instructions from root to leaf"
+          }
+        },
+        "type": "object",
+        "required": [
+          "predicted_class",
+          "predicted_class_index",
+          "confidence",
+          "instructions"
+        ],
+        "title": "DecisionTreeTraversalPredictResponse",
+        "description": "Response containing prediction result with traversal instructions."
       },
       "FloatParameterInfo": {
         "properties": {

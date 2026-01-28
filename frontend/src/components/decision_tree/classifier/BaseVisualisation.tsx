@@ -68,12 +68,11 @@ const BaseDecisionTreeVisualization: React.FC<
     // Create a color scale function that uses the stable mapping
     // Handles both class names (e.g., "setosa") and class indices (e.g., "0")
     const colorScale = (className: string) => {
+        console.log("[Color Scale] Class colors ", classColors)
+        console.log("[Color Scale] Class name ", className, typeof className)
         return classColors.get(className) || '#cccccc';
     };
     
-    console.log('[BaseVisualisation] Color mapping created for classes:', Array.from(classColors.keys()));
-    console.log('[BaseVisualisation] Colors:', Array.from(classColors.values()));
-
     const renderCallback = useCallback(
         (
             container: d3.Selection<SVGGElement, unknown, null, undefined>,

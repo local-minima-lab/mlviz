@@ -13,9 +13,9 @@ interface VisualisationProps {
 }
 
 const Visualisation: React.FC<VisualisationProps> = ({ data: treeData }) => {
-    if (!treeData) return <></>;
-
     const [maxDepth, setMaxDepth] = useState(0);
+
+    if (!treeData) return <></>;
 
     const transformTreeData = (
         node: TreeNode,

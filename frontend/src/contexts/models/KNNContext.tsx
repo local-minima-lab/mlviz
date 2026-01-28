@@ -7,94 +7,71 @@
 import {
     getParameters as getParametersAPI,
     getVisualisation,
-    predict,
+    predict as predictAPI,
     train as trainKNN,
     type KNNPredictionRequest,
     type KNNPredictionResponse,
     type KNNTrainingRequest,
     type KNNVisualisationRequest,
-    type KNNVisualisationResponse
+    type KNNVisualisationResponse,
 } from "@/api/knn";
-import type { ParameterInfo } from "@/api/types";
 import React, {
     createContext,
     useCallback,
     useContext,
     useEffect,
     useRef,
-    type ReactNode
+    type ReactNode,
 } from "react";
-import { createBaseModelContext, type BaseModelData } from "./BaseModelContext";
+import {
+    createBaseModelContext,
+    type BaseModelData,
+    type PredictableModelContext,
+    type PredictionResult,
+    type TrainableModelContext,
+    type VisualizableModelContext
+} from "./BaseModelContext";
 
 // Define comprehensive KNN model data type
-interface KNNModelData extends BaseModelData {
-    // Visualization data (primary model state)
-    visualizationData: KNNVisualisationResponse | null;
-    isVisualizationLoading: boolean;
-    visualizationError: string | null;
-    
-    // Prediction data
-    predictionData: KNNPredictionResponse | null;
-    isPredictionLoading: boolean;
-    predictionError: string | null;
+interface KNNModelData extends BaseModelData, KNNVisualisationResponse {
+    // Persisted query points (optional)
     queryPoints: number[][] | null;
 }
 
 // Create base context instance for KNN
-const { Provider: BaseProvider, useBaseModel } = createBaseModelContext<KNNModelData>({
-    localStorageKey: "knn_model_data",
-    paramsStorageKey: "knn_params",
-    getParameters: getParametersAPI,
-});
+const { Provider: BaseProvider, useBaseModel } =
+    createBaseModelContext<KNNModelData>({
+        localStorageKey: "knn_model_data",
+        paramsStorageKey: "knn_params",
+        getParameters: getParametersAPI,
+    });
 
 // ============================================================================
 // Types
 // ============================================================================
 
-interface KNNContextType {
-    // Unified properties for page compatibility
-    // TrainPage properties
-    isLoading: boolean;              // Alias for isVisualizationLoading
-    error: string | null;            // Alias for visualizationError
-    data: KNNVisualisationResponse | null;  // Alias for visualizationData
-    train: (params?: Partial<KNNVisualisationRequest>) => Promise<void>;  // Alias for loadVisualization
+interface KNNContextType extends
+    TrainableModelContext<KNNModelData>,
+    PredictableModelContext<KNNModelData, KNNPredictionResponse>,
+    VisualizableModelContext<KNNModelData> {
+    // KNN-specific properties (backward compatibility or specialized)
     
-    // PredictPage properties
-    isPredicting: boolean;           // Alias for isPredictionLoading
-    predict: (request: Partial<KNNPredictionRequest>) => Promise<void>;  // Alias for makePrediction
-    
-    // Original KNN-specific properties (backward compatibility)
-    // Visualization (training) state
-    isVisualizationLoading: boolean;
-    visualizationError: string | null;
-    visualizationData: KNNVisualisationResponse | null;
-    lastVisualizationParams: Partial<KNNVisualisationRequest>;
-
-    // Prediction state
+    // Prediction state (Original names)
     isPredictionLoading: boolean;
     predictionError: string | null;
     predictionData: KNNPredictionResponse | null;
     queryPoints: number[][] | null;
 
-    // Visualization methods
-    loadVisualization: (
-        params?: Partial<KNNVisualisationRequest>
-    ) => Promise<void>;
-    clearVisualization: () => void;
+    // Visualization state (Original names)
+    isVisualizationLoading: boolean;
+    visualizationError: string | null;
+    visualizationData: KNNModelData | null;
+    lastVisualizationParams: Partial<KNNVisualisationRequest>;
 
-    // Prediction methods
+    // Specialized methods
     makePrediction: (request: Partial<KNNPredictionRequest>) => Promise<void>;
-    clearPrediction: () => void;
-
-    // Helper methods
-    getFeatureNames: () => string[] | null;
-    getClassNames: () => string[] | null;
     getK: () => number | null;
     isVisualizationReady: () => boolean;
-    getParameters: () => Promise<ParameterInfo[]>;
-    
-    // Reset method
-    resetModelData: () => void;
 }
 
 const KNNContext = createContext<KNNContextType | undefined>(undefined);
@@ -110,25 +87,42 @@ interface KNNProviderProps {
 export const KNNProvider: React.FC<KNNProviderProps> = ({ children }) => {
     return (
         <BaseProvider>
-            <KNNProviderInner>
-                {children}
-            </KNNProviderInner>
+            <KNNProviderInner>{children}</KNNProviderInner>
         </BaseProvider>
     );
 };
 
 const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
     const baseContext = useBaseModel();
-    const { currentModelData, lastParams, setCurrentModelData, setLastParams, resetModelData: baseResetModelData, getParameters } = baseContext;
+    const {
+        currentModelData,
+        lastParams,
+        setCurrentModelData,
+        setLastParams,
+        resetModelData: baseResetModelData,
+        getLastParams,
+        getParameters,
+    } = baseContext;
 
     // Extract values from currentModelData or use defaults
-    const visualizationData = currentModelData?.visualizationData || null;
-    const isVisualizationLoading = currentModelData?.isVisualizationLoading || false;
-    const visualizationError = currentModelData?.visualizationError || null;
-    const predictionData = currentModelData?.predictionData || null;
-    const isPredictionLoading = currentModelData?.isPredictionLoading || false;
-    const predictionError = currentModelData?.predictionError || null;
-    const queryPoints = currentModelData?.queryPoints || null;
+    const [isVisualizationLoading, setIsVisualizationLoading] = React.useState<boolean>(false);
+    const [visualizationError, setVisualizationError] = React.useState<string | null>(null);
+
+    // For backward compatibility and specialized use
+    const visualizationData = currentModelData || null;
+
+    // Prediction state (Local to avoid infinite loops with persisted state)
+    const [isPredictionLoading, setIsPredictionLoading] = React.useState<boolean>(false);
+    const [predictionError, setPredictionError] = React.useState<string | null>(null);
+    const [predictionData, setPredictionData] = React.useState<KNNPredictionResponse | null>(null);
+    const [queryPoints, setQueryPoints] = React.useState<number[][] | null>(currentModelData?.queryPoints || null);
+
+    // Sync queryPoints from currentModelData if needed
+    useEffect(() => {
+        if (currentModelData?.queryPoints) {
+            setQueryPoints(currentModelData.queryPoints);
+        }
+    }, [currentModelData?.queryPoints]);
 
     // ========================================================================
     // Visualization Methods
@@ -137,84 +131,43 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
     const loadVisualization = useCallback(
         async (request: Partial<KNNVisualisationRequest> = {}) => {
             // Update loading state
-            setCurrentModelData({
-                ...(currentModelData || {
-                    visualizationData: null,
-                    isVisualizationLoading: false,
-                    visualizationError: null,
-                    predictionData: null,
-                    isPredictionLoading: false,
-                    predictionError: null,
-                    queryPoints: null,
-                }),
-                isVisualizationLoading: true,
-                visualizationError: null,
-            });
+            setIsVisualizationLoading(true);
+            setVisualizationError(null);
 
             try {
                 const data = await getVisualisation(request);
                 if (data.success) {
                     setCurrentModelData({
-                        ...(currentModelData || {
-                            visualizationData: null,
-                            isVisualizationLoading: false,
-                            visualizationError: null,
-                            predictionData: null,
-                            isPredictionLoading: false,
-                            predictionError: null,
-                            queryPoints: null,
-                        }),
-                        visualizationData: data,
-                        isVisualizationLoading: false,
-                        visualizationError: null,
+                        ...data,
+                        queryPoints: currentModelData?.queryPoints || null,
                     });
+                    setIsVisualizationLoading(false);
+                    setVisualizationError(null);
                     setLastParams(request);
                 } else {
                     throw new Error(
-                        "Visualization failed - API returned success: false"
+                        "Visualization failed - API returned success: false",
                     );
                 }
             } catch (error) {
                 console.error("Failed to load KNN visualization:", error);
-                setCurrentModelData({
-                    ...(currentModelData || {
-                        visualizationData: null,
-                        isVisualizationLoading: false,
-                        visualizationError: null,
-                        predictionData: null,
-                        isPredictionLoading: false,
-                        predictionError: null,
-                        queryPoints: null,
-                    }),
-                    visualizationData: null,
-                    isVisualizationLoading: false,
-                    visualizationError:
-                        error instanceof Error
-                            ? error.message
-                            : "Unknown error loading visualization",
-                });
+                setIsVisualizationLoading(false);
+                setVisualizationError(
+                    error instanceof Error
+                        ? error.message
+                        : "Unknown error loading visualization",
+                );
             }
         },
-        [currentModelData, setCurrentModelData, setLastParams]
+        [currentModelData, setCurrentModelData, setLastParams],
     );
 
     const clearVisualization = useCallback(() => {
-        setCurrentModelData({
-            ...(currentModelData || {
-                visualizationData: null,
-                isVisualizationLoading: false,
-                visualizationError: null,
-                predictionData: null,
-                isPredictionLoading: false,
-                predictionError: null,
-                queryPoints: null,
-            }),
-            visualizationData: null,
-            visualizationError: null,
-            isVisualizationLoading: false,
-        });
+        setCurrentModelData(null);
+        setIsVisualizationLoading(false);
+        setVisualizationError(null);
         setLastParams({});
-    }, [currentModelData, setCurrentModelData, setLastParams]);
+    }, [setCurrentModelData, setLastParams]);
 
     // ========================================================================
     // Training (with metrics)
@@ -227,15 +180,8 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
                 parameters: params as any, // params contains the KNN parameters (n_neighbors, feature_1, etc.)
             };
 
-            setCurrentModelData({
-                visualizationData: null,
-                isVisualizationLoading: true,
-                visualizationError: null,
-                predictionData: null,
-                isPredictionLoading: false,
-                predictionError: null,
-                queryPoints: null,
-            });
+            setIsVisualizationLoading(true);
+            setVisualizationError(null);
 
             try {
                 const data = await trainKNN(request);
@@ -243,139 +189,26 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
                 if (data.success) {
                     console.log("Training successful:", data);
                     setCurrentModelData({
-                        visualizationData: data,  // Includes matrix and scores!
-                        isVisualizationLoading: false,
-                        visualizationError: null,
-                        predictionData: null,
-                        isPredictionLoading: false,
-                        predictionError: null,
+                        ...data,
                         queryPoints: null,
                     });
+                    setIsVisualizationLoading(false);
+                    setVisualizationError(null);
                     setLastParams(params || {});
                 }
+                console.log("Current model data: ", currentModelData);
             } catch (error) {
                 console.error("Error training KNN:", error);
-                setCurrentModelData({
-                    visualizationData: null,
-                    isVisualizationLoading: false,
-                    visualizationError:
-                        error instanceof Error
-                            ? error.message
-                            : "Unknown error training KNN",
-                    predictionData: null,
-                    isPredictionLoading: false,
-                    predictionError: null,
-                    queryPoints: null,
-                });
+                setIsVisualizationLoading(false);
+                setVisualizationError(
+                    error instanceof Error
+                        ? error.message
+                        : "Unknown error training KNN",
+                );
             }
         },
-        [setCurrentModelData, setLastParams]
+        [setCurrentModelData, setLastParams],
     );
-
-    // ========================================================================
-    // Prediction Methods
-    // ========================================================================
-
-    const makePrediction = useCallback(
-        async (request: Partial<KNNPredictionRequest>) => {
-            setCurrentModelData({
-                ...(currentModelData || {
-                    visualizationData: null,
-                    isVisualizationLoading: false,
-                    visualizationError: null,
-                    predictionData: null,
-                    isPredictionLoading: false,
-                    predictionError: null,
-                    queryPoints: null,
-                }),
-                isPredictionLoading: true,
-                predictionError: null,
-            });
-
-            try {
-                const data = await predict(request);
-
-                if (data.success) {
-                    setCurrentModelData({
-                        ...(currentModelData || {
-                            visualizationData: null,
-                            isVisualizationLoading: false,
-                            visualizationError: null,
-                            predictionData: null,
-                            isPredictionLoading: false,
-                            predictionError: null,
-                            queryPoints: null,
-                        }),
-                        predictionData: data,
-                        isPredictionLoading: false,
-                        predictionError: null,
-                        queryPoints: request.query_points || null,
-                    });
-                } else {
-                    throw new Error(
-                        "Prediction failed - API returned success: false"
-                    );
-                }
-            } catch (error) {
-                console.error("Failed to make KNN prediction:", error);
-                setCurrentModelData({
-                    ...(currentModelData || {
-                        visualizationData: null,
-                        isVisualizationLoading: false,
-                        visualizationError: null,
-                        predictionData: null,
-                        isPredictionLoading: false,
-                        predictionError: null,
-                        queryPoints: null,
-                    }),
-                    predictionData: null,
-                    isPredictionLoading: false,
-                    predictionError:
-                        error instanceof Error
-                            ? error.message
-                            : "Unknown error making prediction",
-                });
-            }
-        },
-        [currentModelData, setCurrentModelData]
-    );
-
-    const clearPrediction = useCallback(() => {
-        setCurrentModelData({
-            ...(currentModelData || {
-                visualizationData: null,
-                isVisualizationLoading: false,
-                visualizationError: null,
-                predictionData: null,
-                isPredictionLoading: false,
-                predictionError: null,
-                queryPoints: null,
-            }),
-            predictionData: null,
-            predictionError: null,
-            isPredictionLoading: false,
-            queryPoints: null,
-        });
-    }, [currentModelData, setCurrentModelData]);
-
-    // ========================================================================
-    // Auto-load on mount
-    // ========================================================================
-
-    const autoLoadAttempted = useRef(false);
-
-    useEffect(() => {
-        if (
-            !autoLoadAttempted.current &&
-            !visualizationData &&
-            !isVisualizationLoading &&
-            lastParams &&
-            Object.keys(lastParams).length > 0
-        ) {
-            autoLoadAttempted.current = true;
-            loadVisualization(lastParams);
-        }
-    }, []); // Only run on mount
 
     // ========================================================================
     // Helper Methods
@@ -388,6 +221,13 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
             null
         );
     }, [visualizationData, predictionData]);
+
+    const getPredictiveFeatureNames = useCallback((): string[] | null => {
+        return (
+            visualizationData?.visualisation_feature_names ||
+            getFeatureNames()
+        );
+    }, [visualizationData, getFeatureNames]);
 
     const getClassNames = useCallback((): string[] | null => {
         return (
@@ -412,8 +252,102 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
         );
     }, [visualizationData]);
 
+    // ========================================================================
+    // Prediction Methods
+    // ========================================================================
+
+    const makePrediction = useCallback(
+        async (request: Partial<KNNPredictionRequest>) => {
+            setIsPredictionLoading(true);
+            setPredictionError(null);
+
+            try {
+                const data = await predictAPI(request);
+
+                if (data.success) {
+                    setPredictionData(data);
+                    setIsPredictionLoading(false);
+                    setPredictionError(null);
+                    setQueryPoints(request.query_points || null);
+                    
+                    // Opt-in: persist query points if desired
+                    if (currentModelData) {
+                        setCurrentModelData({
+                            ...currentModelData,
+                            queryPoints: request.query_points || null,
+                        });
+                    }
+                } else {
+                    throw new Error(
+                        "Prediction failed - API returned success: false",
+                    );
+                }
+            } catch (error) {
+                console.error("Failed to make KNN prediction:", error);
+                setPredictionData(null);
+                setIsPredictionLoading(false);
+                setPredictionError(
+                    error instanceof Error
+                        ? error.message
+                        : "Unknown error making prediction",
+                );
+            }
+        },
+        [currentModelData, setCurrentModelData],
+    );
+
+    const predict = useCallback(
+        async (points: Record<string, number>) => {
+            const featureNames = getFeatureNames();
+            if (!featureNames) return;
+
+            // Convert points object to array format expected by API
+            const queryPoint = featureNames.map((name) => points[name] || 0);
+
+            await makePrediction({
+                query_points: [queryPoint],
+                visualisation_features: visualizationData?.visualisation_feature_indices || undefined,
+            });
+        },
+        [getFeatureNames, makePrediction, visualizationData],
+    );
+
+    const clearPrediction = useCallback(() => {
+        setPredictionData(null);
+        setPredictionError(null);
+        setIsPredictionLoading(false);
+        setQueryPoints(null);
+        
+        // Also clear persisted query points
+        if (currentModelData) {
+            setCurrentModelData({
+                ...currentModelData,
+                queryPoints: null,
+            });
+        }
+    }, [currentModelData, setCurrentModelData]);
+
+    // ========================================================================
+    // Auto-load on mount
+    // ========================================================================
+
+    const autoLoadAttempted = useRef(false);
+
+    useEffect(() => {
+        if (
+            !autoLoadAttempted.current &&
+            !visualizationData &&
+            !isVisualizationLoading &&
+            lastParams &&
+            Object.keys(lastParams).length > 0
+        ) {
+            autoLoadAttempted.current = true;
+            loadVisualization(lastParams);
+        }
+    }, []); // Only run on mount
+
     const resetModelData = useCallback(() => {
-        console.log('[KNNContext] Resetting model data');
+        console.log("[KNNContext] Resetting model data");
         baseResetModelData();
     }, [baseResetModelData]);
 
@@ -421,45 +355,58 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
     // Context Value
     // ========================================================================
 
+    const predictionResult: PredictionResult<KNNPredictionResponse> | null = React.useMemo(() => {
+        if (!predictionData || !predictionData.predictions?.[0]) return null;
+
+        return {
+            predictedClass: predictionData.predictions[0],
+            predictedClassIndex: predictionData.prediction_indices?.[0] ?? -1,
+            // confidence is optional but KNN doesn't naturally provide it without extra work
+            additionalData: predictionData,
+        };
+    }, [predictionData]);
+
     const contextValue: KNNContextType = {
-        // Unified properties (for TrainPage/PredictPage compatibility)
+        // BaseModelContextType
+        currentModelData,
+        lastParams,
+        setCurrentModelData,
+        setLastParams,
+        resetModelData,
+        getLastParams,
+        getParameters,
+
+        // TrainableModelContext
         isLoading: isVisualizationLoading,
         error: visualizationError,
-        data: visualizationData,
-        train: trainModel,  // Use trainModel to get metrics
+        data: currentModelData,
+        train: trainModel,
+
+        // PredictableModelContext
         isPredicting: isPredictionLoading,
-        predict: makePrediction,
-        
-        // Original KNN-specific properties (backward compatibility)
-        // Visualization state
-        isVisualizationLoading,
-        visualizationError,
-        visualizationData,
-        lastVisualizationParams: lastParams,
-
-        // Prediction state
-        isPredictionLoading,
         predictionError,
-        predictionData,
-        queryPoints,
-
-        // Visualization methods
-        loadVisualization,
-        clearVisualization,
-
-        // Prediction methods
-        makePrediction,
+        predictionResult,
+        predict,
         clearPrediction,
-
-        // Helper methods
         getFeatureNames,
         getClassNames,
+        getPredictiveFeatureNames,
+
+        // VisualizableModelContext
+        isVisualizing: isVisualizationLoading,
+        visualizationError,
+        visualizationData,
+        loadVisualization,
+
+        // KNN-specifics (Original names for backward compatibility)
+        isPredictionLoading,
+        predictionData,
+        queryPoints,
+        isVisualizationLoading,
+        lastVisualizationParams: lastParams,
+        makePrediction,
         getK,
         isVisualizationReady,
-        getParameters,
-        
-        // Reset method
-        resetModelData,
     };
 
     return (
