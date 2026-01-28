@@ -45,6 +45,20 @@
       "default": "minkowski",
       "options": ["minkowski", "euclidean", "manhattan", "chebyshev"],
       "description": "Distance metric to use for computing distances between points."
+    },
+    {
+      "name": "feature_1",
+      "type": "select",
+      "default": 0,
+      "options": "dynamic:features",
+      "description": "First feature for training and visualization"
+    },
+    {
+      "name": "feature_2",
+      "type": "select",
+      "default": 1,
+      "options": "dynamic:features",
+      "description": "Second feature for training and visualization (optional)"
     }
   ]
 }

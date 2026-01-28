@@ -1,14 +1,15 @@
 import ConfusionMatrix from "@/components/ConfusionMatrix";
-import type { TrainModelResponse } from "@/types/model";
+import type { ClassificationMetadata, ClassificationMetrics } from "@/types/model";
 
 interface DecisionTreeProps {
-    data: TrainModelResponse | null;
+    metrics: ClassificationMetrics
+    metadata: ClassificationMetadata
 }
 
 const roundNumber = (x: number) => String(x.toFixed(5));
 
-const Results = ({ data }: DecisionTreeProps) => {
-    if (data == null) {
+const Results = ({ metrics, metadata }: DecisionTreeProps) => {
+    if (metrics == null || metadata == null) {
         return <></>;
     }
 
@@ -16,13 +17,13 @@ const Results = ({ data }: DecisionTreeProps) => {
         <div className="h-full flex flex-col justify-between overflow-auto">
             <div className="pb-4 border-black">
                 <p className="text-2xl pb-2 text-center">Confusion Matrix</p>
-                {data == null ? (
+                {metrics == null ? (
                     <></>
                 ) : (
                     <div className="w-full">
                         <ConfusionMatrix
-                            classes={data.classes}
-                            matrix={data.matrix}
+                            classes={metadata.class_names}
+                            matrix={metrics.confusion_matrix}
                         />
                     </div>
                 )}
@@ -33,25 +34,25 @@ const Results = ({ data }: DecisionTreeProps) => {
                     <div className="flex flex-wrap justify-between tracking-tight">
                         <p className="font-lg font-semibold">Accuracy</p>
                         <p className="font-mono">
-                            {roundNumber(data.scores.accuracy)}
+                            {roundNumber(metrics.accuracy)}
                         </p>
                     </div>
                     <div className="flex flex-wrap justify-between tracking-tight">
                         <p className="font-lg font-semibold">Recall</p>
                         <p className="font-mono">
-                            {roundNumber(data.scores.recall)}
+                            {roundNumber(metrics.recall)}
                         </p>
                     </div>
                     <div className="flex flex-wrap justify-between  tracking-tight">
                         <p className="font-lg font-semibold">Precision</p>
                         <p className="font-mono">
-                            {roundNumber(data.scores.precision)}
+                            {roundNumber(metrics.precision)}
                         </p>
                     </div>
                     <div className="flex flex-wrap justify-between tracking-tight">
                         <p className="font-lg font-semibold">F1</p>
                         <p className="font-mono">
-                            {roundNumber(data.scores.f1)}
+                            {roundNumber(metrics.f1)}
                         </p>
                     </div>
                 </div>

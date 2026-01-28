@@ -6,6 +6,7 @@ interface ModelOptionsFormProps {
     setParams: (newParams: Record<string, any>) => void;
     onTrainModel: () => void;
     isModelLoading: boolean;
+    featureNames?: string[] | null;
 }
 
 const ModelOptionsForm = ({
@@ -14,6 +15,7 @@ const ModelOptionsForm = ({
     setParams,
     onTrainModel,
     isModelLoading,
+    featureNames,
 }: ModelOptionsFormProps) => {
     return (
         <div className="flex flex-col gap-4 h-full">
@@ -22,6 +24,7 @@ const ModelOptionsForm = ({
                     option={option}
                     params={params}
                     setParams={setParams}
+                    featureNames={featureNames}
                     key={option.name}
                 />
             ))}

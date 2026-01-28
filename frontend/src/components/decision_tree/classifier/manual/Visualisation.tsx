@@ -67,26 +67,29 @@ const Visualisation: React.FC = () => {
     // Define transformTreeData before early return (hooks must be called in same order)
     const transformTreeData = useCallback((node: TreeNode, depth = 0): any => {
         const base = {
-            name: node.type === 'leaf' ? 'Leaf' : node.feature,
+            name: node.type === 'leaf' ? 'Leaf' : (node as any).feature,
             type: node.type,
             samples: node.samples,
             impurity: node.impurity,
             depth,
-            feature: node.feature,
-            threshold: node.threshold,
+            feature: (node as any).feature,
+            threshold: (node as any).threshold,
             value: node.value,
-            histogram_data: node.histogram_data || null, // Include histogram data for split nodes
-            terminal: node.terminal || false, // Include terminal flag
+            histogram_data: (node as any).histogram_data || null, // Include histogram data for split nodes
+            terminal: (node as any).terminal || false, // Include terminal flag
         };
         
-        if (node.type === 'split' && node.left && node.right) {
-            return {
-                ...base,
-                children: [
-                    transformTreeData(node.left, depth + 1),
-                    transformTreeData(node.right, depth + 1),
-                ],
-            };
+        if (node.type === 'split') {
+            const splitNode = node as any; // Type assertion for split node
+            if (splitNode.left && splitNode.right) {
+                return {
+                    ...base,
+                    children: [
+                        transformTreeData(splitNode.left, depth + 1),
+                        transformTreeData(splitNode.right, depth + 1),
+                    ],
+                };
+            }
         }
         
         return base;
@@ -94,6 +97,8 @@ const Visualisation: React.FC = () => {
     
     // Early return after all hooks
     console.log('[ManualTree] Render - manualTree:', manualTree.tree);
+    console.log('[Manual Visualisation] getClassNames():', getClassNames());
+    
     if (!manualTree.tree) {
         console.log('[ManualTree] No tree yet, returning empty');
         return <></>;
@@ -101,7 +106,8 @@ const Visualisation: React.FC = () => {
     
     return (
         <BaseDecisionTreeVisualization
-            data={{ tree: manualTree.tree, classes: getClassNames() || [] }}
+            data={{ tree: manualTree.tree, 
+                classes: getClassNames() || [] }}
             transformTreeData={transformTreeData}
             renderFunction={renderManualDecisionTree}
             clickableSelector=".node, .inline-editor"

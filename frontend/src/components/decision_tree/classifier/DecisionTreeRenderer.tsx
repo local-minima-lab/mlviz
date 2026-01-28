@@ -261,12 +261,12 @@ export const renderDecisionTree = ({
     const { width, height, margin } = dimensions;
     const { currentStep = 0 } = state;
 
-    const colorScale =
-        externalColorScale ||
-        d3
-            .scaleOrdinal<string>()
-            .domain(data.classes || [])
-            .range(d3.schemeDark2.slice(0, (data.classes || []).length));
+    console.log('[DecisionTreeRenderer] data.classes:', data.classes);
+    // Use external color scale if provided (which should always be the case from BaseVisualisation)
+    const colorScale = externalColorScale || ((_className: string) => '#cccccc');
+    
+    console.log('[DecisionTreeRenderer] Color scale initialized');
+
 
     const root = d3.hierarchy(transformTreeData(data.tree, 0, currentStep));
     const contentWidth = width - margin.left - margin.right;
@@ -315,18 +315,20 @@ export const renderDecisionTree = ({
             null,
             undefined
         >;
-        const distribution = getClassDistribution(d, data.classes);
+        const distribution = getClassDistribution(d, data.classes || []);
 
         // Add interpolation factor for path highlighting
         const interpolationFactor = d.data.isOnPath
             ? calculateInterpolationFactor(d.depth, context)
             : 0;
+
+        console.log("colorScale", externalColorScale)
         renderIntegratedSplitNode(
             nodeGroup,
             d,
             distribution,
             120,
-            colorScale,
+            externalColorScale,
             interpolationFactor
         );
         
@@ -377,7 +379,7 @@ export const renderDecisionTree = ({
             null,
             undefined
         >;
-        const distribution = getClassDistribution(d, data.classes);
+        const distribution = getClassDistribution(d, data.classes || []);
 
         // In manual mode, render expandable leaf nodes
         if (mode === "manual") {
@@ -544,6 +546,7 @@ export const renderDecisionTree = ({
                 props.selectedFeature || null,
                 props.selectedThreshold || null,
                 colorScale,
+                data.classes || [],
                 props.manualCallbacks
             );
         } else {

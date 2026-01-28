@@ -7,7 +7,7 @@ from pathlib import Path
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score
 
-from models import TreeNode, BaseMetrics, HistogramData, Dataset, PredefinedDataset, DecisionTreeParameters
+from models import TreeNode, ClassificationMetrics, ClassificationMetadata, HistogramData, Dataset, PredefinedDataset, DecisionTreeParameters
 from .model_cache import cache_service
 from .dataset_service import dataset_service
 
@@ -135,8 +135,8 @@ class DecisionTreeService:
         )
 
     def _calculate_metrics(self, model: DecisionTreeClassifier,
-                           X_test: np.ndarray, y_test: np.ndarray) -> BaseMetrics:
-        """Calculates the accuracy, precision, recall, and f1-score of a model.
+                           X_test: np.ndarray, y_test: np.ndarray) -> ClassificationMetrics:
+        """Calculates the accuracy, precision, recall, f1-score, and confusion matrix of a model.
 
         Args:
             model (DecisionTreeClassifier): The model to assess
@@ -144,11 +144,13 @@ class DecisionTreeService:
             y_test (np.ndarray): Y test data
 
         Returns:
-            BaseMetrics: accuracy, precision, recall and f1 scores
+            ClassificationMetrics: confusion matrix, accuracy, precision, recall and f1 scores
         """
         predictions = model.predict(X_test)
+        conf_matrix = confusion_matrix(y_test, predictions).tolist()
 
-        return BaseMetrics(
+        return ClassificationMetrics(
+            confusion_matrix=conf_matrix,
             accuracy=accuracy_score(y_test, predictions),
             precision=precision_score(
                 y_test, predictions, average="weighted", zero_division=0),
@@ -223,10 +225,6 @@ class DecisionTreeService:
             model, dataset_info["X_test"], dataset_info["y_test"]
         )
 
-        y_test = dataset_info["y_test"]
-        predictions = model.predict(dataset_info["X_test"])
-        conf_matrix = confusion_matrix(y_test, predictions).tolist()
-
         response_data = {
             "success": True,
             "model_key": model_key,
@@ -239,9 +237,7 @@ class DecisionTreeService:
                 **sklearn_params
             },
             "tree": tree_node.model_dump(),
-            "classes": dataset_info["target_names"],
-            "matrix": conf_matrix,
-            "scores": metrics.model_dump()
+            "metrics": metrics.model_dump()
         }
 
         await self.cache.set(model_key, response_data)
@@ -292,13 +288,71 @@ class DecisionTreeService:
             "prediction_indices": predictions.tolist()
         }
 
+    async def predict_with_instructions(
+        self,
+        tree: TreeNode,
+        points: Dict[str, float],
+        class_names: Optional[List[str]] = None
+    ) -> Dict[str, Any]:
+        """Predict using a tree and return traversal instructions.
+
+        Args:
+            tree: Root node of the decision tree
+            points: Feature name to value mapping
+            class_names: Optional list of class names
+
+        Returns:
+            Dictionary with prediction and traversal instructions
+        """
+        instructions: List[str] = []
+        node = tree
+
+        # Traverse tree until we reach a leaf
+        while node.type == 'split':
+            feature_value = points.get(node.feature)
+            if feature_value is None:
+                raise ValueError(f"Missing feature value for: {node.feature}")
+
+            if feature_value <= node.threshold:
+                instructions.append("left")
+                node = node.left
+            else:
+                instructions.append("right")
+                node = node.right
+
+        # Reached leaf node
+        instructions.append("stop")
+
+        # Calculate prediction from leaf node values
+        values = node.value[0] if node.value else []
+        if not values:
+            raise ValueError("Leaf node has no value array")
+
+        max_value = max(values)
+        predicted_index = values.index(max_value)
+        total = sum(values)
+        confidence = max_value / total if total > 0 else 0.0
+
+        # Determine class name
+        if class_names and predicted_index < len(class_names):
+            predicted_class = class_names[predicted_index]
+        else:
+            predicted_class = f"Class {predicted_index}"
+
+        return {
+            "predicted_class": predicted_class,
+            "predicted_class_index": predicted_index,
+            "confidence": confidence,
+            "instructions": instructions,
+        }
+
     async def evaluate_manual_tree(self, tree: TreeNode, dataset_param: Optional[Union[Dict[str, Any], PredefinedDataset, Dataset]] = None) -> Dict[str, Any]:
         """Evaluate a manually built tree against test data.
-        
+
         Args:
             tree: Root node of the manual tree
             dataset_param: Dataset to use for evaluation (defaults to Iris)
-            
+
         Returns:
             Dictionary with scores and confusion matrix
         """
@@ -312,21 +366,30 @@ class DecisionTreeService:
             dataset_info["feature_names"]
         )
         
-        # Calculate metrics using TEST set
+        # Calculate metrics using TEST set (includes confusion matrix)
         y_test = dataset_info["y_test"]  # Use test set labels
-        metrics = BaseMetrics(
+        conf_matrix = confusion_matrix(y_test, predictions).tolist()
+        
+        metrics = ClassificationMetrics(
+            confusion_matrix=conf_matrix,
             accuracy=accuracy_score(y_test, predictions),
             precision=precision_score(y_test, predictions, average="weighted", zero_division=0),
             recall=recall_score(y_test, predictions, average="weighted", zero_division=0),
             f1=f1_score(y_test, predictions, average="weighted", zero_division=0)
         )
         
-        # Calculate confusion matrix
-        conf_matrix = confusion_matrix(y_test, predictions).tolist()
+        # Create metadata
+        metadata = ClassificationMetadata(
+            feature_names=dataset_info["feature_names"],
+            class_names=dataset_info["target_names"],
+            n_features=len(dataset_info["feature_names"]),
+            n_classes=len(dataset_info["target_names"]),
+            dataset_name=dataset.name if hasattr(dataset, 'name') else None
+        )
         
         return {
-            "scores": metrics.model_dump(),
-            "matrix": conf_matrix
+            "metrics": metrics.model_dump(),
+            "metadata": metadata.model_dump()
         }
 
 

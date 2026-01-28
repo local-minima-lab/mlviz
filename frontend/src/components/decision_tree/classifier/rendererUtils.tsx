@@ -7,6 +7,9 @@ import { applyFont } from "@/components/visualisation/config/fonts";
 import type { HistogramData } from "@/types/model";
 import * as d3 from "d3";
 
+// Store explored threshold indices per feature to persist across re-renders
+const exploredIndicesCache = new Map<string, Set<number>>();
+
 export interface TransformedNode {
     name: string;
     type: "leaf" | "split";
@@ -45,7 +48,8 @@ export const getClassDistribution = (
         .sort(
             (a: ClassDistribution, b: ClassDistribution) => b.count - a.count
         ); // Sort by count descending
-
+    console.log('[getClassDistribution] Called with d:', d, 'classNames:', classNames);
+    console.log('[getClassDistribution] Result:', result);
     return result;
 };
 
@@ -59,7 +63,7 @@ export const renderIntegratedSplitNode = (
     d: d3.HierarchyNode<TransformedNode>,
     distribution: ClassDistribution[],
     totalWidth: number,
-    colorScale?: d3.ScaleOrdinal<string, string>,
+    colorScale?: ((className: string) => string) | d3.ScaleOrdinal<string, string>,
     interpolationFactor?: number
 ) => {
     const histogramHeight = 40;
@@ -124,7 +128,7 @@ export const renderLeafNode = (
     d: d3.HierarchyNode<TransformedNode>,
     distribution: ClassDistribution[],
     totalWidth: number,
-    colorScale?: d3.ScaleOrdinal<string, string>,
+    colorScale?: ((className: string) => string) | d3.ScaleOrdinal<string, string>,
     interpolationFactor?: number
 ) => {
     const leafHeight = 40;
@@ -283,7 +287,7 @@ const renderHistogramComponent = (
     height: number,
     xOffset: number,
     yOffset: number,
-    colorScale?: d3.ScaleOrdinal<string, string>
+    colorScale?: ((className: string) => string) | d3.ScaleOrdinal<string, string>
 ) => {
     if (!histogramData.bins || histogramData.bins.length < 2) return;
 
@@ -294,10 +298,20 @@ const renderHistogramComponent = (
 
     const stackedData = prepareHistogramData(histogramData);
 
+    // Debug logging for color scheme issues
+    const keys = Object.keys(histogramData.counts_by_class);
+    // Sort keys to match renderHistogramBars logic
+    const sortedKeys = [...keys].sort(); 
+    
+    console.log('[renderHistogramComponent] Keys:', keys);
+    console.log('[renderHistogramComponent] Sorted Keys:', sortedKeys);
+    
     const colorScheme = colorScale
-        ? Object.keys(histogramData.counts_by_class).map((cls) =>
-              colorScale(cls)
-          )
+        ? sortedKeys.map((cls) => {
+              const color = colorScale(cls);
+              console.log(`[renderHistogramComponent] Mapping class "${cls}" to color:`, color);
+              return color;
+          })
         : undefined;
 
     renderHistogramBars(histogramGroup, histogramData, stackedData, {
@@ -316,7 +330,7 @@ const renderDistributionBar = (
     width: number,
     height: number,
     yOffset: number,
-    colorScale?: d3.ScaleOrdinal<string, string>
+    colorScale?: ((className: string) => string) | d3.ScaleOrdinal<string, string>
 ) => {
     let currentX = -width / 2;
 
@@ -477,7 +491,7 @@ export const renderExpandableLeafNode = (
     d: any,
     distribution: ClassDistribution[],
     nodeWidth: number,
-    colorScale: d3.ScaleOrdinal<string, string, never>,
+    colorScale: ((className: string) => string) | d3.ScaleOrdinal<string, string, never>,
     isSelected: boolean
 ): void => {
     const nodeHeight = 40;
@@ -511,26 +525,27 @@ export const renderExpandableLeafNode = (
         .attr("stroke-width", isSelected ? 2 : 1);
     
     // Display class distribution
-    const barGroup = nodeGroup.append("g");
+    // Reusing renderDistributionBar ensures consistent visualization and correct color mapping
+    // (using class name instead of potentially incorrect loop index)
     const barWidth = nodeWidth - 20;
     const barHeight = 8;
-    const barX = -barWidth / 2;
     const barY = -nodeHeight / 4;
     
-    let xOffset = 0;
-    const totalSamples = d.data.samples;
-    distribution.forEach((classDistribution, i) => {
-        const segmentWidth = (classDistribution.count / totalSamples) * barWidth;
-        barGroup
-            .append("rect")
-            .attr("x", barX + xOffset)
-            .attr("y", barY)
-            .attr("width", segmentWidth)
-            .attr("height", barHeight)
-            .attr("fill", colorScale(i.toString()))
-            .attr("rx", 2);
-        xOffset += segmentWidth;
-    });
+    // Add a group positioned at the start of the bar area
+    const barGroup = nodeGroup.append("g");
+    
+    // renderDistributionBar expects to draw centered on 0, so we pass the correct yOffset
+    // AND we must not translate the group if we want it to align with how renderDistributionBar works
+    // (which draws from -width/2 to +width/2)
+    
+    renderDistributionBar(
+        barGroup,
+        distribution,
+        barWidth,
+        barHeight,
+        barY,
+        colorScale
+    );
     
     // Show "+" icon or "Selected" text
     if (isSelected) {
@@ -563,11 +578,14 @@ const renderInformationGainGraph = (
     currentThreshold: number,
     featureRange: [number, number],
     width: number,
-    height: number
+    height: number,
+    existingExploredIndices?: Set<number>
 ): {
     updateGraph: (newThreshold: number) => void;
+    exploredIndices: Set<number>;
 } => {
-    const margin = { top: 10, right: 10, bottom: 25, left: 45 };
+    // Adjusted margins - bottom margin increased to accommodate "Best" label
+    const margin = { top: 5, right: 10, bottom: 20, left: 45 };
     const graphWidth = width - margin.left - margin.right;
     const graphHeight = height - margin.top - margin.bottom;
     
@@ -576,7 +594,7 @@ const renderInformationGainGraph = (
         .append('g')
         .attr('transform', `translate(${margin.left}, ${margin.top})`);
     
-    // Set up scales
+    // Set up scales - x-axis matches histogram above
     const xScale = d3.scaleLinear()
         .domain(featureRange)
         .range([0, graphWidth]);
@@ -595,7 +613,7 @@ const renderInformationGainGraph = (
         .attr('stroke-width', 1);
     
     // Add grid lines
-    const yTicks = yScale.ticks(4);
+    const yTicks = yScale.ticks(3);
     g.selectAll('.grid-line')
         .data(yTicks)
         .enter()
@@ -609,30 +627,15 @@ const renderInformationGainGraph = (
         .attr('stroke-width', 1)
         .attr('stroke-dasharray', '2,2');
     
-    // Add axes
-    const xAxis = d3.axisBottom(xScale).ticks(5);
-    const yAxis = d3.axisLeft(yScale).ticks(4);
-    
-    g.append('g')
-        .attr('transform', `translate(0, ${graphHeight})`)
-        .call(xAxis)
-        .style('font-size', '10px')
-        .style('color', '#6b7280');
+    // Add only y-axis (x-axis is shared with histogram above)
+    const yAxis = d3.axisLeft(yScale).ticks(3);
     
     g.append('g')
         .call(yAxis)
         .style('font-size', '10px')
         .style('color', '#6b7280');
     
-    // Add axis labels
-    g.append('text')
-        .attr('x', graphWidth / 2)
-        .attr('y', graphHeight + 22)
-        .attr('text-anchor', 'middle')
-        .attr('font-size', '10px')
-        .attr('fill', '#6b7280')
-        .text('Threshold');
-    
+    // Add y-axis label for Information Gain
     g.append('text')
         .attr('transform', 'rotate(-90)')
         .attr('x', -graphHeight / 2)
@@ -640,7 +643,7 @@ const renderInformationGainGraph = (
         .attr('text-anchor', 'middle')
         .attr('font-size', '10px')
         .attr('fill', '#6b7280')
-        .text('Information Gain');
+        .text('Info Gain');
     
     // Create line generator
     const lineGenerator = d3.line<{ threshold: number; information_gain: number }>()
@@ -649,7 +652,8 @@ const renderInformationGainGraph = (
         .curve(d3.curveMonotoneX); // Smooth curve
     
     // Track explored thresholds (indices into the thresholds array)
-    const exploredIndices = new Set<number>();
+    // Use existing set if provided, otherwise create new one
+    const exploredIndices = existingExploredIndices || new Set<number>();
     
     // Find the index of the threshold closest to a given value
     const findClosestThresholdIndex = (targetThreshold: number): number => {
@@ -689,9 +693,9 @@ const renderInformationGainGraph = (
         .attr('stroke-dasharray', '4,4')
         .attr('opacity', 0);
     
-    // Add best threshold label
+    // Add best threshold label (below the graph)
     const bestThresholdLabel = g.append('text')
-        .attr('y', -3)
+        .attr('y', graphHeight + 12)
         .attr('text-anchor', 'middle')
         .attr('font-size', '9px')
         .attr('fill', '#10b981')
@@ -709,16 +713,7 @@ const renderInformationGainGraph = (
     // Add explored points as dots
     const exploredDotsGroup = g.append('g').attr('class', 'explored-dots');
     
-    // Add current threshold indicator (vertical line)
-    const currentLine = g.append('line')
-        .attr('class', 'current-threshold-line')
-        .attr('y1', 0)
-        .attr('y2', graphHeight)
-        .attr('stroke', '#4f46e5')
-        .attr('stroke-width', 2)
-        .attr('opacity', 0.5);
-    
-    // Add current point indicator (circle)
+    // Add current point indicator (circle) - shows current threshold on the line
     const currentPoint = g.append('circle')
         .attr('class', 'current-point')
         .attr('r', 5)
@@ -726,19 +721,13 @@ const renderInformationGainGraph = (
         .attr('stroke', 'white')
         .attr('stroke-width', 2);
     
-    // Add current IG value label
-    const currentLabel = g.append('text')
-        .attr('class', 'current-label')
-        .attr('text-anchor', 'middle')
-        .attr('font-size', '10px')
-        .attr('font-weight', 'bold')
-        .attr('fill', '#4f46e5');
-    
     // Update function
     const updateGraph = (newThreshold: number) => {
         // Mark current threshold as explored
         const currentIdx = findClosestThresholdIndex(newThreshold);
         exploredIndices.add(currentIdx);
+        
+        console.log('[Info Gain Graph] Threshold:', newThreshold.toFixed(3), '| Explored points:', exploredIndices.size);
         
         const exploredPoints = getExploredPoints();
         const currentData = thresholds[currentIdx];
@@ -761,22 +750,10 @@ const renderInformationGainGraph = (
             .attr('fill', '#4f46e5')
             .attr('opacity', 0.6);
         
-        // Update current threshold line
-        currentLine
-            .attr('x1', xScale(newThreshold))
-            .attr('x2', xScale(newThreshold));
-        
-        // Update current point
+        // Update current point position
         currentPoint
             .attr('cx', xScale(currentData.threshold))
             .attr('cy', yScale(currentData.information_gain));
-        
-        // Update current label
-        const labelY = yScale(currentData.information_gain) - 10;
-        currentLabel
-            .attr('x', xScale(currentData.threshold))
-            .attr('y', labelY < 10 ? yScale(currentData.information_gain) + 20 : labelY)
-            .text(currentData.information_gain.toFixed(4));
         
         // Update best threshold marker based on explored points
         const bestExplored = getBestExploredThreshold();
@@ -795,7 +772,7 @@ const renderInformationGainGraph = (
     // Initial render
     updateGraph(currentThreshold);
     
-    return { updateGraph };
+    return { updateGraph, exploredIndices };
 };
 
 export const renderInlineEditor = (
@@ -805,7 +782,8 @@ export const renderInlineEditor = (
     featureStats: any | null,
     selectedFeature: string | null,
     selectedThreshold: number | null,
-    colorScale: d3.ScaleOrdinal<string, string>,
+    colorScale: ((className: string) => string) | d3.ScaleOrdinal<string, string>,
+    classNames: string[],
     callbacks: {
         onFeatureSelect?: (feature: string) => void;
         onThresholdChange?: (threshold: number) => void;
@@ -855,7 +833,9 @@ export const renderInlineEditor = (
         .style('font-size', '14px')
         .on('change', function() {
             const value = (this as HTMLSelectElement).value;
+            console.log('[Feature Selector] Changed to:', value);
             callbacks.onFeatureSelect?.(value);
+            console.log('[Feature Selector] Callback called');
         });
     
     select.append('option').attr('value', '').text('Select feature...');
@@ -870,53 +850,91 @@ export const renderInlineEditor = (
     
     // If feature selected, show histogram and slider
     if (featureStats && selectedFeature) {
-        // Histogram container
-        const histContainer = div
+        // Combined visualization container (histogram + information gain graph)
+        const vizContainer = div
             .append('div')
             .style('margin-bottom', '12px');
         
-        const histSvg = histContainer
+        const histHeight = 100;
+        const graphHeight = 95;
+        const totalHeight = histHeight + graphHeight;
+        
+        const vizSvg = vizContainer
             .append('svg')
             .attr('width', '100%')
-            .attr('height', 100)
+            .attr('height', totalHeight)
             .style('display', 'block');
         
-        // Render histogram
-        const histGroup = histSvg.append('g');
-        const stackedData = prepareHistogramData(featureStats.histogram_data);
         const histWidth = editorWidth - 32;
+        const featureRange = featureStats.feature_range;
+        // Use selectedThreshold if provided (user has interacted), otherwise start with minimum
+        const currentThreshold = selectedThreshold ?? featureStats.thresholds[0].threshold;
+        
+        // Use same margin as the info gain graph for alignment
+        const leftMargin = 45;
+        
+        // Render histogram at the top with left margin to align with graph below
+        const histGroup = vizSvg.append('g')
+            .attr('transform', `translate(${leftMargin}, 0)`);
+        const stackedData = prepareHistogramData(featureStats.histogram_data);
         
         // Create color scheme from colorScale to match tree nodes
-        const colorScheme = Object.keys(featureStats.histogram_data.counts_by_class).map((cls) =>
-            colorScale(cls)
-        );
+        // Map class indices to class names for proper color lookup
+        const colorScheme = Object.keys(featureStats.histogram_data.counts_by_class).map((classIndex) => {
+            const className = classNames[parseInt(classIndex)];
+            return colorScale(className);
+        });
+        
+        // Adjust histogram width to account for margins
+        const adjustedHistWidth = histWidth - leftMargin - 10; // 10 for right margin
         
         renderHistogramBars(histGroup, featureStats.histogram_data, stackedData, {
-            width: histWidth,
-            height: 100,
+            width: adjustedHistWidth,
+            height: histHeight,
             showThreshold: false,
             colorScheme,
         });
         
-        // Add threshold line - start at median threshold to encourage exploration
-        const medianThreshold = selectedThreshold || featureStats.thresholds[Math.floor(featureStats.thresholds.length / 2)].threshold;
-        const currentThreshold = medianThreshold;
-        const featureRange = featureStats.feature_range;
-        const thresholdX = ((currentThreshold - featureRange[0]) / (featureRange[1] - featureRange[0])) * histWidth;
+        // Render the information gain line graph below histogram
+        const graphGroup = vizSvg.append('g')
+            .attr('transform', `translate(0, ${histHeight})`);
         
-        const thresholdLine = histSvg
+        // Get or create explored indices for this feature
+        const cacheKey = selectedFeature;
+        if (!exploredIndicesCache.has(cacheKey)) {
+            exploredIndicesCache.set(cacheKey, new Set<number>());
+        }
+        const existingExploredIndices = exploredIndicesCache.get(cacheKey);
+        
+        const { updateGraph, exploredIndices } = renderInformationGainGraph(
+            graphGroup,
+            featureStats.thresholds,
+            currentThreshold,
+            featureStats.feature_range as [number, number],
+            histWidth,
+            graphHeight,
+            existingExploredIndices
+        );
+        
+        // Update cache with the returned indices
+        exploredIndicesCache.set(cacheKey, exploredIndices);
+        
+        // Add threshold line spanning both histogram and graph (after graph is rendered so it's on top)
+        const thresholdX = leftMargin + ((currentThreshold - featureRange[0]) / (featureRange[1] - featureRange[0])) * adjustedHistWidth;
+        
+        const thresholdLine = vizSvg
             .append('line')
             .attr('x1', thresholdX)
             .attr('x2', thresholdX)
             .attr('y1', 0)
-            .attr('y2', 100)
+            .attr('y2', totalHeight)
             .attr('stroke', '#4f46e5')
             .attr('stroke-width', 2)
             .attr('stroke-dasharray', '5,5')
             .attr('class', 'threshold-line');
         
-        // Add threshold label
-        const thresholdLabel = histSvg
+        // Add threshold label above histogram
+        const thresholdLabel = vizSvg
             .append('text')
             .attr('x', thresholdX)
             .attr('y', -5)
@@ -925,40 +943,6 @@ export const renderInlineEditor = (
             .attr('fill', '#4f46e5')
             .attr('font-weight', 'bold')
             .text(currentThreshold.toFixed(2));
-        
-        // Information Gain Graph
-        const graphHeight = 100;
-        const graphContainer = div
-            .append('div')
-            .style('margin-bottom', '12px')
-            .style('margin-top', '16px');
-        
-        // Add graph title
-        graphContainer
-            .append('div')
-            .style('font-size', '12px')
-            .style('font-weight', '600')
-            .style('color', '#374151')
-            .style('margin-bottom', '8px')
-            .text('Information Gain by Threshold');
-        
-        const graphSvg = graphContainer
-            .append('svg')
-            .attr('width', '100%')
-            .attr('height', graphHeight)
-            .style('display', 'block');
-        
-        const graphGroup = graphSvg.append('g');
-        
-        // Render the information gain line graph
-        const { updateGraph } = renderInformationGainGraph(
-            graphGroup,
-            featureStats.thresholds,
-            currentThreshold,
-            featureStats.feature_range as [number, number],
-            histWidth,
-            graphHeight
-        );
         
         // Threshold slider
         const sliderContainer = div
@@ -988,7 +972,7 @@ export const renderInlineEditor = (
             .attr('min', featureStats.feature_range[0])
             .attr('max', featureStats.feature_range[1])
             .attr('step', (featureStats.feature_range[1] - featureStats.feature_range[0]) / 100)
-            .attr('value', medianThreshold)
+            .attr('value', currentThreshold)
             .style('flex', '1')
             .style('min-width', '0');
         
@@ -1000,11 +984,11 @@ export const renderInlineEditor = (
             .style('color', '#1f2937')
             .style('min-width', '60px')
             .style('text-align', 'right')
-            .text(medianThreshold.toFixed(3));
+            .text(currentThreshold.toFixed(3));
 
         
         // Metrics - find information gain for current threshold
-        const initialThreshold = medianThreshold;
+        const initialThreshold = currentThreshold;
         
         // Find the threshold stats for the current threshold value
         let currentInformationGain = 0;
@@ -1038,7 +1022,7 @@ export const renderInlineEditor = (
             }
             
             // Update threshold line position
-            const newThresholdX = ((threshold - featureRange[0]) / (featureRange[1] - featureRange[0])) * histWidth;
+            const newThresholdX = leftMargin + ((threshold - featureRange[0]) / (featureRange[1] - featureRange[0])) * adjustedHistWidth;
             thresholdLine
                 .attr('x1', newThresholdX)
                 .attr('x2', newThresholdX);
@@ -1109,7 +1093,7 @@ export const renderInlineEditor = (
         .style('font-size', '14px')
         .style('font-weight', '500')
         .text('Split')
-        .on('click', () => callbacks.onSplit?.());
+        .on('click', (event) => { event.preventDefault(); callbacks.onSplit?.(); });
     
     buttonGroup
         .append('button')
@@ -1123,7 +1107,7 @@ export const renderInlineEditor = (
         .style('font-size', '14px')
         .style('font-weight', '500')
         .text('Mark as Leaf')
-        .on('click', () => callbacks.onMarkAsLeaf?.());
+        .on('click', (event) => { event.preventDefault(); callbacks.onMarkAsLeaf?.(); });
     
     buttonGroup
         .append('button')
@@ -1137,5 +1121,5 @@ export const renderInlineEditor = (
         .style('font-size', '14px')
         .style('font-weight', '500')
         .text('Cancel')
-        .on('click', () => callbacks.onCancel?.());
+        .on('click', (event) => { event.preventDefault(); callbacks.onCancel?.(); });
 };

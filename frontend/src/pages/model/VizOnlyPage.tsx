@@ -10,14 +10,20 @@ const VizOnlyPage: React.FC<VizOnlyPageProps> = ({
     model_name,
     parameters,
 }) => {
-    const { visualizationData, loadVisualization } = useModel();
+    const model = useModel();
+    
+    // Support both unified properties and KNN-specific properties
+    const visualizationData = (model as any).visualizationData || (model as any).data;
+    const loadVisualization = (model as any).loadVisualization || (model as any).train;
 
     const context = useContext(CurrentStoryContext);
     if (!context) throw new Error("No context found.");
 
     useEffect(() => {
-        loadVisualization(parameters || {});
-    }, [parameters]);
+        if (loadVisualization) {
+            loadVisualization(parameters || {});
+        }
+    }, [parameters, loadVisualization]);
 
     return (
         <div className="mx-auto w-full h-full">

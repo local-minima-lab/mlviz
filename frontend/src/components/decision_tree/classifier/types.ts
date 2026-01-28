@@ -20,7 +20,7 @@ export interface BaseDecisionTreeRenderProps {
     pathLineColor?: string;
     pathFillColor?: string;
     onPathColor?: string;
-    colorScale?: d3.ScaleOrdinal<string, string>;
+    colorScale?: ((className: string) => string) | d3.ScaleOrdinal<string, string>;
     // Manual tree building props
     selectedNodePath?: number[] | null;
     featureNames?: string[];

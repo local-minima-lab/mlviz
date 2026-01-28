@@ -88,6 +88,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/dt/predict": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Predict With Instructions
+         * @description Make a prediction and return traversal instructions for visualization.
+         *
+         *     This endpoint traverses the provided decision tree using the input feature
+         *     values and returns:
+         *     - The predicted class and confidence
+         *     - A list of traversal instructions ("left", "right", "stop") that can be
+         *       used by the frontend to animate the prediction path through the tree
+         *
+         *     Args:
+         *         request: Contains the tree structure, feature values, and optional class names
+         *
+         *     Raises:
+         *         HTTPException: If prediction fails (e.g., missing feature value)
+         *
+         *     Returns:
+         *         DecisionTreeTraversalPredictResponse: Prediction result with instructions
+         */
+        post: operations["predict_with_instructions_api_dt_predict_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/dt/cache": {
         parameters: {
             query?: never;
@@ -385,6 +420,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/knn/train": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Train
+         * @description Train KNN and return visualization data with evaluation metrics.
+         *
+         *     This endpoint:
+         *     1. Splits dataset into train/test sets (80/20)
+         *     2. Trains KNN on training set
+         *     3. Evaluates on test set (confusion matrix + scores)
+         *     4. Generates visualization data (decision boundary, etc.)
+         *
+         *     Use this endpoint for TrainPage to get both visualization and metrics.
+         *     Use /visualise for VizOnlyPage (no metrics needed).
+         *
+         *     Args:
+         *         request: Training request with parameters and dataset
+         *
+         *     Raises:
+         *         HTTPException: If training fails
+         *
+         *     Returns:
+         *         KNNTrainingResponse: Visualization data + evaluation metrics
+         */
+        post: operations["train_api_knn_train_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -426,17 +499,6 @@ export interface components {
              */
             type: "any";
         };
-        /** BaseMetrics */
-        BaseMetrics: {
-            /** Accuracy */
-            accuracy: number;
-            /** Precision */
-            precision: number;
-            /** Recall */
-            recall: number;
-            /** F1 */
-            f1: number;
-        };
         /**
          * CacheInfoResponse
          * @description Response model for cache information.
@@ -450,6 +512,35 @@ export interface components {
             max_size: number;
             /** Keys */
             keys: string[] | string;
+        };
+        /**
+         * ClassificationMetadata
+         * @description Metadata for classifier responses.
+         */
+        ClassificationMetadata: {
+            /** Feature Names */
+            feature_names: string[];
+            /** Class Names */
+            class_names: string[];
+            /** N Features */
+            n_features: number;
+            /** N Classes */
+            n_classes: number;
+            /** Dataset Name */
+            dataset_name?: string | null;
+        };
+        /** ClassificationMetrics */
+        ClassificationMetrics: {
+            /** Confusion Matrix */
+            confusion_matrix: number[][];
+            /** Accuracy */
+            accuracy: number;
+            /** Precision */
+            precision: number;
+            /** Recall */
+            recall: number;
+            /** F1 */
+            f1: number;
         };
         /**
          * DatasetInfo
@@ -604,17 +695,59 @@ export interface components {
             model_key: string;
             /** Cached */
             cached: boolean;
-            /** Metadata */
-            metadata: {
-                [key: string]: unknown;
-            };
+            metadata: components["schemas"]["ClassificationMetadata"];
             /** Tree */
             tree: components["schemas"]["SplitNode-Output"] | components["schemas"]["LeafNode"];
-            /** Classes */
-            classes: string[];
-            /** Matrix */
-            matrix: number[][];
-            scores: components["schemas"]["BaseMetrics"];
+            metrics: components["schemas"]["ClassificationMetrics"];
+        };
+        /**
+         * DecisionTreeTraversalPredictRequest
+         * @description Request for decision tree prediction with traversal instructions.
+         */
+        DecisionTreeTraversalPredictRequest: {
+            /**
+             * Tree
+             * @description Root node of the decision tree
+             */
+            tree: components["schemas"]["SplitNode-Input"] | components["schemas"]["LeafNode"];
+            /**
+             * Points
+             * @description Feature name to value mapping for prediction
+             */
+            points: {
+                [key: string]: number;
+            };
+            /**
+             * Class Names
+             * @description Class names for the prediction result (optional)
+             */
+            class_names?: string[] | null;
+        };
+        /**
+         * DecisionTreeTraversalPredictResponse
+         * @description Response containing prediction result with traversal instructions.
+         */
+        DecisionTreeTraversalPredictResponse: {
+            /**
+             * Predicted Class
+             * @description Predicted class label
+             */
+            predicted_class: string;
+            /**
+             * Predicted Class Index
+             * @description Index of the predicted class
+             */
+            predicted_class_index: number;
+            /**
+             * Confidence
+             * @description Confidence score (proportion of samples at leaf)
+             */
+            confidence: number;
+            /**
+             * Instructions
+             * @description Traversal instructions from root to leaf
+             */
+            instructions: ("left" | "right" | "stop")[];
         };
         /**
          * FloatParameterInfo
@@ -726,6 +859,18 @@ export interface components {
              * @enum {string}
              */
             metric: "minkowski" | "euclidean" | "manhattan" | "chebyshev";
+            /**
+             * Feature 1
+             * @description First feature index for training and visualization
+             * @default 0
+             */
+            feature_1: number;
+            /**
+             * Feature 2
+             * @description Second feature index for training and visualization (optional)
+             * @default 1
+             */
+            feature_2: number | null;
         };
         /**
          * KNNPredictionRequest
@@ -821,6 +966,63 @@ export interface components {
             n_dimensions: number;
         };
         /**
+         * KNNTrainingRequest
+         * @description Request model for KNN training with evaluation.
+         */
+        KNNTrainingRequest: {
+            /** @description KNN algorithm parameters */
+            parameters?: components["schemas"]["KNNParameters"];
+            /**
+             * Dataset
+             * @description Training dataset. Defaults to Iris dataset.
+             */
+            dataset?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Visualisation Features
+             * @description Feature indices to visualise (1-3 features)
+             */
+            visualisation_features?: number[] | null;
+            /**
+             * Include Boundary
+             * @description Whether to include decision boundary
+             * @default true
+             */
+            include_boundary: boolean;
+            /**
+             * Boundary Resolution
+             * @description Resolution of boundary mesh
+             * @default 50
+             */
+            boundary_resolution: number;
+        };
+        /**
+         * KNNTrainingResponse
+         * @description Response model for KNN training with evaluation metrics.
+         */
+        KNNTrainingResponse: {
+            /** Success */
+            success: boolean;
+            /** Training Points */
+            training_points: number[][];
+            /** Training Labels */
+            training_labels: string[];
+            /** Distance Matrix */
+            distance_matrix: number[][];
+            /** Neighbor Indices */
+            neighbor_indices: number[][];
+            decision_boundary: components["schemas"]["DecisionBoundaryData"] | null;
+            /** @description Classifier metadata */
+            metadata: components["schemas"]["ClassificationMetadata"];
+            /** Visualisation Feature Indices */
+            visualisation_feature_indices: number[] | null;
+            /** Visualisation Feature Names */
+            visualisation_feature_names: string[] | null;
+            /** @description Classification metrics including confusion matrix and scores */
+            metrics: components["schemas"]["ClassificationMetrics"];
+        };
+        /**
          * KNNVisualisationRequest
          * @description Request model for KNN visualisation without prediction.
          */
@@ -881,12 +1083,8 @@ export interface components {
             neighbor_indices: number[][];
             /** @description Decision boundary visualisation data */
             decision_boundary?: components["schemas"]["DecisionBoundaryData"] | null;
-            /** Feature Names */
-            feature_names: string[];
-            /** Class Names */
-            class_names: string[];
-            /** N Dimensions */
-            n_dimensions: number;
+            /** @description Classifier metadata */
+            metadata: components["schemas"]["ClassificationMetadata"];
             /**
              * Visualisation Feature Indices
              * @description Feature indices used for visualisation
@@ -1104,13 +1302,10 @@ export interface components {
          * @description Response containing evaluation metrics for a manual tree.
          */
         ManualTreeEvaluateResponse: {
-            /** @description Accuracy, precision, recall, F1 scores */
-            scores: components["schemas"]["BaseMetrics"];
-            /**
-             * Matrix
-             * @description Confusion matrix
-             */
-            matrix: number[][];
+            /** @description Classification metrics including confusion matrix and scores */
+            metrics: components["schemas"]["ClassificationMetrics"];
+            /** @description Classifier metadata including feature and class information */
+            metadata: components["schemas"]["ClassificationMetadata"];
         };
         /**
          * NeighborInfo
@@ -1196,7 +1391,7 @@ export interface components {
              */
             type: "select";
             /** Options */
-            options: unknown[];
+            options: unknown[] | string;
         };
         /**
          * SplitNode
@@ -1407,6 +1602,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": string[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    predict_with_instructions_api_dt_predict_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DecisionTreeTraversalPredictRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DecisionTreeTraversalPredictResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1688,6 +1916,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KNNVisualisationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    train_api_knn_train_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KNNTrainingRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KNNTrainingResponse"];
                 };
             };
             /** @description Validation Error */

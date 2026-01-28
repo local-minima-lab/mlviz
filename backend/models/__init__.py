@@ -1,4 +1,4 @@
-from .base import BaseMetrics
+from .base import ClassificationMetrics, ClassificationMetadata
 from .util import HistogramData
 from .dataset import Dataset, PredefinedDataset, DatasetInfo
 from .decision_tree import (
@@ -17,7 +17,8 @@ from .knn import (
 )
 
 __all__ = [
-    "BaseMetrics",
+    "ClassificationMetrics",
+    "ClassificationMetadata",
     "HistogramData",
     "Dataset",
     "PredefinedDataset",

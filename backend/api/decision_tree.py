@@ -3,6 +3,8 @@ from fastapi import APIRouter, HTTPException
 from .models import (
     DecisionTreeTrainingRequest,
     DecisionTreeTrainingResponse,
+    DecisionTreeTraversalPredictRequest,
+    DecisionTreeTraversalPredictResponse,
     ParameterInfo,
     CacheInfoResponse,
     ManualNodeStatsRequest,
@@ -69,6 +71,40 @@ async def get_predict_params(request: DecisionTreeTrainingRequest):
         return await dt_service.get_predict_params(request.dataset)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/predict", response_model=DecisionTreeTraversalPredictResponse)
+async def predict_with_instructions(
+    request: DecisionTreeTraversalPredictRequest,
+) -> DecisionTreeTraversalPredictResponse:
+    """Make a prediction and return traversal instructions for visualization.
+
+    This endpoint traverses the provided decision tree using the input feature
+    values and returns:
+    - The predicted class and confidence
+    - A list of traversal instructions ("left", "right", "stop") that can be
+      used by the frontend to animate the prediction path through the tree
+
+    Args:
+        request: Contains the tree structure, feature values, and optional class names
+
+    Raises:
+        HTTPException: If prediction fails (e.g., missing feature value)
+
+    Returns:
+        DecisionTreeTraversalPredictResponse: Prediction result with instructions
+    """
+    try:
+        result = await dt_service.predict_with_instructions(
+            tree=request.tree,
+            points=request.points,
+            class_names=request.class_names,
+        )
+        return DecisionTreeTraversalPredictResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
 
 @router.delete("/cache")

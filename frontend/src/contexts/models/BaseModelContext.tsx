@@ -32,7 +32,7 @@ interface BaseModelConfig {
 /**
  * Base context type that all model contexts will use
  */
-interface BaseModelContextType<TModelData extends BaseModelData> {
+export interface BaseModelContextType<TModelData extends BaseModelData> {
     currentModelData: TModelData | null;
     lastParams: Record<string, any>;
     setCurrentModelData: (data: TModelData | null) => void;
@@ -40,6 +40,64 @@ interface BaseModelContextType<TModelData extends BaseModelData> {
     resetModelData: () => void;
     getLastParams: () => Record<string, any>;
     getParameters: () => Promise<ParameterInfo[]>;
+}
+
+/**
+ * TrainPage capability interface
+ * Models that support training/visualization pages should extend this
+ */
+export interface TrainableModelContext<TModelData extends BaseModelData> 
+    extends BaseModelContextType<TModelData> {
+    isLoading: boolean;
+    error: string | null;
+    data: TModelData | null;        // Alias for currentModelData
+    train: (params: Record<string, any>) => Promise<void>;
+}
+
+/**
+ * Generic prediction result with model-specific data in additionalData
+ * - Common fields: predictedClass, predictedClassIndex, confidence (optional)
+ * - Model-specific data accessed via additionalData with type narrowing
+ */
+export interface PredictionResult<T = unknown> {
+    predictedClass: string;
+    predictedClassIndex: number;
+    confidence?: number;
+    additionalData: T;  // Model-specific data (type-safe via generics)
+}
+
+/**
+ * PredictPage capability interface
+ * Models that support prediction pages should extend this.
+ * Abstracts the prediction mechanism (client-side vs server-side).
+ */
+export interface PredictableModelContext<TModelData extends BaseModelData, TResult = unknown>
+    extends BaseModelContextType<TModelData> {
+    // Required helpers
+    getFeatureNames: () => string[] | null;
+    getClassNames: () => string[] | null;
+    getPredictiveFeatureNames?: () => string[] | null; // Optional: for models using feature subsets
+
+    // Prediction state
+    isPredicting: boolean;
+    predictionError: string | null;
+    predictionResult: PredictionResult<TResult> | null;
+
+    // Unified predict method - takes feature values as input
+    predict: (points: Record<string, number>) => Promise<void>;
+    clearPrediction: () => void;
+}
+
+/**
+ * VizOnlyPage capability interface
+ * Models that support visualization-only pages should extend this
+ */
+export interface VisualizableModelContext<TModelData extends BaseModelData>
+    extends BaseModelContextType<TModelData> {
+    isVisualizing: boolean;
+    visualizationError: string | null;
+    visualizationData: any | null;
+    loadVisualization: (params?: any) => Promise<void>;
 }
 
 /**

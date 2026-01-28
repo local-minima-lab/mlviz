@@ -155,6 +155,48 @@
         }
       }
     },
+    "/api/dt/predict": {
+      "post": {
+        "tags": [
+          "Decision Tree"
+        ],
+        "summary": "Predict With Instructions",
+        "description": "Make a prediction and return traversal instructions for visualization.\n\nThis endpoint traverses the provided decision tree using the input feature\nvalues and returns:\n- The predicted class and confidence\n- A list of traversal instructions (\"left\", \"right\", \"stop\") that can be\n  used by the frontend to animate the prediction path through the tree\n\nArgs:\n    request: Contains the tree structure, feature values, and optional class names\n\nRaises:\n    HTTPException: If prediction fails (e.g., missing feature value)\n\nReturns:\n    DecisionTreeTraversalPredictResponse: Prediction result with instructions",
+        "operationId": "predict_with_instructions_api_dt_predict_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionTreeTraversalPredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionTreeTraversalPredictResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/dt/cache": {
       "delete": {
         "tags": [
@@ -575,6 +617,48 @@
         }
       }
     },
+    "/api/knn/train": {
+      "post": {
+        "tags": [
+          "K-Nearest Neighbors"
+        ],
+        "summary": "Train",
+        "description": "Train KNN and return visualization data with evaluation metrics.\n\nThis endpoint:\n1. Splits dataset into train/test sets (80/20)\n2. Trains KNN on training set\n3. Evaluates on test set (confusion matrix + scores)\n4. Generates visualization data (decision boundary, etc.)\n\nUse this endpoint for TrainPage to get both visualization and metrics.\nUse /visualise for VizOnlyPage (no metrics needed).\n\nArgs:\n    request: Training request with parameters and dataset\n    \nRaises:\n    HTTPException: If training fails\n    \nReturns:\n    KNNTrainingResponse: Visualization data + evaluation metrics",
+        "operationId": "train_api_knn_train_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KNNTrainingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KNNTrainingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -624,34 +708,6 @@
         "title": "AnyParameterInfo",
         "description": "Any type parameter."
       },
-      "BaseMetrics": {
-        "properties": {
-          "accuracy": {
-            "type": "number",
-            "title": "Accuracy"
-          },
-          "precision": {
-            "type": "number",
-            "title": "Precision"
-          },
-          "recall": {
-            "type": "number",
-            "title": "Recall"
-          },
-          "f1": {
-            "type": "number",
-            "title": "F1"
-          }
-        },
-        "type": "object",
-        "required": [
-          "accuracy",
-          "precision",
-          "recall",
-          "f1"
-        ],
-        "title": "BaseMetrics"
-      },
       "CacheInfoResponse": {
         "properties": {
           "enabled": {
@@ -690,6 +746,91 @@
         ],
         "title": "CacheInfoResponse",
         "description": "Response model for cache information."
+      },
+      "ClassificationMetadata": {
+        "properties": {
+          "feature_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Feature Names"
+          },
+          "class_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Class Names"
+          },
+          "n_features": {
+            "type": "integer",
+            "title": "N Features"
+          },
+          "n_classes": {
+            "type": "integer",
+            "title": "N Classes"
+          },
+          "dataset_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature_names",
+          "class_names",
+          "n_features",
+          "n_classes"
+        ],
+        "title": "ClassificationMetadata",
+        "description": "Metadata for classifier responses."
+      },
+      "ClassificationMetrics": {
+        "properties": {
+          "confusion_matrix": {
+            "items": {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Confusion Matrix"
+          },
+          "accuracy": {
+            "type": "number",
+            "title": "Accuracy"
+          },
+          "precision": {
+            "type": "number",
+            "title": "Precision"
+          },
+          "recall": {
+            "type": "number",
+            "title": "Recall"
+          },
+          "f1": {
+            "type": "number",
+            "title": "F1"
+          }
+        },
+        "type": "object",
+        "required": [
+          "confusion_matrix",
+          "accuracy",
+          "precision",
+          "recall",
+          "f1"
+        ],
+        "title": "ClassificationMetrics"
       },
       "DatasetInfo": {
         "properties": {
@@ -980,9 +1121,7 @@
             "title": "Cached"
           },
           "metadata": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Metadata"
+            "$ref": "#/components/schemas/ClassificationMetadata"
           },
           "tree": {
             "anyOf": [
@@ -995,25 +1134,8 @@
             ],
             "title": "Tree"
           },
-          "classes": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Classes"
-          },
-          "matrix": {
-            "items": {
-              "items": {
-                "type": "integer"
-              },
-              "type": "array"
-            },
-            "type": "array",
-            "title": "Matrix"
-          },
-          "scores": {
-            "$ref": "#/components/schemas/BaseMetrics"
+          "metrics": {
+            "$ref": "#/components/schemas/ClassificationMetrics"
           }
         },
         "type": "object",
@@ -1023,12 +1145,97 @@
           "cached",
           "metadata",
           "tree",
-          "classes",
-          "matrix",
-          "scores"
+          "metrics"
         ],
         "title": "DecisionTreeTrainingResponse",
         "description": "Response model for Decision Tree."
+      },
+      "DecisionTreeTraversalPredictRequest": {
+        "properties": {
+          "tree": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SplitNode-Input"
+              },
+              {
+                "$ref": "#/components/schemas/LeafNode"
+              }
+            ],
+            "title": "Tree",
+            "description": "Root node of the decision tree"
+          },
+          "points": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Points",
+            "description": "Feature name to value mapping for prediction"
+          },
+          "class_names": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Names",
+            "description": "Class names for the prediction result (optional)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tree",
+          "points"
+        ],
+        "title": "DecisionTreeTraversalPredictRequest",
+        "description": "Request for decision tree prediction with traversal instructions."
+      },
+      "DecisionTreeTraversalPredictResponse": {
+        "properties": {
+          "predicted_class": {
+            "type": "string",
+            "title": "Predicted Class",
+            "description": "Predicted class label"
+          },
+          "predicted_class_index": {
+            "type": "integer",
+            "title": "Predicted Class Index",
+            "description": "Index of the predicted class"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence",
+            "description": "Confidence score (proportion of samples at leaf)"
+          },
+          "instructions": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "left",
+                "right",
+                "stop"
+              ]
+            },
+            "type": "array",
+            "title": "Instructions",
+            "description": "Traversal instructions from root to leaf"
+          }
+        },
+        "type": "object",
+        "required": [
+          "predicted_class",
+          "predicted_class_index",
+          "confidence",
+          "instructions"
+        ],
+        "title": "DecisionTreeTraversalPredictResponse",
+        "description": "Response containing prediction result with traversal instructions."
       },
       "FloatParameterInfo": {
         "properties": {
@@ -1274,6 +1481,29 @@
             "title": "Metric",
             "description": "Distance metric to use",
             "default": "minkowski"
+          },
+          "feature_1": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Feature 1",
+            "description": "First feature index for training and visualization",
+            "default": 0
+          },
+          "feature_2": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature 2",
+            "description": "Second feature index for training and visualization (optional)",
+            "default": 1
           }
         },
         "type": "object",
@@ -1480,6 +1710,165 @@
         "title": "KNNPredictionResponse",
         "description": "Response model for KNN prediction."
       },
+      "KNNTrainingRequest": {
+        "properties": {
+          "parameters": {
+            "$ref": "#/components/schemas/KNNParameters",
+            "description": "KNN algorithm parameters"
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset",
+            "description": "Training dataset. Defaults to Iris dataset."
+          },
+          "visualisation_features": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visualisation Features",
+            "description": "Feature indices to visualise (1-3 features)"
+          },
+          "include_boundary": {
+            "type": "boolean",
+            "title": "Include Boundary",
+            "description": "Whether to include decision boundary",
+            "default": true
+          },
+          "boundary_resolution": {
+            "type": "integer",
+            "maximum": 200.0,
+            "minimum": 10.0,
+            "title": "Boundary Resolution",
+            "description": "Resolution of boundary mesh",
+            "default": 50
+          }
+        },
+        "type": "object",
+        "title": "KNNTrainingRequest",
+        "description": "Request model for KNN training with evaluation."
+      },
+      "KNNTrainingResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "training_points": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Training Points"
+          },
+          "training_labels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Training Labels"
+          },
+          "distance_matrix": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Distance Matrix"
+          },
+          "neighbor_indices": {
+            "items": {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Neighbor Indices"
+          },
+          "decision_boundary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DecisionBoundaryData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/ClassificationMetadata",
+            "description": "Classifier metadata"
+          },
+          "visualisation_feature_indices": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visualisation Feature Indices"
+          },
+          "visualisation_feature_names": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visualisation Feature Names"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/ClassificationMetrics",
+            "description": "Classification metrics including confusion matrix and scores"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "training_points",
+          "training_labels",
+          "distance_matrix",
+          "neighbor_indices",
+          "decision_boundary",
+          "metadata",
+          "visualisation_feature_indices",
+          "visualisation_feature_names",
+          "metrics"
+        ],
+        "title": "KNNTrainingResponse",
+        "description": "Response model for KNN training with evaluation metrics."
+      },
       "KNNVisualisationRequest": {
         "properties": {
           "parameters": {
@@ -1591,23 +1980,9 @@
             ],
             "description": "Decision boundary visualisation data"
           },
-          "feature_names": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Feature Names"
-          },
-          "class_names": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Class Names"
-          },
-          "n_dimensions": {
-            "type": "integer",
-            "title": "N Dimensions"
+          "metadata": {
+            "$ref": "#/components/schemas/ClassificationMetadata",
+            "description": "Classifier metadata"
           },
           "visualisation_feature_indices": {
             "anyOf": [
@@ -1647,9 +2022,7 @@
           "training_labels",
           "distance_matrix",
           "neighbor_indices",
-          "feature_names",
-          "class_names",
-          "n_dimensions"
+          "metadata"
         ],
         "title": "KNNVisualisationResponse",
         "description": "Response model for KNN visualisation without prediction."
@@ -2018,26 +2391,19 @@
       },
       "ManualTreeEvaluateResponse": {
         "properties": {
-          "scores": {
-            "$ref": "#/components/schemas/BaseMetrics",
-            "description": "Accuracy, precision, recall, F1 scores"
+          "metrics": {
+            "$ref": "#/components/schemas/ClassificationMetrics",
+            "description": "Classification metrics including confusion matrix and scores"
           },
-          "matrix": {
-            "items": {
-              "items": {
-                "type": "integer"
-              },
-              "type": "array"
-            },
-            "type": "array",
-            "title": "Matrix",
-            "description": "Confusion matrix"
+          "metadata": {
+            "$ref": "#/components/schemas/ClassificationMetadata",
+            "description": "Classifier metadata including feature and class information"
           }
         },
         "type": "object",
         "required": [
-          "scores",
-          "matrix"
+          "metrics",
+          "metadata"
         ],
         "title": "ManualTreeEvaluateResponse",
         "description": "Response containing evaluation metrics for a manual tree."
@@ -2194,8 +2560,15 @@
             "title": "Type"
           },
           "options": {
-            "items": {},
-            "type": "array",
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "string"
+              }
+            ],
             "title": "Options"
           }
         },

@@ -1,19 +1,27 @@
 import DecisionTreePredictVisualization from "@/components/decision_tree/classifier/prediction/Visualisation";
+import KNNPredictVisualization from "@/components/knn/classifier/prediction/Visualisation";
+import type { PredictionResult } from "@/contexts/models/BaseModelContext";
 import React from "react";
+
 interface ComponentRegistryProps {
     componentName: string;
     data?: Record<string, any> | null;
     points?: Record<string, any> | null;
+    predictionResult?: PredictionResult<any> | null;
+    isPredicting?: boolean;
 }
 
 const componentMap: Record<string, React.ComponentType<any>> = {
     decision_tree: DecisionTreePredictVisualization,
+    knn: KNNPredictVisualization,
 } as const;
 
 export const PredictComponent: React.FC<ComponentRegistryProps> = ({
     componentName,
     data,
     points,
+    predictionResult,
+    isPredicting,
 }) => {
     const Component = componentMap[componentName as keyof typeof componentMap];
     if (!Component) {
@@ -30,6 +38,8 @@ export const PredictComponent: React.FC<ComponentRegistryProps> = ({
         <Component
             data={data}
             points={points}
+            predictionResult={predictionResult}
+            isPredicting={isPredicting}
         />
     );
 };

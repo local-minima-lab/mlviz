@@ -3,7 +3,8 @@ from pydantic import BaseModel, Field
 
 from models import (
     TreeNode,
-    BaseMetrics,
+    ClassificationMetrics,
+    ClassificationMetadata,
     DatasetInfo,
     DecisionTreeParameters,
     KNNParameters,
@@ -30,11 +31,9 @@ class DecisionTreeTrainingResponse(BaseModel):
     success: bool
     model_key: str
     cached: bool
-    metadata: Dict[str, Any]
+    metadata: ClassificationMetadata
     tree: TreeNode
-    classes: list[str]
-    matrix: list[list[int]]
-    scores: BaseMetrics
+    metrics: ClassificationMetrics
 
 
 class DecisionTreePredictionRequest(BaseModel):
@@ -128,8 +127,26 @@ class ManualTreeEvaluateRequest(BaseModel):
 
 class ManualTreeEvaluateResponse(BaseModel):
     """Response containing evaluation metrics for a manual tree."""
-    scores: BaseMetrics = Field(description="Accuracy, precision, recall, F1 scores")
-    matrix: List[List[int]] = Field(description="Confusion matrix")
+    metrics: ClassificationMetrics = Field(description="Classification metrics including confusion matrix and scores")
+    metadata: ClassificationMetadata = Field(description="Classifier metadata including feature and class information")
+
+
+class DecisionTreeTraversalPredictRequest(BaseModel):
+    """Request for decision tree prediction with traversal instructions."""
+    tree: TreeNode = Field(description="Root node of the decision tree")
+    points: Dict[str, float] = Field(description="Feature name to value mapping for prediction")
+    class_names: Optional[List[str]] = Field(
+        None, description="Class names for the prediction result (optional)")
+
+
+class DecisionTreeTraversalPredictResponse(BaseModel):
+    """Response containing prediction result with traversal instructions."""
+    predicted_class: str = Field(description="Predicted class label")
+    predicted_class_index: int = Field(description="Index of the predicted class")
+    confidence: float = Field(description="Confidence score (proportion of samples at leaf)")
+    instructions: List[Literal["left", "right", "stop"]] = Field(
+        description="Traversal instructions from root to leaf"
+    )
 
 
 class BaseParameterInfo(BaseModel):
@@ -142,7 +159,8 @@ class BaseParameterInfo(BaseModel):
 class SelectParameterInfo(BaseParameterInfo):
     """Select parameter with predefined options."""
     type: Literal["select"]
-    options: list[Any]
+    options: Union[list[Any], str]  # Allow string for dynamic options like "dynamic:features"
+
 
 
 class IntParameterInfo(BaseParameterInfo):
@@ -263,15 +281,62 @@ class KNNVisualisationResponse(BaseModel):
     )
 
     # Metadata
-    feature_names: list[str]
-    class_names: list[str]
-    n_dimensions: int
+    metadata: ClassificationMetadata = Field(description="Classifier metadata")
+    
+    # Visualisation-specific info
     visualisation_feature_indices: Optional[list[int]] = Field(
         None, description="Feature indices used for visualisation"
     )
     visualisation_feature_names: Optional[list[str]] = Field(
         None, description="Names of features used for visualisation"
     )
+
+
+class KNNTrainingRequest(BaseModel):
+    """Request model for KNN training with evaluation."""
+    parameters: KNNParameters = Field(
+        default_factory=KNNParameters,
+        description="KNN algorithm parameters"
+    )
+    dataset: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Training dataset. Defaults to Iris dataset."
+    )
+    visualisation_features: Optional[List[int]] = Field(
+        None,
+        description="Feature indices to visualise (1-3 features)"
+    )
+    include_boundary: bool = Field(
+        True, description="Whether to include decision boundary"
+    )
+    boundary_resolution: int = Field(
+        50, ge=10, le=200, description="Resolution of boundary mesh"
+    )
+
+
+class KNNTrainingResponse(BaseModel):
+    """Response model for KNN training with evaluation metrics."""
+    success: bool
+    
+    # Visualization data (same as KNNVisualisationResponse)
+    training_points: list[list[float]]
+    training_labels: list[str]
+    distance_matrix: list[list[float]]
+    neighbor_indices: list[list[int]]
+    decision_boundary: Optional[DecisionBoundaryData]
+    
+    # Metadata
+    metadata: ClassificationMetadata = Field(description="Classifier metadata")
+    
+    # Visualisation-specific info
+    visualisation_feature_indices: Optional[list[int]]
+    visualisation_feature_names: Optional[list[str]]
+    
+    # Evaluation metrics (matching DecisionTree)
+    metrics: ClassificationMetrics = Field(
+        description="Classification metrics including confusion matrix and scores"
+    )
+
 
 
 class KNNPredictionRequest(BaseModel):

@@ -1,6 +1,7 @@
 /**
  * 3D Scatter Plot Renderer
  * Renders 3D scatter plots with orthographic projection and rotation
+ * NOT IN A FUNCTIONAL STATE. TO BE REPLACED WITH OPENGL OR OTHER 3D RENDERING LIBRARY
  */
 
 import type {

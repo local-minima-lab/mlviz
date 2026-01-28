@@ -52,11 +52,27 @@ const BaseDecisionTreeVisualization: React.FC<
 }) => {
     const { pathLineColor, pathFillColor } = nodeStyleConfig;
 
-    const colorScale = d3
-        .scaleOrdinal<string>()
-        .domain(data?.classes || [])
-        .range(d3.schemeDark2.slice(0, (data?.classes || []).length));
-
+    console.log('[BaseVisualisation] Creating color scale with classes:', data?.classes);
+    
+    // Create a stable color mapping to prevent d3's ordinal scale from accumulating domain values
+    const classColors = new Map<string, string>();
+    const classes = data?.classes || [];
+    const colors = d3.schemeDark2.slice(0, classes.length);
+    
+    classes.forEach((className: string, index: number) => {
+        classColors.set(className, colors[index] || '#cccccc');
+        // Also map the index as a string for histogram data compatibility
+        classColors.set(index.toString(), colors[index] || '#cccccc');
+    });
+    
+    // Create a color scale function that uses the stable mapping
+    // Handles both class names (e.g., "setosa") and class indices (e.g., "0")
+    const colorScale = (className: string) => {
+        console.log("[Color Scale] Class colors ", classColors)
+        console.log("[Color Scale] Class name ", className, typeof className)
+        return classColors.get(className) || '#cccccc';
+    };
+    
     const renderCallback = useCallback(
         (
             container: d3.Selection<SVGGElement, unknown, null, undefined>,

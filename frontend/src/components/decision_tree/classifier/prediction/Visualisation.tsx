@@ -1,6 +1,8 @@
 import BaseDecisionTreeVisualization from "@/components/decision_tree/classifier/BaseVisualisation";
 import { renderDecisionTree } from "@/components/decision_tree/classifier/DecisionTreeRenderer";
 import type { RenderVisualisationProps } from "@/components/decision_tree/classifier/types";
+import type { PredictionResult } from "@/contexts/models/BaseModelContext";
+import type { DTPredictionAdditionalData } from "@/contexts/models/DecisionTreeContext";
 
 import type { PredictionProps, TreeNode } from "@/types/model";
 import { useEffect, useState } from "react";
@@ -8,6 +10,8 @@ import { useEffect, useState } from "react";
 interface VisualisationProps extends PredictionProps {
     pathLineColor?: string;
     pathFillColor?: string;
+    predictionResult?: PredictionResult<DTPredictionAdditionalData> | null;
+    isPredicting?: boolean;
 }
 
 export const renderPredictionDecisionTree = (
@@ -21,8 +25,14 @@ const Visualisation: React.FC<VisualisationProps> = ({
     points,
     pathLineColor,
     pathFillColor,
+    predictionResult,
+    isPredicting: _isPredicting,
 }) => {
+    void _isPredicting; // Available for future loading indicator
     
+    const [currentDepth, setCurrentDepth] = useState(0);
+    const [predictionPath, setPredictionPath] = useState<TreeNode[]>([]);
+
     if (!data) {
         return (
             <div className="text-center p-8">
@@ -39,24 +49,26 @@ const Visualisation: React.FC<VisualisationProps> = ({
         );
     }
 
-    const [currentDepth, setCurrentDepth] = useState(0);
-    const [predictionPath, setPredictionPath] = useState<TreeNode[]>([]);
-
-    const calculatePredictionPath = (
-        node: TreeNode,
-        path: TreeNode[] = []
+    // Convert instructions from backend to a path of TreeNodes
+    const instructionsToPath = (
+        tree: TreeNode,
+        instructions: Array<"left" | "right" | "stop">
     ): TreeNode[] => {
-        const newPath = [...path, node];
-        if (node.type === "leaf") return newPath;
+        const path: TreeNode[] = [tree];
+        let node = tree;
 
-        if (!node.feature || node.threshold === null || node.threshold === undefined) return newPath;
-        const featureValue = points[node.feature];
-        if (featureValue === undefined) return newPath;
+        for (const instruction of instructions) {
+            if (instruction === "stop") break;
+            if (node.type !== "split") break;
 
-        const goLeft = featureValue <= node.threshold;
-        const nextNode = goLeft ? node.left : node.right;
-        if (!nextNode) return newPath;
-        return calculatePredictionPath(nextNode, newPath);
+            const nextNode = instruction === "left" ? node.left : node.right;
+            if (!nextNode) break;
+
+            path.push(nextNode);
+            node = nextNode;
+        }
+
+        return path;
     };
 
     const transformTreeData = (
@@ -102,7 +114,7 @@ const Visualisation: React.FC<VisualisationProps> = ({
             feature: node.type === "split" ? node.feature : undefined,
             threshold: node.type === "split" ? node.threshold : undefined,
             value: node.value || undefined,
-            histogram_data: node.histogram_data,
+            histogram_data: (node as any).histogram_data,
         };
 
         if (node.type === "split") {
@@ -164,10 +176,13 @@ const Visualisation: React.FC<VisualisationProps> = ({
     };
 
     useEffect(() => {
-        const path = calculatePredictionPath(data.tree);
-        setPredictionPath(path);
-        setCurrentDepth(0);
-    }, [data, points]);
+        // Use instructions from predictionResult if available
+        if (predictionResult?.additionalData?.instructions) {
+            const path = instructionsToPath(data.tree, predictionResult.additionalData.instructions);
+            setPredictionPath(path);
+            setCurrentDepth(0);
+        }
+    }, [data, predictionResult]);
 
     const handleDepthChange = (newDepth: number) => {
         setCurrentDepth(newDepth);
@@ -175,7 +190,7 @@ const Visualisation: React.FC<VisualisationProps> = ({
 
     return (
         <BaseDecisionTreeVisualization
-            data={data}
+            data={{ ...data, classes: data.metadata?.class_names || [] }}
             points={points}
             nodeStyleConfig={{
                 pathLineColor,

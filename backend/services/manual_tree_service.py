@@ -124,16 +124,8 @@ class ManualTreeService:
                                y_labels: np.ndarray,
                                threshold: float,
                                feature_idx: int,
-                               thresholds: List[float] = None) -> HistogramData:
-        """Generate histogram data for visualization.
-        
-        Args:
-            X_values: Feature values for the node
-            y_labels: Class labels for the node
-            threshold: Current threshold value
-            feature_idx: Index of the feature
-            thresholds: Optional list of all possible threshold values to align bins with
-        """
+                               num_bins: int = 10) -> HistogramData:
+        """Generate histogram data for visualization."""
         if len(X_values) == 0:
             return HistogramData(
                 feature_values=[],
@@ -163,8 +155,7 @@ class ManualTreeService:
             # Ensure bins are unique and sorted
             bins = sorted(set(bins))
         else:
-            # Fallback to fixed-width bins if no thresholds provided
-            bins = np.linspace(min_val, max_val, min(10, len(X_values)) + 1)
+            bins = np.linspace(min_val, max_val, min(num_bins, len(X_values)) + 1)
 
         # Count samples per bin per class
         unique_classes = np.unique(y_labels)
@@ -376,16 +367,14 @@ class ManualTreeService:
                        key=lambda i: threshold_stats_list[i].information_gain)
         best_threshold = threshold_stats_list[best_idx].threshold
 
-        # Create overall histogram data with threshold-aligned bins
-        # Extract threshold values for bin alignment
-        threshold_values = [ts.threshold for ts in threshold_stats_list]
-        
+        # Create overall histogram data (using best threshold for visualization)
+        # Use number of thresholds as bin count for better granularity
         histogram_data = self._create_histogram_data(
             feature_values,
             y_node,
             best_threshold,
             feature_idx,
-            thresholds=threshold_values
+            num_bins=len(threshold_stats_list)
         )
 
         # Get feature range

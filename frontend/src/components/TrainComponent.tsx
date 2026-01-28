@@ -1,5 +1,6 @@
 import DecisionTree from "@/components/decision_tree/classifier/training/Visualisation";
-import KNN from "@/components/knn/classifier/learning/Visualisation";
+import KNN from "@/components/knn/classifier/training/Visualisation";
+
 
 import type { TrainModelResponse } from "@/types/model";
 import React from "react";

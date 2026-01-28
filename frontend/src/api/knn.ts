@@ -3,9 +3,9 @@
  * Provides functions for interacting with the KNN backend endpoints
  */
 
+import { API_BASE_URL as BASE_URL } from "@/api/config";
 import type { ParameterInfo } from "@/api/types";
 import type { components } from "@/types/api";
-import { API_BASE_URL as BASE_URL } from "@/api/config";
 
 // ============================================================================
 // Type Aliases (auto-generated from OpenAPI spec)
@@ -144,14 +144,69 @@ export const predict = async (
     return data;
 };
 
+/**
+ * Trains KNN and returns visualization data with evaluation metrics.
+ * 
+ * This endpoint splits the dataset into train/test sets, trains KNN,
+ * evaluates on the test set, and returns both visualization data and
+ * evaluation metrics (confusion matrix + scores).
+ * 
+ * Use this for TrainPage to get metrics for display.
+ * Use getVisualisation for VizOnlyPage (no metrics needed).
+ * 
+ * @param request Training request including:
+ *   - parameters: KNN algorithm parameters
+ *   - dataset: Full dataset (will be split 80/20)
+ *   - visualisation_features: Features to visualize
+ * @returns A promise resolving to KNNTrainingResponse with:
+ *   - All visualization data (training_points, decision_boundary, etc.)
+ *   - matrix: Confusion matrix from test set evaluation
+ *   - scores: Accuracy, precision, recall, F1 scores
+ * @throws Error if the request fails or response is unsuccessful
+ * 
+ * @example
+ * const trainData = await trainKNN({
+ *   parameters: { n_neighbors: 5 },
+ *   include_boundary: true
+ * });
+ * // trainData.matrix: [[10, 0], [1, 9]]
+ * // trainData.scores: { accuracy: 0.95, precision: 0.94, ... }
+ */
+export const train = async (
+    request: Partial<KNNTrainingRequest> = {}
+): Promise<KNNTrainingResponse> => {
+    const response = await fetch(`${API_BASE_URL}/train`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify(request),
+    });
+    
+    console.log(request)
+
+    const data: KNNTrainingResponse = await response.json();
+
+    if (!response.ok || !data.success) {
+        const errorMessage =
+            (data as any).message || `HTTP error! status: ${response.status}`;
+        throw new Error(errorMessage);
+    }
+
+    return data;
+};
+
 // ============================================================================
 // Export Types (for consumer convenience)
 // ============================================================================
 
+type KNNTrainingRequest = components["schemas"]["KNNTrainingRequest"];
+type KNNTrainingResponse = components["schemas"]["KNNTrainingResponse"];
+
 export type {
     KNNPredictionRequest,
-    KNNPredictionResponse,
-    KNNVisualisationRequest,
-    KNNVisualisationResponse,
-    ParameterInfo,
+    KNNPredictionResponse, KNNTrainingRequest,
+    KNNTrainingResponse, KNNVisualisationRequest,
+    KNNVisualisationResponse, ParameterInfo
 };
+

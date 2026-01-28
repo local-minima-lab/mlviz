@@ -9,11 +9,12 @@ import {
     calculateNodeStats,
     evaluateManualTree as evaluateManualTreeAPI,
     getParameters as getParametersAPI,
+    predictWithInstructions,
     trainModel as initiateTrainModel,
     type DecisionTreeResponse,
 } from "@/api/dt";
 import type { components } from "@/types/api";
-import type { TreeNode } from "@/types/model";
+import type { ClassificationMetrics, TreeNode } from "@/types/model";
 import type { Parameters } from "@/types/story";
 import React, {
     createContext,
@@ -24,7 +25,22 @@ import React, {
     useState,
     type ReactNode
 } from "react";
-import { createBaseModelContext, type BaseModelData } from "./BaseModelContext";
+import { createBaseModelContext, type BaseModelData, type PredictableModelContext, type PredictionResult, type TrainableModelContext } from "./BaseModelContext";
+
+/**
+ * DT-specific prediction additional data
+ * Contains traversal instructions for visualization
+ */
+export interface DTPredictionAdditionalData {
+    /**
+     * List of traversal instructions from root to leaf
+     * Each instruction indicates which direction to go at each split node
+     * - "left": go to left child (feature value <= threshold)
+     * - "right": go to right child (feature value > threshold)
+     * - "stop": reached a leaf node
+     */
+    instructions: Array<"left" | "right" | "stop">;
+}
 
 const LOCAL_STORAGE_MODE_KEY = "dt_tree_mode";
 
@@ -38,14 +54,7 @@ interface DecisionTreeModelData extends BaseModelData {
         [key: string]: unknown;
     };
     tree: TreeNode;
-    classes: string[];
-    matrix?: number[][];
-    scores?: {
-        accuracy: number;
-        precision: number;
-        recall: number;
-        f1: number;
-    };
+    metrics: ClassificationMetrics;
     
     // Tree mode tracking
     treeMode: 'trained' | 'manual';
@@ -81,21 +90,19 @@ interface ManualTreeInterface {
     evaluate: () => Promise<void>;
 }
 
-interface DecisionTreeContextType {
-    isModelLoading: boolean;
-    modelError: string | null;
+interface DecisionTreeContextType extends
+    TrainableModelContext<DecisionTreeModelData>,
+    PredictableModelContext<DecisionTreeModelData, DTPredictionAdditionalData> {
+    // DT-specific properties
     treeMode: 'trained' | 'manual' | null;
-    currentModelData: DecisionTreeModelData | null;
-    lastTrainedParams: Parameters;
-    trainNewModel: (params: Parameters) => Promise<void>;
-    clearStoredModelParams: () => void;
-    // Helper methods
-    getFeatureNames: () => string[] | null;
-    getClassNames: () => string[] | null;
-    getParameters: () => Promise<import("@/api/types").ParameterInfo[]>;
-    // Manual tree building
     manualTree: ManualTreeInterface;
-    resetModelData: () => void;
+
+    // Keep existing method names for backward compatibility
+    isModelLoading: boolean;        // = isLoading
+    modelError: string | null;      // = error
+    trainNewModel: (params: Parameters) => Promise<void>;  // = train
+    lastTrainedParams: Parameters;  // = lastParams
+    clearStoredModelParams: () => void;
 }
 
 const DecisionTreeContext = createContext<DecisionTreeContextType | undefined>(
@@ -127,10 +134,15 @@ export const DecisionTreeProvider: React.FC<DecisionTreeProviderProps> = ({
 
 const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
     const baseContext = useBaseModel();
-    const { currentModelData, lastParams, setCurrentModelData, setLastParams, resetModelData: baseResetModelData, getParameters } = baseContext;
+    const { currentModelData, lastParams, setCurrentModelData, setLastParams, resetModelData: baseResetModelData, getLastParams, getParameters } = baseContext;
 
     const [isModelLoading, setIsModelLoading] = useState<boolean>(false);
     const [modelError, setModelError] = useState<string | null>(null);
+
+    // Prediction state (for PredictableModelContext)
+    const [isPredicting, setIsPredicting] = useState<boolean>(false);
+    const [predictionError, setPredictionError] = useState<string | null>(null);
+    const [predictionResult, setPredictionResult] = useState<PredictionResult<DTPredictionAdditionalData> | null>(null);
 
     // Extract commonly used values from currentModelData
     const treeMode = currentModelData?.treeMode || null;
@@ -157,7 +169,8 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
         console.log('[updateNodeAtPath] Current tree:', tree);
         
         if (path.length === 0) {
-            const result = { ...tree, ...updates };
+            // Type-safe merge for root node update
+            const result = { ...tree, ...updates } as TreeNode;
             console.log('[updateNodeAtPath] Updating root node, result:', result);
             return result;
         }
@@ -192,6 +205,10 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
         setModelError(null);
         try {
             const data: DecisionTreeResponse = await initiateTrainModel(params);
+            
+            console.log('[trainNewModel] API response:', data);
+            console.log('[trainNewModel] data.metadata:', data.metadata);
+            console.log('[trainNewModel] data.metadata?.class_names:', data.metadata?.class_names);
 
             if (data.success) {
                 const modelData: DecisionTreeModelData = {
@@ -200,15 +217,14 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
                     cached: data.cached,
                     metadata: data.metadata,
                     tree: data.tree,
-                    classes: data.classes,
-                    matrix: data.matrix,
-                    scores: data.scores,
+                    metrics: data.metrics,
                     treeMode: 'trained',
                     selectedNodePath: null,
                     manualFeatureStats: null,
                     selectedFeature: null,
                     selectedThreshold: null,
                 };
+                console.log('[trainNewModel] Setting modelData:', modelData);
                 setCurrentModelData(modelData);
                 setLastParams(params);
             } else {
@@ -268,11 +284,53 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
     }, [currentModelData]);
 
     const getClassNames = useCallback((): string[] | null => {
-        if (!currentModelData?.classes) {
+        if (!currentModelData?.metadata?.class_names) {
             return null;
         }
-        return currentModelData.classes;
+        console.log('[getClassNames] currentModelData:', currentModelData);
+        return currentModelData.metadata.class_names as string[];
     }, [currentModelData]);
+
+    // Prediction method (PredictableModelContext) - calls backend API
+    const predict = useCallback(async (points: Record<string, number>) => {
+        if (!currentModelData?.tree) {
+            setPredictionError("No tree available for prediction");
+            return;
+        }
+
+        setIsPredicting(true);
+        setPredictionError(null);
+
+        try {
+            const classNames = getClassNames() || undefined;
+
+            // Call backend API for prediction with traversal instructions
+            const result = await predictWithInstructions({
+                tree: currentModelData.tree,
+                points,
+                class_names: classNames,
+            });
+
+            setPredictionResult({
+                predictedClass: result.predicted_class,
+                predictedClassIndex: result.predicted_class_index,
+                confidence: result.confidence,
+                additionalData: {
+                    instructions: result.instructions,
+                }
+            });
+        } catch (error) {
+            setPredictionError(error instanceof Error ? error.message : "Prediction failed");
+        } finally {
+            setIsPredicting(false);
+        }
+    }, [currentModelData, getClassNames]);
+
+    // Clear prediction (PredictableModelContext)
+    const clearPrediction = useCallback(() => {
+        setPredictionResult(null);
+        setPredictionError(null);
+    }, []);
 
     // Manual tree building functions
     const initializeManualTree = useCallback(async () => {
@@ -335,12 +393,12 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
                     cached: false,
                     metadata: {
                         feature_names: datasetResponse.feature_names,
+                        class_names: datasetResponse.target_names,
                     },
                     tree: rootNode,
-                    classes: classes,
-                    // Initial confusion matrix represents single leaf predicting majority class
-                    matrix: initialMatrix,
-                    scores: {
+                    // Initial metrics represent single leaf predicting majority class
+                    metrics: {
+                        confusion_matrix: initialMatrix,
                         accuracy: initialAccuracy,
                         precision: initialAccuracy, // Simplified for single-class prediction
                         recall: initialAccuracy,
@@ -378,7 +436,7 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
     const loadManualFeatureStats = useCallback(async (feature: string) => {
         if (!currentModelData || !selectedNodePath) return;
         
-        const node = getNodeByPath(manualTree, selectedNodePath);
+        const node = getNodeByPath(manualTree || null, selectedNodePath);
         if (!node) return;
         
         try {
@@ -393,7 +451,7 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
                 ...currentModelData,
                 selectedFeature: feature,
                 manualFeatureStats: stats,
-                selectedThreshold: stats.best_threshold,
+                selectedThreshold: null, // Let renderer default to minimum threshold
             });
         } catch (error) {
             console.error('Failed to load feature stats:', error);
@@ -491,11 +549,10 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
                     dataset: null, // Uses default Iris dataset
                 });
                 
-                // Update with scores and matrix
+                // Update with metrics
                 setCurrentModelData({
                     ...updatedModelData,
-                    scores: result.scores,
-                    matrix: result.matrix,
+                    metrics: result.metrics,
                 });
             } catch (error) {
                 console.error('[ManualTree] Failed to evaluate tree after split:', error);
@@ -561,11 +618,10 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
                 dataset: null, // Uses default Iris dataset
             });
             
-            // Update with scores and matrix
+            // Update with metrics
             setCurrentModelData({
                 ...updatedModelData,
-                scores: result.scores,
-                matrix: result.matrix,
+                metrics: result.metrics,
             });
         } catch (error) {
             console.error('[ManualTree] Failed to evaluate tree after marking as leaf:', error);
@@ -575,7 +631,7 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
 
     const canSplitManualNode = useCallback(() => {
         if (!selectedNodePath) return false;
-        const node = getNodeByPath(manualTree, selectedNodePath);
+        const node = getNodeByPath(manualTree || null, selectedNodePath);
         return node?.type === 'leaf' && selectedFeature !== null && selectedThreshold !== null;
     }, [manualTree, selectedNodePath, selectedFeature, selectedThreshold, getNodeByPath]);
 
@@ -594,11 +650,14 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
             
             console.log('[ManualTree] Evaluation result:', result);
             
-            // Update currentModelData with new scores and matrix
+            // Update currentModelData with new metrics and preserve metadata
             setCurrentModelData({
                 ...currentModelData,
-                scores: result.scores,
-                matrix: result.matrix,
+                metrics: result.metrics,
+                metadata: {
+                    ...currentModelData.metadata,
+                    ...result.metadata,
+                },
             });
         } catch (error) {
             console.error('[ManualTree] Failed to evaluate tree:', error);
@@ -628,20 +687,41 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
     }, [manualTree]);
 
     const contextValue: DecisionTreeContextType = {
+        // BaseModelContext (inherited)
+        currentModelData,
+        lastParams,
+        setCurrentModelData,
+        setLastParams,
+        resetModelData,
+        getLastParams,
+        getParameters,
+
+        // TrainableModelContext (for TrainPage)
+        isLoading: isModelLoading,
+        error: modelError,
+        data: currentModelData,
+        train: trainNewModel,
+
+        // PredictableModelContext (for PredictPage)
+        isPredicting,
+        predictionError,
+        predictionResult,
+        predict,
+        clearPrediction,
+        getFeatureNames,
+        getClassNames,
+
+        // DT-specific (backward compatibility)
         isModelLoading,
         modelError,
         treeMode,
-        currentModelData: currentModelData,
         lastTrainedParams: lastParams,
         trainNewModel,
         clearStoredModelParams,
-        // Helper methods
-        getFeatureNames,
-        getClassNames,
-        getParameters,
+
         // Manual tree building
         manualTree: {
-            tree: manualTree,
+            tree: manualTree || null,
             selectedNodePath,
             featureStats: manualFeatureStats,
             selectedFeature,
@@ -655,7 +735,6 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
             canSplit: canSplitManualNode,
             evaluate: evaluateManualTree,
         },
-        resetModelData,
     };
 
     return (
