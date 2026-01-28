@@ -1,0 +1,50 @@
+{
+  "parameters": [
+    {
+      "name": "max_depth",
+      "type": "int",
+      "default": 5,
+      "min": 1,
+      "max": 50,
+      "description": "Maximum depth of the tree. Controls overfitting by limiting how deep the tree can grow."
+    },
+    {
+      "name": "criterion",
+      "type": "select",
+      "default": "gini",
+      "options": ["gini", "entropy"],
+      "description": "Function to measure the quality of a split. Gini impurity or information entropy."
+    },
+    {
+      "name": "min_samples_split",
+      "type": "int", 
+      "default": 2,
+      "min": 2,
+      "max": 100,
+      "description": "Minimum number of samples required to split an internal node."
+    },
+    {
+      "name": "min_samples_leaf",
+      "type": "int",
+      "default": 1,
+      "min": 1,
+      "max": 50,
+      "description": "Minimum number of samples required to be at a leaf node."
+    },
+    {
+      "name": "max_features",
+      "type": "select",
+      "default": null,
+      "options": [null, "sqrt", "log2"],
+      "description": "Number of features to consider when looking for the best split. null uses all features."
+    },
+    {
+      "name": "random_state",
+      "type": "int",
+      "default": 2025,
+      "min": 0,
+      "max": 2147483647,
+      "description": "Random seed for reproducible results."
+    }
+  ]
+}

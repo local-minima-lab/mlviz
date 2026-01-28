@@ -1,0 +1,2931 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "MLviz",
+    "description": "API documentation including ML model training and data analysis.",
+    "contact": {
+      "name": "zaidan sani",
+      "url": "https://mzaidanbs.github.io/",
+      "email": "mzaidanbs@gmail.com"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/dt/train_params": {
+      "get": {
+        "tags": [
+          "Decision Tree"
+        ],
+        "summary": "Get Parameters",
+        "description": "Gets the parameters for training.\n\nReturns:\n    List[ParameterInfo]: List of parameters for training",
+        "operationId": "get_parameters_api_dt_train_params_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/SelectParameterInfo"
+                      },
+                      {
+                        "$ref": "#/components/schemas/IntParameterInfo"
+                      },
+                      {
+                        "$ref": "#/components/schemas/NumberParameterInfo"
+                      },
+                      {
+                        "$ref": "#/components/schemas/FloatParameterInfo"
+                      },
+                      {
+                        "$ref": "#/components/schemas/AnyParameterInfo"
+                      }
+                    ],
+                    "discriminator": {
+                      "propertyName": "type",
+                      "mapping": {
+                        "select": "#/components/schemas/SelectParameterInfo",
+                        "int": "#/components/schemas/IntParameterInfo",
+                        "number": "#/components/schemas/NumberParameterInfo",
+                        "float": "#/components/schemas/FloatParameterInfo",
+                        "any": "#/components/schemas/AnyParameterInfo"
+                      }
+                    }
+                  },
+                  "type": "array",
+                  "title": "Response Get Parameters Api Dt Train Params Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dt/train": {
+      "post": {
+        "tags": [
+          "Decision Tree"
+        ],
+        "summary": "Train Model",
+        "description": "Train a decision tree model with the specified parameters.\n\nSupports both predefined datasets (iris, wine, breast_cancer, digits) \nand custom datasets. Models are automatically cached for efficiency.\n\nArgs:\n    request (DecisionTreeTrainingRequest): The request parameters\n\nRaises:\n    HTTPException: Exception if unable to train model\n\nReturns:\n    DecisionTreeTrainingResponse: Model details",
+        "operationId": "train_model_api_dt_train_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionTreeTrainingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionTreeTrainingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dt/predict_params": {
+      "post": {
+        "tags": [
+          "Decision Tree"
+        ],
+        "summary": "Get Predict Params",
+        "description": "Gets params for prediction\n\nArgs:\n    request (DecisionTreeTrainingRequest): Request\n\nRaises:\n    HTTPException: Exception if retrieval failed\n\nReturns:\n    List[str]: Feature names",
+        "operationId": "get_predict_params_api_dt_predict_params_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionTreeTrainingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array",
+                  "title": "Response Get Predict Params Api Dt Predict Params Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dt/predict": {
+      "post": {
+        "tags": [
+          "Decision Tree"
+        ],
+        "summary": "Predict With Instructions",
+        "description": "Make a prediction and return traversal instructions for visualization.\n\nThis endpoint traverses the provided decision tree using the input feature\nvalues and returns:\n- The predicted class and confidence\n- A list of traversal instructions (\"left\", \"right\", \"stop\") that can be\n  used by the frontend to animate the prediction path through the tree\n\nArgs:\n    request: Contains the tree structure, feature values, and optional class names\n\nRaises:\n    HTTPException: If prediction fails (e.g., missing feature value)\n\nReturns:\n    DecisionTreeTraversalPredictResponse: Prediction result with instructions",
+        "operationId": "predict_with_instructions_api_dt_predict_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecisionTreeTraversalPredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DecisionTreeTraversalPredictResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dt/cache": {
+      "delete": {
+        "tags": [
+          "Decision Tree"
+        ],
+        "summary": "Clear Cache",
+        "description": "Clear all cached models.",
+        "operationId": "clear_cache_api_dt_cache_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dt/cache/info": {
+      "get": {
+        "tags": [
+          "Decision Tree"
+        ],
+        "summary": "Get Cache Info",
+        "description": "Get cache statistics and information.",
+        "operationId": "get_cache_info_api_dt_cache_info_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CacheInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dt/manual/node-stats": {
+      "post": {
+        "tags": [
+          "Decision Tree"
+        ],
+        "summary": "Calculate Node Stats",
+        "description": "Calculate statistics for a potential node split in manual tree building.\n\nThis endpoint calculates entropy/gini, information gain, class distributions,\nand histogram data for a given feature and threshold split.\n\nArgs:\n    request (ManualNodeStatsRequest): Contains dataset, feature, threshold,\n                                     parent samples mask, and criterion\n\nRaises:\n    HTTPException: If feature not found or calculation fails\n\nReturns:\n    ManualNodeStatsResponse: Statistics for parent and child nodes,\n                            information gain, histogram data, and sample masks",
+        "operationId": "calculate_node_stats_api_dt_manual_node_stats_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualNodeStatsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualNodeStatsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dt/manual/feature-stats": {
+      "post": {
+        "tags": [
+          "Decision Tree"
+        ],
+        "summary": "Calculate Feature Stats",
+        "description": "Calculate statistics for all possible thresholds of a feature.\n\nThis endpoint returns statistics for all valid split points of a feature,\nenabling instant slider feedback without additional API calls.\n\nArgs:\n    request (ManualFeatureStatsRequest): Contains dataset, feature,\n                                        parent samples mask, criterion,\n                                        and max_thresholds limit\n\nRaises:\n    HTTPException: If feature not found, has only one value, or calculation fails\n\nReturns:\n    ManualFeatureStatsResponse: Array of threshold statistics, best threshold,\n                               feature range, histogram, and metadata",
+        "operationId": "calculate_feature_stats_api_dt_manual_feature_stats_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualFeatureStatsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualFeatureStatsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dt/manual/evaluate": {
+      "post": {
+        "tags": [
+          "Decision Tree"
+        ],
+        "summary": "Evaluate Manual Tree",
+        "description": "Evaluate a manually built tree against test data.\n\nThis endpoint calculates accuracy, precision, recall, and F1 scores\nby making predictions on the test set using the provided tree structure.\n\nArgs:\n    request (ManualTreeEvaluateRequest): Contains tree structure and optional dataset\n\nRaises:\n    HTTPException: If evaluation fails\n\nReturns:\n    ManualTreeEvaluateResponse: Metrics (accuracy, precision, recall, F1) and confusion matrix",
+        "operationId": "evaluate_manual_tree_api_dt_manual_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualTreeEvaluateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ManualTreeEvaluateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dataset/list": {
+      "get": {
+        "tags": [
+          "Dataset"
+        ],
+        "summary": "Get Available Datasets",
+        "description": "Get a list of all available predefined datasets.\n\nReturns:\n    DatasetListResponse: Dictionary of dataset names and their metadata",
+        "operationId": "get_available_datasets_api_dataset_list_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/dataset/load": {
+      "get": {
+        "tags": [
+          "Dataset"
+        ],
+        "summary": "Load Dataset",
+        "description": "Load a dataset with its full data for visualization.\n\nDefaults to the Iris dataset if no name is provided.\nReturns the complete dataset including feature values, labels,\nand metadata needed for visualization.\n\nArgs:\n    name: Dataset name (defaults to \"iris\")\n    test_size: Test set proportion (defaults to 0.25)\n    random_state: Random seed (defaults to 2025)\n\nReturns:\n    DatasetResponse: Complete dataset with features, labels, and metadata\n\nRaises:\n    HTTPException: If dataset loading fails",
+        "operationId": "load_dataset_api_dataset_load_get",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Dataset name (iris, wine, breast_cancer, digits)",
+              "default": "iris",
+              "title": "Name"
+            },
+            "description": "Dataset name (iris, wine, breast_cancer, digits)"
+          },
+          {
+            "name": "test_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "maximum": 0.5,
+                  "minimum": 0.1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Proportion of dataset to use for test split",
+              "default": 0.25,
+              "title": "Test Size"
+            },
+            "description": "Proportion of dataset to use for test split"
+          },
+          {
+            "name": "random_state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Random seed for train/test split",
+              "default": 2025,
+              "title": "Random State"
+            },
+            "description": "Random seed for train/test split"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/knn/params": {
+      "get": {
+        "tags": [
+          "K-Nearest Neighbors"
+        ],
+        "summary": "Get Parameters",
+        "description": "Get the parameters for KNN.\n\nReturns:\n    List[ParameterInfo]: List of parameters for KNN",
+        "operationId": "get_parameters_api_knn_params_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/SelectParameterInfo"
+                      },
+                      {
+                        "$ref": "#/components/schemas/IntParameterInfo"
+                      },
+                      {
+                        "$ref": "#/components/schemas/NumberParameterInfo"
+                      },
+                      {
+                        "$ref": "#/components/schemas/FloatParameterInfo"
+                      },
+                      {
+                        "$ref": "#/components/schemas/AnyParameterInfo"
+                      }
+                    ],
+                    "discriminator": {
+                      "propertyName": "type",
+                      "mapping": {
+                        "select": "#/components/schemas/SelectParameterInfo",
+                        "int": "#/components/schemas/IntParameterInfo",
+                        "number": "#/components/schemas/NumberParameterInfo",
+                        "float": "#/components/schemas/FloatParameterInfo",
+                        "any": "#/components/schemas/AnyParameterInfo"
+                      }
+                    }
+                  },
+                  "type": "array",
+                  "title": "Response Get Parameters Api Knn Params Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/knn/predict": {
+      "post": {
+        "tags": [
+          "K-Nearest Neighbors"
+        ],
+        "summary": "Predict",
+        "description": "Make KNN predictions with visualization data.\n\nKNN is a lazy learner - no training phase needed. This endpoint\nfits the model on the provided dataset and makes predictions\nfor the query points, returning neighbor information and\ndecision boundary data for visualization.\n\nArgs:\n    request (KNNPredictionRequest): Prediction request with parameters,\n        dataset, and query points\n\nRaises:\n    HTTPException: If prediction fails\n\nReturns:\n    KNNPredictionResponse: Predictions, neighbor info, and visualization data",
+        "operationId": "predict_api_knn_predict_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KNNPredictionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KNNPredictionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/knn/visualise": {
+      "post": {
+        "tags": [
+          "K-Nearest Neighbors"
+        ],
+        "summary": "Visualise",
+        "description": "Get KNN visualisation data without making predictions.\n\nThis endpoint is useful for visualising the training dataset\nwith decision boundaries BEFORE making any predictions. It returns\nall training points and the decision boundary based on KNN parameters,\nbut does not require any query points.\n\nUse cases:\n- Initial dataset exploration\n- Understanding how K affects decision boundaries\n- Visualising feature spaces before prediction\n\nArgs:\n    request (KNNVisualisationRequest): Visualisation request with parameters\n        and dataset\n\nRaises:\n    HTTPException: If visualisation generation fails\n\nReturns:\n    KNNVisualisationResponse: Training data, decision boundary, and metadata",
+        "operationId": "visualise_api_knn_visualise_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KNNVisualisationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KNNVisualisationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/knn/train": {
+      "post": {
+        "tags": [
+          "K-Nearest Neighbors"
+        ],
+        "summary": "Train",
+        "description": "Train KNN and return visualization data with evaluation metrics.\n\nThis endpoint:\n1. Splits dataset into train/test sets (80/20)\n2. Trains KNN on training set\n3. Evaluates on test set (confusion matrix + scores)\n4. Generates visualization data (decision boundary, etc.)\n\nUse this endpoint for TrainPage to get both visualization and metrics.\nUse /visualise for VizOnlyPage (no metrics needed).\n\nArgs:\n    request: Training request with parameters and dataset\n    \nRaises:\n    HTTPException: If training fails\n    \nReturns:\n    KNNTrainingResponse: Visualization data + evaluation metrics",
+        "operationId": "train_api_knn_train_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KNNTrainingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KNNTrainingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health Check",
+        "description": "Health check endpoint.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnyParameterInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "default": {
+            "title": "Default"
+          },
+          "type": {
+            "type": "string",
+            "const": "any",
+            "title": "Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "default",
+          "type"
+        ],
+        "title": "AnyParameterInfo",
+        "description": "Any type parameter."
+      },
+      "CacheInfoResponse": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "current_size": {
+            "type": "integer",
+            "title": "Current Size"
+          },
+          "max_size": {
+            "type": "integer",
+            "title": "Max Size"
+          },
+          "keys": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Keys"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "current_size",
+          "max_size",
+          "keys"
+        ],
+        "title": "CacheInfoResponse",
+        "description": "Response model for cache information."
+      },
+      "ClassificationMetadata": {
+        "properties": {
+          "feature_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Feature Names"
+          },
+          "class_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Class Names"
+          },
+          "n_features": {
+            "type": "integer",
+            "title": "N Features"
+          },
+          "n_classes": {
+            "type": "integer",
+            "title": "N Classes"
+          },
+          "dataset_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature_names",
+          "class_names",
+          "n_features",
+          "n_classes"
+        ],
+        "title": "ClassificationMetadata",
+        "description": "Metadata for classifier responses."
+      },
+      "ClassificationMetrics": {
+        "properties": {
+          "confusion_matrix": {
+            "items": {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Confusion Matrix"
+          },
+          "accuracy": {
+            "type": "number",
+            "title": "Accuracy"
+          },
+          "precision": {
+            "type": "number",
+            "title": "Precision"
+          },
+          "recall": {
+            "type": "number",
+            "title": "Recall"
+          },
+          "f1": {
+            "type": "number",
+            "title": "F1"
+          }
+        },
+        "type": "object",
+        "required": [
+          "confusion_matrix",
+          "accuracy",
+          "precision",
+          "recall",
+          "f1"
+        ],
+        "title": "ClassificationMetrics"
+      },
+      "DatasetInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "n_samples": {
+            "type": "integer",
+            "title": "N Samples"
+          },
+          "n_features": {
+            "type": "integer",
+            "title": "N Features"
+          },
+          "n_classes": {
+            "type": "integer",
+            "title": "N Classes"
+          },
+          "target_type": {
+            "type": "string",
+            "enum": [
+              "classification",
+              "regression"
+            ],
+            "title": "Target Type",
+            "default": "classification"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "n_samples",
+          "n_features",
+          "n_classes"
+        ],
+        "title": "DatasetInfo",
+        "description": "Metadata about a dataset."
+      },
+      "DatasetListResponse": {
+        "properties": {
+          "datasets": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/DatasetInfo"
+            },
+            "type": "object",
+            "title": "Datasets"
+          }
+        },
+        "type": "object",
+        "required": [
+          "datasets"
+        ],
+        "title": "DatasetListResponse",
+        "description": "Response model for available datasets."
+      },
+      "DatasetResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "X": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "X",
+            "description": "Feature matrix"
+          },
+          "y": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Y",
+            "description": "Target vector"
+          },
+          "feature_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Feature Names",
+            "description": "Names of features"
+          },
+          "target_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Target Names",
+            "description": "Names of target classes"
+          },
+          "info": {
+            "$ref": "#/components/schemas/DatasetInfo",
+            "description": "Dataset metadata"
+          },
+          "test_size": {
+            "type": "number",
+            "title": "Test Size",
+            "description": "Test set proportion"
+          },
+          "random_state": {
+            "type": "integer",
+            "title": "Random State",
+            "description": "Random seed for reproducibility"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "X",
+          "y",
+          "feature_names",
+          "target_names",
+          "info",
+          "test_size",
+          "random_state"
+        ],
+        "title": "DatasetResponse",
+        "description": "Response model for loaded dataset."
+      },
+      "DecisionBoundaryData": {
+        "properties": {
+          "mesh_points": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Mesh Points",
+            "description": "Grid points for boundary visualization"
+          },
+          "predictions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Predictions",
+            "description": "Predicted class at each mesh point"
+          },
+          "dimensions": {
+            "type": "integer",
+            "title": "Dimensions",
+            "description": "Number of dimensions (1, 2, or 3)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mesh_points",
+          "predictions",
+          "dimensions"
+        ],
+        "title": "DecisionBoundaryData",
+        "description": "Decision boundary visualization data."
+      },
+      "DecisionTreeTrainingRequest": {
+        "properties": {
+          "max_depth": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Depth",
+            "description": "Maximum depth of the tree",
+            "default": 5
+          },
+          "criterion": {
+            "type": "string",
+            "enum": [
+              "gini",
+              "entropy"
+            ],
+            "title": "Criterion",
+            "description": "Split quality criterion",
+            "default": "gini"
+          },
+          "min_samples_split": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 2.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Samples Split",
+            "description": "Minimum samples to split",
+            "default": 2
+          },
+          "min_samples_leaf": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Samples Leaf",
+            "description": "Minimum samples at leaf",
+            "default": 1
+          },
+          "max_features": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "sqrt",
+                  "log2"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Features",
+            "description": "Number of features to consider"
+          },
+          "random_state": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Random State",
+            "description": "Random seed for reproducibility",
+            "default": 2025
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset",
+            "description": "Dataset to use for training"
+          }
+        },
+        "type": "object",
+        "title": "DecisionTreeTrainingRequest",
+        "description": "Request model for Decision Tree."
+      },
+      "DecisionTreeTrainingResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "model_key": {
+            "type": "string",
+            "title": "Model Key"
+          },
+          "cached": {
+            "type": "boolean",
+            "title": "Cached"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/ClassificationMetadata"
+          },
+          "tree": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SplitNode-Output"
+              },
+              {
+                "$ref": "#/components/schemas/LeafNode"
+              }
+            ],
+            "title": "Tree"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/ClassificationMetrics"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "model_key",
+          "cached",
+          "metadata",
+          "tree",
+          "metrics"
+        ],
+        "title": "DecisionTreeTrainingResponse",
+        "description": "Response model for Decision Tree."
+      },
+      "DecisionTreeTraversalPredictRequest": {
+        "properties": {
+          "tree": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SplitNode-Input"
+              },
+              {
+                "$ref": "#/components/schemas/LeafNode"
+              }
+            ],
+            "title": "Tree",
+            "description": "Root node of the decision tree"
+          },
+          "points": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Points",
+            "description": "Feature name to value mapping for prediction"
+          },
+          "class_names": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Names",
+            "description": "Class names for the prediction result (optional)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tree",
+          "points"
+        ],
+        "title": "DecisionTreeTraversalPredictRequest",
+        "description": "Request for decision tree prediction with traversal instructions."
+      },
+      "DecisionTreeTraversalPredictResponse": {
+        "properties": {
+          "predicted_class": {
+            "type": "string",
+            "title": "Predicted Class",
+            "description": "Predicted class label"
+          },
+          "predicted_class_index": {
+            "type": "integer",
+            "title": "Predicted Class Index",
+            "description": "Index of the predicted class"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence",
+            "description": "Confidence score (proportion of samples at leaf)"
+          },
+          "instructions": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "left",
+                "right",
+                "stop"
+              ]
+            },
+            "type": "array",
+            "title": "Instructions",
+            "description": "Traversal instructions from root to leaf"
+          }
+        },
+        "type": "object",
+        "required": [
+          "predicted_class",
+          "predicted_class_index",
+          "confidence",
+          "instructions"
+        ],
+        "title": "DecisionTreeTraversalPredictResponse",
+        "description": "Response containing prediction result with traversal instructions."
+      },
+      "FloatParameterInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "default": {
+            "title": "Default"
+          },
+          "type": {
+            "type": "string",
+            "const": "float",
+            "title": "Type"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "step": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "default",
+          "type"
+        ],
+        "title": "FloatParameterInfo",
+        "description": "Float parameter with optional range and step."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HistogramData": {
+        "properties": {
+          "feature_values": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Feature Values"
+          },
+          "class_labels": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Class Labels"
+          },
+          "bins": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Bins"
+          },
+          "counts_by_class": {
+            "additionalProperties": {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Counts By Class"
+          },
+          "threshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold"
+          },
+          "total_samples": {
+            "type": "integer",
+            "title": "Total Samples"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature_values",
+          "class_labels",
+          "bins",
+          "counts_by_class",
+          "threshold",
+          "total_samples"
+        ],
+        "title": "HistogramData"
+      },
+      "IntParameterInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "default": {
+            "title": "Default"
+          },
+          "type": {
+            "type": "string",
+            "const": "int",
+            "title": "Type"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "default",
+          "type"
+        ],
+        "title": "IntParameterInfo",
+        "description": "Integer parameter with optional range."
+      },
+      "KNNParameters": {
+        "properties": {
+          "n_neighbors": {
+            "type": "integer",
+            "maximum": 50.0,
+            "minimum": 1.0,
+            "title": "N Neighbors",
+            "description": "Number of neighbors to use",
+            "default": 5
+          },
+          "weights": {
+            "type": "string",
+            "enum": [
+              "uniform",
+              "distance"
+            ],
+            "title": "Weights",
+            "description": "Weight function: 'uniform' (equal weights) or 'distance' (inverse distance weighting)",
+            "default": "uniform"
+          },
+          "algorithm": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "ball_tree",
+              "kd_tree",
+              "brute"
+            ],
+            "title": "Algorithm",
+            "description": "Algorithm to compute nearest neighbors",
+            "default": "auto"
+          },
+          "leaf_size": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Leaf Size",
+            "description": "Leaf size passed to BallTree or KDTree (affects speed and memory)",
+            "default": 30
+          },
+          "p": {
+            "type": "number",
+            "minimum": 1.0,
+            "title": "P",
+            "description": "Power parameter for Minkowski metric (p=1: Manhattan, p=2: Euclidean)",
+            "default": 2
+          },
+          "metric": {
+            "type": "string",
+            "enum": [
+              "minkowski",
+              "euclidean",
+              "manhattan",
+              "chebyshev"
+            ],
+            "title": "Metric",
+            "description": "Distance metric to use",
+            "default": "minkowski"
+          },
+          "feature_1": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Feature 1",
+            "description": "First feature index for training and visualization",
+            "default": 0
+          },
+          "feature_2": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature 2",
+            "description": "Second feature index for training and visualization (optional)",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "title": "KNNParameters",
+        "description": "Core KNN algorithm parameters matching sklearn.neighbors.KNeighborsClassifier."
+      },
+      "KNNPredictionRequest": {
+        "properties": {
+          "parameters": {
+            "$ref": "#/components/schemas/KNNParameters",
+            "description": "KNN algorithm parameters (defaults to n_neighbors=5, uniform weights, etc.)"
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset",
+            "description": "Training dataset with X, y, feature_names, class_names. Defaults to Iris dataset."
+          },
+          "query_points": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Query Points",
+            "description": "Test points to classify"
+          },
+          "visualisation_features": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visualisation Features",
+            "description": "Indices for visualisation features"
+          },
+          "include_boundary": {
+            "type": "boolean",
+            "title": "Include Boundary",
+            "description": "Whether to include decision boundary data",
+            "default": true
+          },
+          "boundary_resolution": {
+            "type": "integer",
+            "maximum": 200.0,
+            "minimum": 10.0,
+            "title": "Boundary Resolution",
+            "description": "Resolution of boundary mesh",
+            "default": 50
+          }
+        },
+        "type": "object",
+        "required": [
+          "query_points"
+        ],
+        "title": "KNNPredictionRequest",
+        "description": "Request model for KNN prediction."
+      },
+      "KNNPredictionResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "predictions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Predictions",
+            "description": "Predicted class labels"
+          },
+          "prediction_indices": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Prediction Indices",
+            "description": "Predicted class indices"
+          },
+          "neighbors_info": {
+            "items": {
+              "items": {
+                "$ref": "#/components/schemas/NeighborInfo"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Neighbors Info",
+            "description": "Neighbor information for each query point"
+          },
+          "training_points": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Training Points",
+            "description": "All training point coordinates"
+          },
+          "training_labels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Training Labels",
+            "description": "All training point labels"
+          },
+          "all_distances": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "All Distances",
+            "description": "Distance from each query point to all training points"
+          },
+          "distance_matrix": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Distance Matrix",
+            "description": "Distance from each training point to all other training points (0 for self)"
+          },
+          "neighbor_indices": {
+            "items": {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Neighbor Indices",
+            "description": "Indices of K nearest neighbors for each training point (sorted by distance)"
+          },
+          "decision_boundary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DecisionBoundaryData"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Decision boundary visualization data"
+          },
+          "feature_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Feature Names"
+          },
+          "class_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Class Names"
+          },
+          "n_dimensions": {
+            "type": "integer",
+            "title": "N Dimensions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "predictions",
+          "prediction_indices",
+          "neighbors_info",
+          "training_points",
+          "training_labels",
+          "all_distances",
+          "distance_matrix",
+          "neighbor_indices",
+          "feature_names",
+          "class_names",
+          "n_dimensions"
+        ],
+        "title": "KNNPredictionResponse",
+        "description": "Response model for KNN prediction."
+      },
+      "KNNTrainingRequest": {
+        "properties": {
+          "parameters": {
+            "$ref": "#/components/schemas/KNNParameters",
+            "description": "KNN algorithm parameters"
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset",
+            "description": "Training dataset. Defaults to Iris dataset."
+          },
+          "visualisation_features": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visualisation Features",
+            "description": "Feature indices to visualise (1-3 features)"
+          },
+          "include_boundary": {
+            "type": "boolean",
+            "title": "Include Boundary",
+            "description": "Whether to include decision boundary",
+            "default": true
+          },
+          "boundary_resolution": {
+            "type": "integer",
+            "maximum": 200.0,
+            "minimum": 10.0,
+            "title": "Boundary Resolution",
+            "description": "Resolution of boundary mesh",
+            "default": 50
+          }
+        },
+        "type": "object",
+        "title": "KNNTrainingRequest",
+        "description": "Request model for KNN training with evaluation."
+      },
+      "KNNTrainingResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "training_points": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Training Points"
+          },
+          "training_labels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Training Labels"
+          },
+          "distance_matrix": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Distance Matrix"
+          },
+          "neighbor_indices": {
+            "items": {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Neighbor Indices"
+          },
+          "decision_boundary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DecisionBoundaryData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/ClassificationMetadata",
+            "description": "Classifier metadata"
+          },
+          "visualisation_feature_indices": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visualisation Feature Indices"
+          },
+          "visualisation_feature_names": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visualisation Feature Names"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/ClassificationMetrics",
+            "description": "Classification metrics including confusion matrix and scores"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "training_points",
+          "training_labels",
+          "distance_matrix",
+          "neighbor_indices",
+          "decision_boundary",
+          "metadata",
+          "visualisation_feature_indices",
+          "visualisation_feature_names",
+          "metrics"
+        ],
+        "title": "KNNTrainingResponse",
+        "description": "Response model for KNN training with evaluation metrics."
+      },
+      "KNNVisualisationRequest": {
+        "properties": {
+          "parameters": {
+            "$ref": "#/components/schemas/KNNParameters",
+            "description": "KNN algorithm parameters"
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset",
+            "description": "Training dataset. Defaults to Iris dataset."
+          },
+          "visualisation_features": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visualisation Features",
+            "description": "Feature indices to visualise (1-3 features)"
+          },
+          "include_boundary": {
+            "type": "boolean",
+            "title": "Include Boundary",
+            "description": "Whether to include decision boundary",
+            "default": true
+          },
+          "boundary_resolution": {
+            "type": "integer",
+            "maximum": 200.0,
+            "minimum": 10.0,
+            "title": "Boundary Resolution",
+            "description": "Resolution of boundary mesh",
+            "default": 50
+          }
+        },
+        "type": "object",
+        "title": "KNNVisualisationRequest",
+        "description": "Request model for KNN visualisation without prediction."
+      },
+      "KNNVisualisationResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "training_points": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Training Points",
+            "description": "All training point coordinates (visualisation features only)"
+          },
+          "training_labels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Training Labels",
+            "description": "All training point labels"
+          },
+          "distance_matrix": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Distance Matrix",
+            "description": "Distance from each training point to all other training points (0 for self)"
+          },
+          "neighbor_indices": {
+            "items": {
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Neighbor Indices",
+            "description": "Indices of K nearest neighbors for each training point (sorted by distance)"
+          },
+          "decision_boundary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DecisionBoundaryData"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Decision boundary visualisation data"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/ClassificationMetadata",
+            "description": "Classifier metadata"
+          },
+          "visualisation_feature_indices": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visualisation Feature Indices",
+            "description": "Feature indices used for visualisation"
+          },
+          "visualisation_feature_names": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visualisation Feature Names",
+            "description": "Names of features used for visualisation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "training_points",
+          "training_labels",
+          "distance_matrix",
+          "neighbor_indices",
+          "metadata"
+        ],
+        "title": "KNNVisualisationResponse",
+        "description": "Response model for KNN visualisation without prediction."
+      },
+      "LeafNode": {
+        "properties": {
+          "samples": {
+            "type": "integer",
+            "title": "Samples"
+          },
+          "impurity": {
+            "type": "number",
+            "title": "Impurity"
+          },
+          "value": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Value"
+          },
+          "samples_mask": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Samples Mask",
+            "description": "Indices of samples that reached this node (None for trained models, populated for manual trees)"
+          },
+          "terminal": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terminal",
+            "description": "Whether this node is marked as terminal (frontend-only, used in manual tree building)"
+          },
+          "type": {
+            "type": "string",
+            "const": "leaf",
+            "title": "Type",
+            "default": "leaf"
+          }
+        },
+        "type": "object",
+        "required": [
+          "samples",
+          "impurity",
+          "value"
+        ],
+        "title": "LeafNode",
+        "description": "Leaf node in a decision tree (no further splits)."
+      },
+      "ManualFeatureStatsRequest": {
+        "properties": {
+          "feature": {
+            "type": "string",
+            "title": "Feature",
+            "description": "Feature name to analyze"
+          },
+          "parent_samples_mask": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Samples Mask",
+            "description": "Indices of samples that reached this node (None for root)"
+          },
+          "criterion": {
+            "type": "string",
+            "title": "Criterion",
+            "description": "Criterion to use for impurity calculation (gini or entropy)",
+            "default": "gini"
+          },
+          "max_thresholds": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 10.0,
+            "title": "Max Thresholds",
+            "description": "Maximum number of thresholds to return",
+            "default": 100
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset",
+            "description": "Dataset to use for training"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature"
+        ],
+        "title": "ManualFeatureStatsRequest",
+        "description": "Request to calculate statistics for all thresholds of a feature."
+      },
+      "ManualFeatureStatsResponse": {
+        "properties": {
+          "feature": {
+            "type": "string",
+            "title": "Feature"
+          },
+          "feature_index": {
+            "type": "integer",
+            "title": "Feature Index"
+          },
+          "thresholds": {
+            "items": {
+              "$ref": "#/components/schemas/ThresholdStatistics"
+            },
+            "type": "array",
+            "title": "Thresholds",
+            "description": "Statistics for each threshold, sorted by threshold value"
+          },
+          "best_threshold": {
+            "type": "number",
+            "title": "Best Threshold",
+            "description": "Threshold with highest information gain"
+          },
+          "best_threshold_index": {
+            "type": "integer",
+            "title": "Best Threshold Index",
+            "description": "Index of best threshold in the thresholds array"
+          },
+          "feature_range": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Feature Range",
+            "description": "[min, max] values of the feature"
+          },
+          "histogram_data": {
+            "$ref": "#/components/schemas/HistogramData",
+            "description": "Overall feature distribution at current node"
+          },
+          "total_unique_values": {
+            "type": "integer",
+            "title": "Total Unique Values",
+            "description": "Total number of unique feature values"
+          },
+          "returned_threshold_count": {
+            "type": "integer",
+            "title": "Returned Threshold Count",
+            "description": "Number of thresholds returned (may be capped)"
+          },
+          "available_features": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Available Features",
+            "description": "List of all available features"
+          },
+          "class_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Class Names",
+            "description": "List of all class names in the dataset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature",
+          "feature_index",
+          "thresholds",
+          "best_threshold",
+          "best_threshold_index",
+          "feature_range",
+          "histogram_data",
+          "total_unique_values",
+          "returned_threshold_count",
+          "available_features",
+          "class_names"
+        ],
+        "title": "ManualFeatureStatsResponse",
+        "description": "Response containing statistics for all thresholds of a feature."
+      },
+      "ManualNodeStatsRequest": {
+        "properties": {
+          "feature": {
+            "type": "string",
+            "title": "Feature",
+            "description": "Feature name to split on"
+          },
+          "threshold": {
+            "type": "number",
+            "title": "Threshold",
+            "description": "Threshold value for the split"
+          },
+          "parent_samples_mask": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Samples Mask",
+            "description": "Indices of samples that reached this node (None for root)"
+          },
+          "criterion": {
+            "type": "string",
+            "title": "Criterion",
+            "description": "Criterion to use for impurity calculation (gini or entropy)",
+            "default": "gini"
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset",
+            "description": "Dataset to use for training"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature",
+          "threshold"
+        ],
+        "title": "ManualNodeStatsRequest",
+        "description": "Request to calculate statistics for a potential node split."
+      },
+      "ManualNodeStatsResponse": {
+        "properties": {
+          "feature": {
+            "type": "string",
+            "title": "Feature"
+          },
+          "feature_index": {
+            "type": "integer",
+            "title": "Feature Index"
+          },
+          "threshold": {
+            "type": "number",
+            "title": "Threshold"
+          },
+          "split_stats": {
+            "$ref": "#/components/schemas/SplitStatistics"
+          },
+          "histogram_data": {
+            "$ref": "#/components/schemas/HistogramData"
+          },
+          "left_samples_mask": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Left Samples Mask",
+            "description": "Indices of samples that go to left child (<= threshold)"
+          },
+          "right_samples_mask": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Right Samples Mask",
+            "description": "Indices of samples that go to right child (> threshold)"
+          },
+          "available_features": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Available Features",
+            "description": "List of all available features"
+          },
+          "class_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Class Names",
+            "description": "List of all class names in the dataset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature",
+          "feature_index",
+          "threshold",
+          "split_stats",
+          "histogram_data",
+          "left_samples_mask",
+          "right_samples_mask",
+          "available_features",
+          "class_names"
+        ],
+        "title": "ManualNodeStatsResponse",
+        "description": "Response containing statistics for a potential split."
+      },
+      "ManualTreeEvaluateRequest": {
+        "properties": {
+          "tree": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SplitNode-Input"
+              },
+              {
+                "$ref": "#/components/schemas/LeafNode"
+              }
+            ],
+            "title": "Tree",
+            "description": "Root node of the manual tree"
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset",
+            "description": "Dataset to use for evaluation (defaults to Iris)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tree"
+        ],
+        "title": "ManualTreeEvaluateRequest",
+        "description": "Request to evaluate a manually built tree."
+      },
+      "ManualTreeEvaluateResponse": {
+        "properties": {
+          "metrics": {
+            "$ref": "#/components/schemas/ClassificationMetrics",
+            "description": "Classification metrics including confusion matrix and scores"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/ClassificationMetadata",
+            "description": "Classifier metadata including feature and class information"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metrics",
+          "metadata"
+        ],
+        "title": "ManualTreeEvaluateResponse",
+        "description": "Response containing evaluation metrics for a manual tree."
+      },
+      "NeighborInfo": {
+        "properties": {
+          "index": {
+            "type": "integer",
+            "title": "Index",
+            "description": "Index in training data"
+          },
+          "distance": {
+            "type": "number",
+            "title": "Distance",
+            "description": "Distance from query point"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "description": "Class label"
+          },
+          "coordinates": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Coordinates",
+            "description": "Feature values"
+          }
+        },
+        "type": "object",
+        "required": [
+          "index",
+          "distance",
+          "label",
+          "coordinates"
+        ],
+        "title": "NeighborInfo",
+        "description": "Information about a single neighbor."
+      },
+      "NodeStatistics": {
+        "properties": {
+          "samples": {
+            "type": "integer",
+            "title": "Samples"
+          },
+          "impurity": {
+            "type": "number",
+            "title": "Impurity"
+          },
+          "class_distribution": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Class Distribution"
+          },
+          "class_probabilities": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Class Probabilities"
+          }
+        },
+        "type": "object",
+        "required": [
+          "samples",
+          "impurity",
+          "class_distribution",
+          "class_probabilities"
+        ],
+        "title": "NodeStatistics",
+        "description": "Statistics for a node before/after split."
+      },
+      "NumberParameterInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "default": {
+            "title": "Default"
+          },
+          "type": {
+            "type": "string",
+            "const": "number",
+            "title": "Type"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "step": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "default",
+          "type"
+        ],
+        "title": "NumberParameterInfo",
+        "description": "Number parameter with optional range and step."
+      },
+      "SelectParameterInfo": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "default": {
+            "title": "Default"
+          },
+          "type": {
+            "type": "string",
+            "const": "select",
+            "title": "Type"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Options"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "description",
+          "default",
+          "type",
+          "options"
+        ],
+        "title": "SelectParameterInfo",
+        "description": "Select parameter with predefined options."
+      },
+      "SplitNode-Input": {
+        "properties": {
+          "samples": {
+            "type": "integer",
+            "title": "Samples"
+          },
+          "impurity": {
+            "type": "number",
+            "title": "Impurity"
+          },
+          "value": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Value"
+          },
+          "samples_mask": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Samples Mask",
+            "description": "Indices of samples that reached this node (None for trained models, populated for manual trees)"
+          },
+          "terminal": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terminal",
+            "description": "Whether this node is marked as terminal (frontend-only, used in manual tree building)"
+          },
+          "type": {
+            "type": "string",
+            "const": "split",
+            "title": "Type",
+            "default": "split"
+          },
+          "feature": {
+            "type": "string",
+            "title": "Feature"
+          },
+          "feature_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature Index",
+            "description": "Numeric index of the feature (None for manual trees, populated for trained models)"
+          },
+          "threshold": {
+            "type": "number",
+            "title": "Threshold"
+          },
+          "histogram_data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HistogramData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "left": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SplitNode-Input"
+              },
+              {
+                "$ref": "#/components/schemas/LeafNode"
+              }
+            ],
+            "title": "Left"
+          },
+          "right": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SplitNode-Input"
+              },
+              {
+                "$ref": "#/components/schemas/LeafNode"
+              }
+            ],
+            "title": "Right"
+          }
+        },
+        "type": "object",
+        "required": [
+          "samples",
+          "impurity",
+          "value",
+          "feature",
+          "threshold",
+          "left",
+          "right"
+        ],
+        "title": "SplitNode",
+        "description": "Binary split node in a decision tree."
+      },
+      "SplitNode-Output": {
+        "properties": {
+          "samples": {
+            "type": "integer",
+            "title": "Samples"
+          },
+          "impurity": {
+            "type": "number",
+            "title": "Impurity"
+          },
+          "value": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Value"
+          },
+          "samples_mask": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Samples Mask",
+            "description": "Indices of samples that reached this node (None for trained models, populated for manual trees)"
+          },
+          "terminal": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terminal",
+            "description": "Whether this node is marked as terminal (frontend-only, used in manual tree building)"
+          },
+          "type": {
+            "type": "string",
+            "const": "split",
+            "title": "Type",
+            "default": "split"
+          },
+          "feature": {
+            "type": "string",
+            "title": "Feature"
+          },
+          "feature_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature Index",
+            "description": "Numeric index of the feature (None for manual trees, populated for trained models)"
+          },
+          "threshold": {
+            "type": "number",
+            "title": "Threshold"
+          },
+          "histogram_data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HistogramData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "left": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SplitNode-Output"
+              },
+              {
+                "$ref": "#/components/schemas/LeafNode"
+              }
+            ],
+            "title": "Left"
+          },
+          "right": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SplitNode-Output"
+              },
+              {
+                "$ref": "#/components/schemas/LeafNode"
+              }
+            ],
+            "title": "Right"
+          }
+        },
+        "type": "object",
+        "required": [
+          "samples",
+          "impurity",
+          "value",
+          "feature",
+          "threshold",
+          "left",
+          "right"
+        ],
+        "title": "SplitNode",
+        "description": "Binary split node in a decision tree."
+      },
+      "SplitStatistics": {
+        "properties": {
+          "parent_stats": {
+            "$ref": "#/components/schemas/NodeStatistics"
+          },
+          "left_stats": {
+            "$ref": "#/components/schemas/NodeStatistics"
+          },
+          "right_stats": {
+            "$ref": "#/components/schemas/NodeStatistics"
+          },
+          "information_gain": {
+            "type": "number",
+            "title": "Information Gain"
+          },
+          "weighted_impurity": {
+            "type": "number",
+            "title": "Weighted Impurity"
+          }
+        },
+        "type": "object",
+        "required": [
+          "parent_stats",
+          "left_stats",
+          "right_stats",
+          "information_gain",
+          "weighted_impurity"
+        ],
+        "title": "SplitStatistics",
+        "description": "Statistics for evaluating a split."
+      },
+      "ThresholdStatistics": {
+        "properties": {
+          "threshold": {
+            "type": "number",
+            "title": "Threshold"
+          },
+          "information_gain": {
+            "type": "number",
+            "title": "Information Gain"
+          },
+          "split_stats": {
+            "$ref": "#/components/schemas/SplitStatistics"
+          },
+          "left_samples_mask": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Left Samples Mask",
+            "description": "Indices of samples that go to left child (<= threshold)"
+          },
+          "right_samples_mask": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Right Samples Mask",
+            "description": "Indices of samples that go to right child (> threshold)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "threshold",
+          "information_gain",
+          "split_stats",
+          "left_samples_mask",
+          "right_samples_mask"
+        ],
+        "title": "ThresholdStatistics",
+        "description": "Statistics for a single threshold value."
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}
