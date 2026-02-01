@@ -458,6 +458,139 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/kmeans/params": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Parameters
+         * @description Get the parameters for K-Means.
+         *
+         *     Returns:
+         *         List[ParameterInfo]: List of parameters for K-Means
+         */
+        get: operations["get_parameters_api_kmeans_params_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kmeans/step": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Step
+         * @description Perform one K-Means iteration: assign points to centroids and update centroids.
+         *
+         *     This endpoint takes user-provided centroids and:
+         *     1. Assigns each data point to its nearest centroid
+         *     2. Calculates new centroid positions as the mean of assigned points
+         *     3. Returns all data needed for visualization
+         *
+         *     Use this for step-by-step K-Means visualization where users can:
+         *     - Place initial centroids manually
+         *     - Step through iterations one at a time
+         *     - Observe how clusters evolve
+         *
+         *     Args:
+         *         request: Step request with parameters, centroids, and dataset
+         *
+         *     Raises:
+         *         HTTPException: If step fails
+         *
+         *     Returns:
+         *         KMeansStepResponse: Assignments, distances, updated centroids, and visualization data
+         */
+        post: operations["step_api_kmeans_step_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kmeans/train": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Train
+         * @description Run K-Means until convergence, returning all iterations.
+         *
+         *     This endpoint takes user-provided initial centroids and:
+         *     1. Runs K-Means iterations until convergence or max_iterations
+         *     2. Returns data for ALL iterations for playback/animation
+         *     3. Includes final results
+         *
+         *     Use this when you want to:
+         *     - Animate the full K-Means algorithm
+         *     - Show convergence behavior
+         *     - Get final clustering results
+         *
+         *     Args:
+         *         request: Training request with parameters, initial centroids, dataset, and max_iterations
+         *
+         *     Raises:
+         *         HTTPException: If training fails
+         *
+         *     Returns:
+         *         KMeansTrainResponse: All iterations, final centroids, and visualization data
+         */
+        post: operations["train_api_kmeans_train_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/kmeans/predict": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Predict
+         * @description Predict cluster assignments for query points given centroids.
+         *
+         *     This endpoint assigns query points to their nearest centroid
+         *     and returns distance information for visualization.
+         *
+         *     Args:
+         *         request: Prediction request with parameters, centroids, and query points
+         *
+         *     Raises:
+         *         HTTPException: If prediction fails
+         *
+         *     Returns:
+         *         KMeansPredictResponse: Assignments and distances for query points
+         */
+        post: operations["predict_api_kmeans_predict_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -541,6 +674,37 @@ export interface components {
             recall: number;
             /** F1 */
             f1: number;
+        };
+        /**
+         * Dataset
+         * @description Complete dataset with features and targets.
+         */
+        Dataset: {
+            /**
+             * X
+             * @description Feature matrix
+             */
+            X: number[][];
+            /**
+             * Y
+             * @description Target vector
+             */
+            y: number[];
+            /** Feature Names */
+            feature_names?: string[] | null;
+            /** Target Names */
+            target_names?: string[] | null;
+            info?: components["schemas"]["DatasetInfo"] | null;
+            /**
+             * Test Size
+             * @default 0.25
+             */
+            test_size: number;
+            /**
+             * Random State
+             * @default 2025
+             */
+            random_state: number;
         };
         /**
          * DatasetInfo
@@ -680,9 +844,7 @@ export interface components {
              * Dataset
              * @description Dataset to use for training
              */
-            dataset?: {
-                [key: string]: unknown;
-            } | null;
+            dataset?: components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"] | null;
         };
         /**
          * DecisionTreeTrainingResponse
@@ -816,6 +978,310 @@ export interface components {
             max?: number | null;
         };
         /**
+         * KMeansClusterInfo
+         * @description Information about a single cluster.
+         */
+        KMeansClusterInfo: {
+            /** Cluster Id */
+            cluster_id: number;
+            /** Centroid */
+            centroid: number[];
+            /** N Points */
+            n_points: number;
+            /** Point Indices */
+            point_indices: number[];
+        };
+        /**
+         * KMeansIterationData
+         * @description Data for a single K-Means iteration.
+         */
+        KMeansIterationData: {
+            /**
+             * Iteration
+             * @description Iteration number (0-indexed)
+             */
+            iteration: number;
+            /**
+             * Assignments
+             * @description Cluster index for each data point
+             */
+            assignments: number[];
+            /**
+             * Distance Matrix
+             * @description Distance from each point to each centroid
+             */
+            distance_matrix: number[][];
+            /**
+             * Centroids
+             * @description Centroids at start of iteration
+             */
+            centroids: number[][];
+            /**
+             * New Centroids
+             * @description Updated centroids after iteration
+             */
+            new_centroids: number[][];
+            /**
+             * Centroid Shifts
+             * @description Distance each centroid moved
+             */
+            centroid_shifts: number[];
+            /**
+             * Converged
+             * @description Whether converged at this iteration
+             */
+            converged: boolean;
+            /**
+             * Cluster Info
+             * @description Detailed information for each cluster
+             */
+            cluster_info: components["schemas"]["KMeansClusterInfo"][];
+        };
+        /**
+         * KMeansMetadata
+         * @description Metadata for K-Means clustering.
+         */
+        KMeansMetadata: {
+            /** Feature Names */
+            feature_names: string[];
+            /** N Features */
+            n_features: number;
+            /** N Samples */
+            n_samples: number;
+            /** N Clusters */
+            n_clusters: number;
+        };
+        /**
+         * KMeansParameters
+         * @description Core K-Means algorithm parameters for manual step-by-step clustering.
+         */
+        KMeansParameters: {
+            /**
+             * N Clusters
+             * @description Number of clusters to form
+             * @default 3
+             */
+            n_clusters: number;
+            /**
+             * Metric
+             * @description Distance metric for assigning points to clusters
+             * @default euclidean
+             * @enum {string}
+             */
+            metric: "euclidean" | "manhattan";
+            /**
+             * Feature 1
+             * @description First feature index for visualization
+             * @default 0
+             */
+            feature_1: number;
+            /**
+             * Feature 2
+             * @description Second feature index for visualization
+             * @default 1
+             */
+            feature_2: number | null;
+        };
+        /**
+         * KMeansPredictRequest
+         * @description Request model for K-Means prediction.
+         */
+        KMeansPredictRequest: {
+            /** @description K-Means algorithm parameters */
+            parameters?: components["schemas"]["KMeansParameters"];
+            /**
+             * Centroids
+             * @description Centroid positions [[x, y], ...]
+             */
+            centroids: number[][];
+            /**
+             * Query Points
+             * @description Points to assign to clusters [[x, y], ...]
+             */
+            query_points: number[][];
+        };
+        /**
+         * KMeansPredictResponse
+         * @description Response model for K-Means prediction.
+         */
+        KMeansPredictResponse: {
+            /** Success */
+            success: boolean;
+            /**
+             * Query Points
+             * @description The input points
+             */
+            query_points: number[][];
+            /**
+             * Assignments
+             * @description Cluster index for each query point
+             */
+            assignments: number[];
+            /**
+             * Distance Matrix
+             * @description Distance from each query point to each centroid
+             */
+            distance_matrix: number[][];
+            /**
+             * Assigned Distances
+             * @description Distance to the assigned centroid for each point
+             */
+            assigned_distances: number[];
+            /**
+             * Centroids
+             * @description The centroids used
+             */
+            centroids: number[][];
+        };
+        /**
+         * KMeansStepRequest
+         * @description Request model for a single K-Means iteration.
+         */
+        KMeansStepRequest: {
+            /** @description K-Means algorithm parameters */
+            parameters?: components["schemas"]["KMeansParameters"];
+            /**
+             * Centroids
+             * @description Current centroid positions [[x, y], ...]
+             */
+            centroids: number[][];
+            /**
+             * Dataset
+             * @description Dataset to use. Defaults to Iris dataset.
+             */
+            dataset?: components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"] | null;
+            /**
+             * Visualisation Features
+             * @description Feature indices for visualization (defaults to [feature_1, feature_2])
+             */
+            visualisation_features?: number[] | null;
+        };
+        /**
+         * KMeansStepResponse
+         * @description Response model for a single K-Means iteration.
+         */
+        KMeansStepResponse: {
+            /** Success */
+            success: boolean;
+            /**
+             * Data Points
+             * @description All data points in visualization space
+             */
+            data_points: number[][];
+            /**
+             * Assignments
+             * @description Cluster index for each data point
+             */
+            assignments: number[];
+            /**
+             * Distance Matrix
+             * @description Distance from each point to each centroid
+             */
+            distance_matrix: number[][];
+            /**
+             * Centroids
+             * @description Original centroids passed in
+             */
+            centroids: number[][];
+            /**
+             * New Centroids
+             * @description Updated centroids after iteration
+             */
+            new_centroids: number[][];
+            /**
+             * Centroid Shifts
+             * @description Distance each centroid moved
+             */
+            centroid_shifts: number[];
+            /**
+             * Converged
+             * @description Whether the algorithm has converged
+             */
+            converged: boolean;
+            /**
+             * Cluster Info
+             * @description Detailed information for each cluster
+             */
+            cluster_info: components["schemas"]["KMeansClusterInfo"][];
+            metadata: components["schemas"]["KMeansMetadata"];
+            /** Visualisation Feature Indices */
+            visualisation_feature_indices: number[];
+            /** Visualisation Feature Names */
+            visualisation_feature_names: string[];
+        };
+        /**
+         * KMeansTrainRequest
+         * @description Request model for K-Means training (all iterations).
+         */
+        KMeansTrainRequest: {
+            /** @description K-Means algorithm parameters */
+            parameters?: components["schemas"]["KMeansParameters"];
+            /**
+             * Centroids
+             * @description Initial centroid positions [[x, y], ...]
+             */
+            centroids: number[][];
+            /**
+             * Dataset
+             * @description Dataset to use. Defaults to Iris dataset.
+             */
+            dataset?: components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"] | null;
+            /**
+             * Visualisation Features
+             * @description Feature indices for visualization (defaults to [feature_1, feature_2])
+             */
+            visualisation_features?: number[] | null;
+            /**
+             * Max Iterations
+             * @description Maximum iterations before stopping
+             * @default 100
+             */
+            max_iterations: number;
+        };
+        /**
+         * KMeansTrainResponse
+         * @description Response model for K-Means training (all iterations until convergence).
+         */
+        KMeansTrainResponse: {
+            /** Success */
+            success: boolean;
+            /**
+             * Data Points
+             * @description All data points in visualization space
+             */
+            data_points: number[][];
+            /**
+             * Iterations
+             * @description Data for each iteration
+             */
+            iterations: components["schemas"]["KMeansIterationData"][];
+            /**
+             * Total Iterations
+             * @description Total number of iterations run
+             */
+            total_iterations: number;
+            /**
+             * Converged
+             * @description Whether the algorithm converged
+             */
+            converged: boolean;
+            /**
+             * Final Centroids
+             * @description Final centroid positions
+             */
+            final_centroids: number[][];
+            /**
+             * Final Assignments
+             * @description Final cluster assignments
+             */
+            final_assignments: number[];
+            metadata: components["schemas"]["KMeansMetadata"];
+            /** Visualisation Feature Indices */
+            visualisation_feature_indices: number[];
+            /** Visualisation Feature Names */
+            visualisation_feature_names: string[];
+        };
+        /**
          * KNNParameters
          * @description Core KNN algorithm parameters matching sklearn.neighbors.KNeighborsClassifier.
          */
@@ -883,9 +1349,7 @@ export interface components {
              * Dataset
              * @description Training dataset with X, y, feature_names, class_names. Defaults to Iris dataset.
              */
-            dataset?: {
-                [key: string]: unknown;
-            } | null;
+            dataset?: components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"] | null;
             /**
              * Query Points
              * @description Test points to classify
@@ -976,9 +1440,7 @@ export interface components {
              * Dataset
              * @description Training dataset. Defaults to Iris dataset.
              */
-            dataset?: {
-                [key: string]: unknown;
-            } | null;
+            dataset?: components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"] | null;
             /**
              * Visualisation Features
              * @description Feature indices to visualise (1-3 features)
@@ -1033,9 +1495,7 @@ export interface components {
              * Dataset
              * @description Training dataset. Defaults to Iris dataset.
              */
-            dataset?: {
-                [key: string]: unknown;
-            } | null;
+            dataset?: components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"] | null;
             /**
              * Visualisation Features
              * @description Feature indices to visualise (1-3 features)
@@ -1155,9 +1615,7 @@ export interface components {
              * Dataset
              * @description Dataset to use for training
              */
-            dataset?: {
-                [key: string]: unknown;
-            } | null;
+            dataset?: components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"] | null;
         };
         /**
          * ManualFeatureStatsResponse
@@ -1241,9 +1699,7 @@ export interface components {
              * Dataset
              * @description Dataset to use for training
              */
-            dataset?: {
-                [key: string]: unknown;
-            } | null;
+            dataset?: components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"] | null;
         };
         /**
          * ManualNodeStatsResponse
@@ -1293,9 +1749,7 @@ export interface components {
              * Dataset
              * @description Dataset to use for evaluation (defaults to Iris)
              */
-            dataset?: {
-                [key: string]: unknown;
-            } | null;
+            dataset?: components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"] | null;
         };
         /**
          * ManualTreeEvaluateResponse
@@ -1373,6 +1827,27 @@ export interface components {
             max?: number | null;
             /** Step */
             step?: number | null;
+        };
+        /**
+         * PredefinedDataset
+         * @description Reference to a predefined dataset.
+         */
+        PredefinedDataset: {
+            /**
+             * Name
+             * @enum {string}
+             */
+            name: "iris" | "wine" | "breast_cancer" | "digits";
+            /**
+             * Test Size
+             * @default 0.25
+             */
+            test_size: number;
+            /**
+             * Random State
+             * @default 2025
+             */
+            random_state: number;
         };
         /**
          * SelectParameterInfo
@@ -1949,6 +2424,125 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KNNTrainingResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_parameters_api_kmeans_params_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": (components["schemas"]["SelectParameterInfo"] | components["schemas"]["IntParameterInfo"] | components["schemas"]["NumberParameterInfo"] | components["schemas"]["FloatParameterInfo"] | components["schemas"]["AnyParameterInfo"])[];
+                };
+            };
+        };
+    };
+    step_api_kmeans_step_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KMeansStepRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KMeansStepResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    train_api_kmeans_train_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KMeansTrainRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KMeansTrainResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    predict_api_kmeans_predict_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KMeansPredictRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KMeansPredictResponse"];
                 };
             };
             /** @description Validation Error */

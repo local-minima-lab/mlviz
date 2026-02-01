@@ -8,6 +8,7 @@ from models import (
     DecisionBoundaryData,
     DecisionTreeParameters,
     HistogramData,
+    KMeansParameters,
     KNNParameters,
     ManualFeatureStatsParameters,
     NeighborInfo,
@@ -423,3 +424,203 @@ class KNNPredictionResponse(BaseModel):
     feature_names: List[str]
     class_names: List[str]
     n_dimensions: int
+
+
+# K-Means Models
+
+
+class KMeansClusterInfo(BaseModel):
+    """Information about a single cluster."""
+
+    cluster_id: int
+    centroid: List[float]
+    n_points: int
+    point_indices: List[int]
+
+
+class KMeansMetadata(BaseModel):
+    """Metadata for K-Means clustering."""
+
+    feature_names: List[str]
+    n_features: int
+    n_samples: int
+    n_clusters: int
+
+
+class KMeansStepResponse(BaseModel):
+    """Response model for a single K-Means iteration."""
+
+    success: bool
+
+    # Data points
+    data_points: List[List[float]] = Field(
+        description="All data points in visualization space"
+    )
+
+    # Cluster assignments
+    assignments: List[int] = Field(
+        description="Cluster index for each data point"
+    )
+
+    # Distance information
+    distance_matrix: List[List[float]] = Field(
+        description="Distance from each point to each centroid"
+    )
+
+    # Centroids
+    centroids: List[List[float]] = Field(
+        description="Original centroids passed in"
+    )
+    new_centroids: List[List[float]] = Field(
+        description="Updated centroids after iteration"
+    )
+    centroid_shifts: List[float] = Field(
+        description="Distance each centroid moved"
+    )
+
+    # Convergence
+    converged: bool = Field(
+        description="Whether the algorithm has converged"
+    )
+
+    # Cluster info
+    cluster_info: List[KMeansClusterInfo] = Field(
+        description="Detailed information for each cluster"
+    )
+
+    # Metadata
+    metadata: KMeansMetadata
+
+    # Visualization info
+    visualisation_feature_indices: List[int]
+    visualisation_feature_names: List[str]
+
+
+class KMeansIterationData(BaseModel):
+    """Data for a single K-Means iteration."""
+
+    iteration: int = Field(description="Iteration number (0-indexed)")
+    assignments: List[int] = Field(description="Cluster index for each data point")
+    distance_matrix: List[List[float]] = Field(
+        description="Distance from each point to each centroid"
+    )
+    centroids: List[List[float]] = Field(description="Centroids at start of iteration")
+    new_centroids: List[List[float]] = Field(
+        description="Updated centroids after iteration"
+    )
+    centroid_shifts: List[float] = Field(description="Distance each centroid moved")
+    converged: bool = Field(description="Whether converged at this iteration")
+    cluster_info: List[KMeansClusterInfo] = Field(
+        description="Detailed information for each cluster"
+    )
+
+
+class KMeansTrainRequest(BaseModel):
+    """Request model for K-Means training (all iterations)."""
+
+    parameters: KMeansParameters = Field(
+        default_factory=KMeansParameters, description="K-Means algorithm parameters"
+    )
+    centroids: List[List[float]] = Field(
+        description="Initial centroid positions [[x, y], ...]"
+    )
+    dataset: Optional[Union[Dataset, PredefinedDataset]] = Field(
+        None, description="Dataset to use. Defaults to Iris dataset."
+    )
+    visualisation_features: Optional[List[int]] = Field(
+        None,
+        description="Feature indices for visualization (defaults to [feature_1, feature_2])",
+    )
+    max_iterations: int = Field(
+        100, ge=1, le=1000, description="Maximum iterations before stopping"
+    )
+
+
+class KMeansTrainResponse(BaseModel):
+    """Response model for K-Means training (all iterations until convergence)."""
+
+    success: bool
+
+    # Data points
+    data_points: List[List[float]] = Field(
+        description="All data points in visualization space"
+    )
+
+    # All iterations
+    iterations: List[KMeansIterationData] = Field(
+        description="Data for each iteration"
+    )
+    total_iterations: int = Field(description="Total number of iterations run")
+
+    # Final results
+    converged: bool = Field(description="Whether the algorithm converged")
+    final_centroids: List[List[float]] = Field(description="Final centroid positions")
+    final_assignments: List[int] = Field(description="Final cluster assignments")
+
+    # Metadata
+    metadata: KMeansMetadata
+
+    # Visualization info
+    visualisation_feature_indices: List[int]
+    visualisation_feature_names: List[str]
+
+
+class KMeansStepRequest(BaseModel):
+    """Request model for a single K-Means iteration."""
+
+    parameters: KMeansParameters = Field(
+        default_factory=KMeansParameters, description="K-Means algorithm parameters"
+    )
+    centroids: List[List[float]] = Field(
+        description="Current centroid positions [[x, y], ...]"
+    )
+    dataset: Optional[Union[Dataset, PredefinedDataset]] = Field(
+        None, description="Dataset to use. Defaults to Iris dataset."
+    )
+    visualisation_features: Optional[List[int]] = Field(
+        None,
+        description="Feature indices for visualization (defaults to [feature_1, feature_2])",
+    )
+
+
+class KMeansPredictRequest(BaseModel):
+    """Request model for K-Means prediction."""
+
+    parameters: KMeansParameters = Field(
+        default_factory=KMeansParameters, description="K-Means algorithm parameters"
+    )
+    centroids: List[List[float]] = Field(
+        description="Centroid positions [[x, y], ...]"
+    )
+    query_points: List[List[float]] = Field(
+        description="Points to assign to clusters [[x, y], ...]"
+    )
+
+
+class KMeansPredictResponse(BaseModel):
+    """Response model for K-Means prediction."""
+
+    success: bool
+
+    # Query points
+    query_points: List[List[float]] = Field(
+        description="The input points"
+    )
+
+    # Assignments
+    assignments: List[int] = Field(
+        description="Cluster index for each query point"
+    )
+
+    # Distance information
+    distance_matrix: List[List[float]] = Field(
+        description="Distance from each query point to each centroid"
+    )
+    assigned_distances: List[float] = Field(
+        description="Distance to the assigned centroid for each point"
+    )
+
+    # Centroids
+    centroids: List[List[float]] = Field(
+        description="The centroids used"
+    )

@@ -659,6 +659,184 @@
         }
       }
     },
+    "/api/kmeans/params": {
+      "get": {
+        "tags": [
+          "K-Means"
+        ],
+        "summary": "Get Parameters",
+        "description": "Get the parameters for K-Means.\n\nReturns:\n    List[ParameterInfo]: List of parameters for K-Means",
+        "operationId": "get_parameters_api_kmeans_params_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/SelectParameterInfo"
+                      },
+                      {
+                        "$ref": "#/components/schemas/IntParameterInfo"
+                      },
+                      {
+                        "$ref": "#/components/schemas/NumberParameterInfo"
+                      },
+                      {
+                        "$ref": "#/components/schemas/FloatParameterInfo"
+                      },
+                      {
+                        "$ref": "#/components/schemas/AnyParameterInfo"
+                      }
+                    ],
+                    "discriminator": {
+                      "propertyName": "type",
+                      "mapping": {
+                        "select": "#/components/schemas/SelectParameterInfo",
+                        "int": "#/components/schemas/IntParameterInfo",
+                        "number": "#/components/schemas/NumberParameterInfo",
+                        "float": "#/components/schemas/FloatParameterInfo",
+                        "any": "#/components/schemas/AnyParameterInfo"
+                      }
+                    }
+                  },
+                  "type": "array",
+                  "title": "Response Get Parameters Api Kmeans Params Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/kmeans/step": {
+      "post": {
+        "tags": [
+          "K-Means"
+        ],
+        "summary": "Step",
+        "description": "Perform one K-Means iteration: assign points to centroids and update centroids.\n\nThis endpoint takes user-provided centroids and:\n1. Assigns each data point to its nearest centroid\n2. Calculates new centroid positions as the mean of assigned points\n3. Returns all data needed for visualization\n\nUse this for step-by-step K-Means visualization where users can:\n- Place initial centroids manually\n- Step through iterations one at a time\n- Observe how clusters evolve\n\nArgs:\n    request: Step request with parameters, centroids, and dataset\n\nRaises:\n    HTTPException: If step fails\n\nReturns:\n    KMeansStepResponse: Assignments, distances, updated centroids, and visualization data",
+        "operationId": "step_api_kmeans_step_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KMeansStepRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KMeansStepResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/kmeans/train": {
+      "post": {
+        "tags": [
+          "K-Means"
+        ],
+        "summary": "Train",
+        "description": "Run K-Means until convergence, returning all iterations.\n\nThis endpoint takes user-provided initial centroids and:\n1. Runs K-Means iterations until convergence or max_iterations\n2. Returns data for ALL iterations for playback/animation\n3. Includes final results\n\nUse this when you want to:\n- Animate the full K-Means algorithm\n- Show convergence behavior\n- Get final clustering results\n\nArgs:\n    request: Training request with parameters, initial centroids, dataset, and max_iterations\n\nRaises:\n    HTTPException: If training fails\n\nReturns:\n    KMeansTrainResponse: All iterations, final centroids, and visualization data",
+        "operationId": "train_api_kmeans_train_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KMeansTrainRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KMeansTrainResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/kmeans/predict": {
+      "post": {
+        "tags": [
+          "K-Means"
+        ],
+        "summary": "Predict",
+        "description": "Predict cluster assignments for query points given centroids.\n\nThis endpoint assigns query points to their nearest centroid\nand returns distance information for visualization.\n\nArgs:\n    request: Prediction request with parameters, centroids, and query points\n\nRaises:\n    HTTPException: If prediction fails\n\nReturns:\n    KMeansPredictResponse: Assignments and distances for query points",
+        "operationId": "predict_api_kmeans_predict_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KMeansPredictRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KMeansPredictResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -831,6 +1009,87 @@
           "f1"
         ],
         "title": "ClassificationMetrics"
+      },
+      "Dataset": {
+        "properties": {
+          "X": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "X",
+            "description": "Feature matrix"
+          },
+          "y": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Y",
+            "description": "Target vector"
+          },
+          "feature_names": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature Names"
+          },
+          "target_names": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Names"
+          },
+          "info": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DatasetInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "test_size": {
+            "type": "number",
+            "maximum": 0.5,
+            "minimum": 0.1,
+            "title": "Test Size",
+            "default": 0.25
+          },
+          "random_state": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Random State",
+            "default": 2025
+          }
+        },
+        "type": "object",
+        "required": [
+          "X",
+          "y"
+        ],
+        "title": "Dataset",
+        "description": "Complete dataset with features and targets."
       },
       "DatasetInfo": {
         "properties": {
@@ -1091,8 +1350,10 @@
           "dataset": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/Dataset"
+              },
+              {
+                "$ref": "#/components/schemas/PredefinedDataset"
               },
               {
                 "type": "null"
@@ -1423,6 +1684,631 @@
         "title": "IntParameterInfo",
         "description": "Integer parameter with optional range."
       },
+      "KMeansClusterInfo": {
+        "properties": {
+          "cluster_id": {
+            "type": "integer",
+            "title": "Cluster Id"
+          },
+          "centroid": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Centroid"
+          },
+          "n_points": {
+            "type": "integer",
+            "title": "N Points"
+          },
+          "point_indices": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Point Indices"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cluster_id",
+          "centroid",
+          "n_points",
+          "point_indices"
+        ],
+        "title": "KMeansClusterInfo",
+        "description": "Information about a single cluster."
+      },
+      "KMeansIterationData": {
+        "properties": {
+          "iteration": {
+            "type": "integer",
+            "title": "Iteration",
+            "description": "Iteration number (0-indexed)"
+          },
+          "assignments": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Assignments",
+            "description": "Cluster index for each data point"
+          },
+          "distance_matrix": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Distance Matrix",
+            "description": "Distance from each point to each centroid"
+          },
+          "centroids": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Centroids",
+            "description": "Centroids at start of iteration"
+          },
+          "new_centroids": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "New Centroids",
+            "description": "Updated centroids after iteration"
+          },
+          "centroid_shifts": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Centroid Shifts",
+            "description": "Distance each centroid moved"
+          },
+          "converged": {
+            "type": "boolean",
+            "title": "Converged",
+            "description": "Whether converged at this iteration"
+          },
+          "cluster_info": {
+            "items": {
+              "$ref": "#/components/schemas/KMeansClusterInfo"
+            },
+            "type": "array",
+            "title": "Cluster Info",
+            "description": "Detailed information for each cluster"
+          }
+        },
+        "type": "object",
+        "required": [
+          "iteration",
+          "assignments",
+          "distance_matrix",
+          "centroids",
+          "new_centroids",
+          "centroid_shifts",
+          "converged",
+          "cluster_info"
+        ],
+        "title": "KMeansIterationData",
+        "description": "Data for a single K-Means iteration."
+      },
+      "KMeansMetadata": {
+        "properties": {
+          "feature_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Feature Names"
+          },
+          "n_features": {
+            "type": "integer",
+            "title": "N Features"
+          },
+          "n_samples": {
+            "type": "integer",
+            "title": "N Samples"
+          },
+          "n_clusters": {
+            "type": "integer",
+            "title": "N Clusters"
+          }
+        },
+        "type": "object",
+        "required": [
+          "feature_names",
+          "n_features",
+          "n_samples",
+          "n_clusters"
+        ],
+        "title": "KMeansMetadata",
+        "description": "Metadata for K-Means clustering."
+      },
+      "KMeansParameters": {
+        "properties": {
+          "n_clusters": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "N Clusters",
+            "description": "Number of clusters to form",
+            "default": 3
+          },
+          "metric": {
+            "type": "string",
+            "enum": [
+              "euclidean",
+              "manhattan"
+            ],
+            "title": "Metric",
+            "description": "Distance metric for assigning points to clusters",
+            "default": "euclidean"
+          },
+          "feature_1": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
+            "title": "Feature 1",
+            "description": "First feature index for visualization",
+            "default": 0
+          },
+          "feature_2": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 10.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feature 2",
+            "description": "Second feature index for visualization",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "title": "KMeansParameters",
+        "description": "Core K-Means algorithm parameters for manual step-by-step clustering."
+      },
+      "KMeansPredictRequest": {
+        "properties": {
+          "parameters": {
+            "$ref": "#/components/schemas/KMeansParameters",
+            "description": "K-Means algorithm parameters"
+          },
+          "centroids": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Centroids",
+            "description": "Centroid positions [[x, y], ...]"
+          },
+          "query_points": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Query Points",
+            "description": "Points to assign to clusters [[x, y], ...]"
+          }
+        },
+        "type": "object",
+        "required": [
+          "centroids",
+          "query_points"
+        ],
+        "title": "KMeansPredictRequest",
+        "description": "Request model for K-Means prediction."
+      },
+      "KMeansPredictResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "query_points": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Query Points",
+            "description": "The input points"
+          },
+          "assignments": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Assignments",
+            "description": "Cluster index for each query point"
+          },
+          "distance_matrix": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Distance Matrix",
+            "description": "Distance from each query point to each centroid"
+          },
+          "assigned_distances": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Assigned Distances",
+            "description": "Distance to the assigned centroid for each point"
+          },
+          "centroids": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Centroids",
+            "description": "The centroids used"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "query_points",
+          "assignments",
+          "distance_matrix",
+          "assigned_distances",
+          "centroids"
+        ],
+        "title": "KMeansPredictResponse",
+        "description": "Response model for K-Means prediction."
+      },
+      "KMeansStepRequest": {
+        "properties": {
+          "parameters": {
+            "$ref": "#/components/schemas/KMeansParameters",
+            "description": "K-Means algorithm parameters"
+          },
+          "centroids": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Centroids",
+            "description": "Current centroid positions [[x, y], ...]"
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Dataset"
+              },
+              {
+                "$ref": "#/components/schemas/PredefinedDataset"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset",
+            "description": "Dataset to use. Defaults to Iris dataset."
+          },
+          "visualisation_features": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visualisation Features",
+            "description": "Feature indices for visualization (defaults to [feature_1, feature_2])"
+          }
+        },
+        "type": "object",
+        "required": [
+          "centroids"
+        ],
+        "title": "KMeansStepRequest",
+        "description": "Request model for a single K-Means iteration."
+      },
+      "KMeansStepResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "data_points": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Data Points",
+            "description": "All data points in visualization space"
+          },
+          "assignments": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Assignments",
+            "description": "Cluster index for each data point"
+          },
+          "distance_matrix": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Distance Matrix",
+            "description": "Distance from each point to each centroid"
+          },
+          "centroids": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Centroids",
+            "description": "Original centroids passed in"
+          },
+          "new_centroids": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "New Centroids",
+            "description": "Updated centroids after iteration"
+          },
+          "centroid_shifts": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array",
+            "title": "Centroid Shifts",
+            "description": "Distance each centroid moved"
+          },
+          "converged": {
+            "type": "boolean",
+            "title": "Converged",
+            "description": "Whether the algorithm has converged"
+          },
+          "cluster_info": {
+            "items": {
+              "$ref": "#/components/schemas/KMeansClusterInfo"
+            },
+            "type": "array",
+            "title": "Cluster Info",
+            "description": "Detailed information for each cluster"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/KMeansMetadata"
+          },
+          "visualisation_feature_indices": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Visualisation Feature Indices"
+          },
+          "visualisation_feature_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Visualisation Feature Names"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "data_points",
+          "assignments",
+          "distance_matrix",
+          "centroids",
+          "new_centroids",
+          "centroid_shifts",
+          "converged",
+          "cluster_info",
+          "metadata",
+          "visualisation_feature_indices",
+          "visualisation_feature_names"
+        ],
+        "title": "KMeansStepResponse",
+        "description": "Response model for a single K-Means iteration."
+      },
+      "KMeansTrainRequest": {
+        "properties": {
+          "parameters": {
+            "$ref": "#/components/schemas/KMeansParameters",
+            "description": "K-Means algorithm parameters"
+          },
+          "centroids": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Centroids",
+            "description": "Initial centroid positions [[x, y], ...]"
+          },
+          "dataset": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Dataset"
+              },
+              {
+                "$ref": "#/components/schemas/PredefinedDataset"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset",
+            "description": "Dataset to use. Defaults to Iris dataset."
+          },
+          "visualisation_features": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visualisation Features",
+            "description": "Feature indices for visualization (defaults to [feature_1, feature_2])"
+          },
+          "max_iterations": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 1.0,
+            "title": "Max Iterations",
+            "description": "Maximum iterations before stopping",
+            "default": 100
+          }
+        },
+        "type": "object",
+        "required": [
+          "centroids"
+        ],
+        "title": "KMeansTrainRequest",
+        "description": "Request model for K-Means training (all iterations)."
+      },
+      "KMeansTrainResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "data_points": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Data Points",
+            "description": "All data points in visualization space"
+          },
+          "iterations": {
+            "items": {
+              "$ref": "#/components/schemas/KMeansIterationData"
+            },
+            "type": "array",
+            "title": "Iterations",
+            "description": "Data for each iteration"
+          },
+          "total_iterations": {
+            "type": "integer",
+            "title": "Total Iterations",
+            "description": "Total number of iterations run"
+          },
+          "converged": {
+            "type": "boolean",
+            "title": "Converged",
+            "description": "Whether the algorithm converged"
+          },
+          "final_centroids": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            "type": "array",
+            "title": "Final Centroids",
+            "description": "Final centroid positions"
+          },
+          "final_assignments": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Final Assignments",
+            "description": "Final cluster assignments"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/KMeansMetadata"
+          },
+          "visualisation_feature_indices": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Visualisation Feature Indices"
+          },
+          "visualisation_feature_names": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Visualisation Feature Names"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "data_points",
+          "iterations",
+          "total_iterations",
+          "converged",
+          "final_centroids",
+          "final_assignments",
+          "metadata",
+          "visualisation_feature_indices",
+          "visualisation_feature_names"
+        ],
+        "title": "KMeansTrainResponse",
+        "description": "Response model for K-Means training (all iterations until convergence)."
+      },
       "KNNParameters": {
         "properties": {
           "n_neighbors": {
@@ -1519,8 +2405,10 @@
           "dataset": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/Dataset"
+              },
+              {
+                "$ref": "#/components/schemas/PredefinedDataset"
               },
               {
                 "type": "null"
@@ -1719,8 +2607,10 @@
           "dataset": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/Dataset"
+              },
+              {
+                "$ref": "#/components/schemas/PredefinedDataset"
               },
               {
                 "type": "null"
@@ -1878,8 +2768,10 @@
           "dataset": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/Dataset"
+              },
+              {
+                "$ref": "#/components/schemas/PredefinedDataset"
               },
               {
                 "type": "null"
@@ -2129,8 +3021,10 @@
           "dataset": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/Dataset"
+              },
+              {
+                "$ref": "#/components/schemas/PredefinedDataset"
               },
               {
                 "type": "null"
@@ -2267,8 +3161,10 @@
           "dataset": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/Dataset"
+              },
+              {
+                "$ref": "#/components/schemas/PredefinedDataset"
               },
               {
                 "type": "null"
@@ -2371,8 +3267,10 @@
           "dataset": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "$ref": "#/components/schemas/Dataset"
+              },
+              {
+                "$ref": "#/components/schemas/PredefinedDataset"
               },
               {
                 "type": "null"
@@ -2540,6 +3438,39 @@
         ],
         "title": "NumberParameterInfo",
         "description": "Number parameter with optional range and step."
+      },
+      "PredefinedDataset": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": [
+              "iris",
+              "wine",
+              "breast_cancer",
+              "digits"
+            ],
+            "title": "Name"
+          },
+          "test_size": {
+            "type": "number",
+            "maximum": 0.5,
+            "minimum": 0.1,
+            "title": "Test Size",
+            "default": 0.25
+          },
+          "random_state": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Random State",
+            "default": 2025
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "PredefinedDataset",
+        "description": "Reference to a predefined dataset."
       },
       "SelectParameterInfo": {
         "properties": {
