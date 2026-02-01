@@ -495,6 +495,11 @@ class KMeansStepResponse(BaseModel):
     visualisation_feature_indices: List[int]
     visualisation_feature_names: List[str]
 
+    # Decision boundary data (optional)
+    decision_boundary: Optional[DecisionBoundaryData] = Field(
+        None, description="Decision boundary visualization data"
+    )
+
 
 class KMeansIterationData(BaseModel):
     """Data for a single K-Means iteration."""
@@ -534,6 +539,12 @@ class KMeansTrainRequest(BaseModel):
     max_iterations: int = Field(
         100, ge=1, le=1000, description="Maximum iterations before stopping"
     )
+    include_boundary: bool = Field(
+        True, description="Whether to include decision boundary"
+    )
+    boundary_resolution: int = Field(
+        50, ge=10, le=200, description="Resolution of boundary mesh"
+    )
 
 
 class KMeansTrainResponse(BaseModel):
@@ -564,6 +575,11 @@ class KMeansTrainResponse(BaseModel):
     visualisation_feature_indices: List[int]
     visualisation_feature_names: List[str]
 
+    # Decision boundary data (optional)
+    decision_boundary: Optional[DecisionBoundaryData] = Field(
+        None, description="Decision boundary visualization data"
+    )
+
 
 class KMeansStepRequest(BaseModel):
     """Request model for a single K-Means iteration."""
@@ -580,6 +596,12 @@ class KMeansStepRequest(BaseModel):
     visualisation_features: Optional[List[int]] = Field(
         None,
         description="Feature indices for visualization (defaults to [feature_1, feature_2])",
+    )
+    include_boundary: bool = Field(
+        True, description="Whether to include decision boundary"
+    )
+    boundary_resolution: int = Field(
+        50, ge=10, le=200, description="Resolution of boundary mesh"
     )
 
 

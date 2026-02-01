@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Union
 import numpy as np
 from models import (
     Dataset,
+    DecisionBoundaryData,
     KMeansParameters,
     PredefinedDataset,
 )
@@ -148,12 +149,92 @@ class KMeansService:
         converged = bool(np.all(centroid_shifts < tol))
         return converged, centroid_shifts
 
+    def _generate_decision_boundary(
+        self,
+        centroids: np.ndarray,
+        X_data: np.ndarray,
+        metric: str = "euclidean",
+        resolution: int = 50,
+    ) -> Optional[Dict[str, Any]]:
+        """Generate decision boundary visualization data for K-Means.
+        
+        Args:
+            centroids: Array of shape (n_clusters, n_features) with centroid positions
+            X_data: Training data of shape (n_samples, n_features) to determine bounds
+            metric: Distance metric ('euclidean' or 'manhattan')
+            resolution: Resolution of boundary mesh
+            
+        Returns:
+            Dictionary with mesh_points, predictions (cluster IDs), and dimensions
+        """
+        from models import DecisionBoundaryData
+        
+        n_features = X_data.shape[1]
+        
+        # Only support 1D, 2D, and 3D visualization
+        if n_features > 3:
+            n_features = min(3, X_data.shape[1])
+            X_data = X_data[:, :n_features]
+            centroids = centroids[:, :n_features]
+        
+        if n_features == 1:
+            # 1D: Create a line of points
+            x_min, x_max = X_data[:, 0].min(), X_data[:, 0].max()
+            margin = (x_max - x_min) * 0.1
+            x_line = np.linspace(x_min - margin, x_max + margin, resolution)
+            mesh_points = x_line.reshape(-1, 1)
+            
+        elif n_features == 2:
+            # 2D: Create a grid
+            x_min, x_max = X_data[:, 0].min(), X_data[:, 0].max()
+            y_min, y_max = X_data[:, 1].min(), X_data[:, 1].max()
+            x_margin = (x_max - x_min) * 0.1
+            y_margin = (y_max - y_min) * 0.1
+            
+            xx, yy = np.meshgrid(
+                np.linspace(x_min - x_margin, x_max + x_margin, resolution),
+                np.linspace(y_min - y_margin, y_max + y_margin, resolution),
+            )
+            mesh_points = np.c_[xx.ravel(), yy.ravel()]
+            
+        else:  # n_features == 3
+            # 3D: Create a 3D grid (smaller resolution to avoid memory issues)
+            res_3d = min(resolution, 30)  # Cap at 30 for 3D to avoid explosion
+            x_min, x_max = X_data[:, 0].min(), X_data[:, 0].max()
+            y_min, y_max = X_data[:, 1].min(), X_data[:, 1].max()
+            z_min, z_max = X_data[:, 2].min(), X_data[:, 2].max()
+            x_margin = (x_max - x_min) * 0.1
+            y_margin = (y_max - y_min) * 0.1
+            z_margin = (z_max - z_min) * 0.1
+            
+            xx, yy, zz = np.meshgrid(
+                np.linspace(x_min - x_margin, x_max + x_margin, res_3d),
+                np.linspace(y_min - y_margin, y_max + y_margin, res_3d),
+                np.linspace(z_min - z_margin, z_max + z_margin, res_3d),
+            )
+            mesh_points = np.c_[xx.ravel(), yy.ravel(), zz.ravel()]
+        
+        # Assign each mesh point to nearest centroid
+        assignments, _ = self._assign_centroids(mesh_points, centroids, metric)
+        
+        # Convert cluster IDs to strings for consistency with KNN
+        predictions = [str(int(cluster_id)) for cluster_id in assignments]
+        
+        return DecisionBoundaryData(
+            mesh_points=mesh_points.tolist(),
+            predictions=predictions,
+            dimensions=n_features,
+        )
+
+
     async def step(
         self,
         parameters: KMeansParameters,
         centroids: List[List[float]],
         dataset_param: Optional[Union[Dict[str, Any], PredefinedDataset, Dataset]] = None,
         visualisation_features: Optional[List[int]] = None,
+        include_boundary: bool = True,
+        boundary_resolution: int = 50,
     ) -> Dict[str, Any]:
         """Perform one K-Means iteration: assign points to centroids and update centroids.
 
@@ -162,6 +243,8 @@ class KMeansService:
             centroids: Current centroid positions [[x, y], ...]
             dataset_param: Dataset to use (defaults to Iris)
             visualisation_features: Feature indices for visualization (defaults to [0, 1])
+            include_boundary: Whether to generate decision boundary
+            boundary_resolution: Resolution of boundary mesh
 
         Returns:
             Dict containing assignments, distances, updated centroids, and visualization data
@@ -218,6 +301,13 @@ class KMeansService:
         # Get visualization feature names
         viz_feature_names = [dataset.feature_names[i] for i in visualisation_features]
 
+        # Generate decision boundary if requested
+        decision_boundary = None
+        if include_boundary and len(visualisation_features) <= 3:
+            decision_boundary = self._generate_decision_boundary(
+                new_centroids, X_viz, parameters.metric, boundary_resolution
+            )
+
         return {
             "success": True,
             "data_points": X_viz.tolist(),
@@ -236,6 +326,9 @@ class KMeansService:
             },
             "visualisation_feature_indices": visualisation_features,
             "visualisation_feature_names": viz_feature_names,
+            "decision_boundary": (
+                decision_boundary.model_dump() if decision_boundary else None
+            ),
         }
 
     async def train(
@@ -245,6 +338,8 @@ class KMeansService:
         dataset_param: Optional[Union[Dict[str, Any], PredefinedDataset, Dataset]] = None,
         visualisation_features: Optional[List[int]] = None,
         max_iterations: int = 100,
+        include_boundary: bool = True,
+        boundary_resolution: int = 50,
     ) -> Dict[str, Any]:
         """Run K-Means until convergence, returning all iterations.
 
@@ -254,6 +349,8 @@ class KMeansService:
             dataset_param: Dataset to use (defaults to Iris)
             visualisation_features: Feature indices for visualization (defaults to [0, 1])
             max_iterations: Maximum number of iterations before stopping
+            include_boundary: Whether to generate decision boundary
+            boundary_resolution: Resolution of boundary mesh
 
         Returns:
             Dict containing all iterations and final results
@@ -332,6 +429,13 @@ class KMeansService:
             if converged:
                 break
 
+        # Generate decision boundary if requested (using final centroids)
+        decision_boundary = None
+        if include_boundary and len(visualisation_features) <= 3:
+            decision_boundary = self._generate_decision_boundary(
+                current_centroids, X_viz, parameters.metric, boundary_resolution
+            )
+
         return {
             "success": True,
             "data_points": X_viz.tolist(),
@@ -348,6 +452,9 @@ class KMeansService:
             },
             "visualisation_feature_indices": visualisation_features,
             "visualisation_feature_names": viz_feature_names,
+            "decision_boundary": (
+                decision_boundary.model_dump() if decision_boundary else None
+            ),
         }
 
     async def predict(

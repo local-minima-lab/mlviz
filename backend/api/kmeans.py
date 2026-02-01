@@ -75,6 +75,8 @@ async def step(
             centroids=request.centroids,
             dataset_param=request.dataset,
             visualisation_features=viz_features,
+            include_boundary=request.include_boundary,
+            boundary_resolution=request.boundary_resolution,
         )
         return KMeansStepResponse(**result)
 
@@ -133,6 +135,8 @@ async def train(
             dataset_param=request.dataset,
             visualisation_features=viz_features,
             max_iterations=request.max_iterations,
+            include_boundary=request.include_boundary,
+            boundary_resolution=request.boundary_resolution,
         )
         return KMeansTrainResponse(**result)
 
