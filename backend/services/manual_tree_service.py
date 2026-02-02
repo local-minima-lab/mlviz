@@ -124,7 +124,8 @@ class ManualTreeService:
                                y_labels: np.ndarray,
                                threshold: float,
                                feature_idx: int,
-                               num_bins: int = 10) -> HistogramData:
+                               num_bins: int = 10,
+                               thresholds: List[float] | None = None) -> HistogramData:
         """Generate histogram data for visualization."""
         if len(X_values) == 0:
             return HistogramData(
@@ -250,7 +251,8 @@ class ManualTreeService:
             feature_values,
             y_node,
             request.threshold,
-            feature_idx
+            feature_idx,
+            thresholds=[request.threshold]
         )
 
         return ManualNodeStatsResponse(
@@ -374,7 +376,8 @@ class ManualTreeService:
             y_node,
             best_threshold,
             feature_idx,
-            num_bins=len(threshold_stats_list)
+            num_bins=len(threshold_stats_list),
+            thresholds=split_points
         )
 
         # Get feature range
