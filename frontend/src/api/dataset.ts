@@ -1,6 +1,8 @@
+import { API_BASE_URL as BASE_URL } from "@/api/config";
+
 import type { components } from "@/types/api";
 
-const API_BASE_URL = "/api/dataset";
+const API_BASE_URL = `${BASE_URL}/api/dataset`;
 
 export type DatasetResponse = components["schemas"]["DatasetResponse"];
 
