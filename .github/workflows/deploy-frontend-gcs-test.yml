@@ -117,3 +117,36 @@ jobs:
                   echo "Frontend URL: http://${{ env.BUCKET_NAME }}.storage.googleapis.com"
                   echo "Backend URL:  ${{ needs.get-backend-url.outputs.backend-url }}"
                   echo "======================================"
+
+    update-backend-cors:
+        name: Update Backend CORS
+        runs-on: ubuntu-latest
+        needs: [get-backend-url, deploy-frontend]
+
+        steps:
+            - name: Authenticate to Google Cloud
+              uses: google-github-actions/auth@v2
+              with:
+                  credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+            - name: Set up Cloud SDK
+              uses: google-github-actions/setup-gcloud@v2
+
+            - name: Update backend CORS to allow GCS frontend
+              run: |
+                  FRONTEND_URL="http://${{ env.BUCKET_NAME }}.storage.googleapis.com"
+                  echo "Updating backend CORS to allow: $FRONTEND_URL"
+                  gcloud run services update ${{ env.BACKEND_SERVICE_NAME }} \
+                    --region ${{ env.REGION }} \
+                    --update-env-vars FRONTEND_URL=$FRONTEND_URL
+                  echo "✅ Backend CORS updated"
+
+            - name: Final Summary
+              run: |
+                  echo "======================================"
+                  echo "✅ Test Environment Deployment Complete"
+                  echo "======================================"
+                  echo "Frontend: http://${{ env.BUCKET_NAME }}.storage.googleapis.com/index.html"
+                  echo "Backend:  ${{ needs.get-backend-url.outputs.backend-url }}"
+                  echo "CORS configured for frontend URL"
+                  echo "======================================"
