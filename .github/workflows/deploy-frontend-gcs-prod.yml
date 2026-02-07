@@ -1,0 +1,152 @@
+name: Deploy Frontend to GCS (Production)
+
+on:
+    push:
+        branches:
+            - main
+        paths:
+            - "frontend/**"
+            - ".github/workflows/deploy-frontend-gcs-prod.yml"
+    workflow_dispatch:
+
+env:
+    PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+    REGION: ${{ secrets.GCP_REGION }}
+    BUCKET_NAME: mlviz
+    BACKEND_SERVICE_NAME: backend
+
+jobs:
+    get-backend-url:
+        name: Get Backend URL
+        runs-on: ubuntu-latest
+        outputs:
+            backend-url: ${{ steps.get-url.outputs.url }}
+
+        steps:
+            - name: Authenticate to Google Cloud
+              uses: google-github-actions/auth@v2
+              with:
+                  credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+            - name: Set up Cloud SDK
+              uses: google-github-actions/setup-gcloud@v2
+
+            - name: Get backend service URL
+              id: get-url
+              run: |
+                  SERVICE_URL=$(gcloud run services describe ${{ env.BACKEND_SERVICE_NAME }} \
+                    --platform managed \
+                    --region ${{ env.REGION }} \
+                    --format 'value(status.url)')
+                  echo "url=${SERVICE_URL}" >> $GITHUB_OUTPUT
+                  echo "✅ Backend URL: ${SERVICE_URL}"
+
+    deploy-frontend:
+        name: Deploy Frontend to GCS
+        runs-on: ubuntu-latest
+        needs: get-backend-url
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+                  cache: "npm"
+                  cache-dependency-path: frontend/package-lock.json
+
+            - name: Install dependencies
+              working-directory: ./frontend
+              run: npm ci
+
+            - name: Build frontend with backend URL
+              working-directory: ./frontend
+              env:
+                  VITE_API_BASE_URL: ${{ needs.get-backend-url.outputs.backend-url }}
+              run: |
+                  echo "Building with backend URL: $VITE_API_BASE_URL"
+                  npm run build
+
+            - name: Authenticate to Google Cloud
+              uses: google-github-actions/auth@v2
+              with:
+                  credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+            - name: Set up Cloud SDK
+              uses: google-github-actions/setup-gcloud@v2
+
+            - name: Create bucket if not exists
+              run: |
+                  if ! gsutil ls -b gs://${{ env.BUCKET_NAME }} > /dev/null 2>&1; then
+                    gsutil mb -l ${{ env.REGION }} gs://${{ env.BUCKET_NAME }}
+                    echo "✅ Bucket gs://${{ env.BUCKET_NAME }} created"
+                  else
+                    echo "✅ Bucket gs://${{ env.BUCKET_NAME }} already exists"
+                  fi
+
+            - name: Configure Static Website Hosting
+              run: |
+                  gsutil web set -m index.html -e index.html gs://${{ env.BUCKET_NAME }}
+                  echo "✅ Web hosting configured (index/error: index.html)"
+
+            - name: Upload files to GCS
+              run: |
+                  gsutil -m rsync -r -d frontend/dist gs://${{ env.BUCKET_NAME }}
+                  echo "✅ Files uploaded to gs://${{ env.BUCKET_NAME }}"
+
+            - name: Make objects public
+              run: |
+                  gsutil iam ch allUsers:objectViewer gs://${{ env.BUCKET_NAME }}
+                  echo "✅ Bucket made public (objectViewer)"
+
+            - name: Set cache control headers
+              run: |
+                  # Cache assets for 1 year
+                  gsutil -m setmeta -h "Cache-Control:public, max-age=31536000" gs://${{ env.BUCKET_NAME }}/assets/**
+                  # Don't cache index.html
+                  gsutil setmeta -h "Cache-Control:no-cache, no-store, must-revalidate" gs://${{ env.BUCKET_NAME }}/index.html
+                  echo "✅ Cache headers set"
+
+            - name: Deployment Summary
+              run: |
+                  echo "======================================"
+                  echo "🚀 Production Frontend Deployed to GCS"
+                  echo "======================================"
+                  echo "Frontend URL: https://${{ env.BUCKET_NAME }}.storage.googleapis.com/index.html"
+                  echo "Backend URL:  ${{ needs.get-backend-url.outputs.backend-url }}"
+                  echo "======================================"
+
+    update-backend-cors:
+        name: Update Backend CORS
+        runs-on: ubuntu-latest
+        needs: [get-backend-url, deploy-frontend]
+
+        steps:
+            - name: Authenticate to Google Cloud
+              uses: google-github-actions/auth@v2
+              with:
+                  credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+            - name: Set up Cloud SDK
+              uses: google-github-actions/setup-gcloud@v2
+
+            - name: Update backend CORS to allow GCS frontend
+              run: |
+                  FRONTEND_URL="https://${{ env.BUCKET_NAME }}.storage.googleapis.com"
+                  echo "Updating backend CORS to allow: $FRONTEND_URL"
+                  gcloud run services update ${{ env.BACKEND_SERVICE_NAME }} \
+                    --region ${{ env.REGION }} \
+                    --update-env-vars FRONTEND_URL=$FRONTEND_URL
+                  echo "✅ Backend CORS updated"
+
+            - name: Final Summary
+              run: |
+                  echo "======================================"
+                  echo "✅ Production Environment Deployment Complete"
+                  echo "======================================"
+                  echo "Frontend: https://${{ env.BUCKET_NAME }}.storage.googleapis.com/index.html"
+                  echo "Backend:  ${{ needs.get-backend-url.outputs.backend-url }}"
+                  echo "CORS configured for frontend URL"
+                  echo "======================================"
