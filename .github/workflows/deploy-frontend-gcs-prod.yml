@@ -1,19 +1,19 @@
-name: Deploy Frontend to GCS (Test)
+name: Deploy Frontend to GCS (Production)
 
 on:
     push:
         branches:
-            - test
+            - main
         paths:
             - "frontend/**"
-            - ".github/workflows/deploy-frontend-gcs-test.yml"
+            - ".github/workflows/deploy-frontend-gcs-prod.yml"
     workflow_dispatch:
 
 env:
     PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
     REGION: ${{ secrets.GCP_REGION }}
-    BUCKET_NAME: mlviz-frontend-test
-    BACKEND_SERVICE_NAME: mlviz-backend-test
+    BUCKET_NAME: mlviz
+    BACKEND_SERVICE_NAME: backend
 
 jobs:
     get-backend-url:
@@ -112,7 +112,7 @@ jobs:
             - name: Deployment Summary
               run: |
                   echo "======================================"
-                  echo "🚀 Test Frontend Deployed to GCS"
+                  echo "🚀 Production Frontend Deployed to GCS"
                   echo "======================================"
                   echo "Frontend URL: https://${{ env.BUCKET_NAME }}.storage.googleapis.com/index.html"
                   echo "Backend URL:  ${{ needs.get-backend-url.outputs.backend-url }}"
@@ -144,7 +144,7 @@ jobs:
             - name: Final Summary
               run: |
                   echo "======================================"
-                  echo "✅ Test Environment Deployment Complete"
+                  echo "✅ Production Environment Deployment Complete"
                   echo "======================================"
                   echo "Frontend: https://${{ env.BUCKET_NAME }}.storage.googleapis.com/index.html"
                   echo "Backend:  ${{ needs.get-backend-url.outputs.backend-url }}"
