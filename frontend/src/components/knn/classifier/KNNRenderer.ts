@@ -134,7 +134,7 @@ export function renderKNNTraining({
                     neighborLineColor: "#666",
                     neighborLineWidth: 1.5,
                     queryPointSize: 8,
-                    highlightColor: "#ff6b6b",
+                    highlightColor: "#666",
                     interpolationFactor: 1,
                 }
             );
@@ -264,7 +264,6 @@ export function renderKNNPrediction({
             }
         );
     }
-    // 3D would require more complex visualization
 }
 
 // ============================================================================

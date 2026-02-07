@@ -1155,6 +1155,18 @@ export interface components {
              * @description Feature indices for visualization (defaults to [feature_1, feature_2])
              */
             visualisation_features?: number[] | null;
+            /**
+             * Include Boundary
+             * @description Whether to include decision boundary
+             * @default true
+             */
+            include_boundary: boolean;
+            /**
+             * Boundary Resolution
+             * @description Resolution of boundary mesh
+             * @default 50
+             */
+            boundary_resolution: number;
         };
         /**
          * KMeansStepResponse
@@ -1208,6 +1220,8 @@ export interface components {
             visualisation_feature_indices: number[];
             /** Visualisation Feature Names */
             visualisation_feature_names: string[];
+            /** @description Decision boundary visualization data */
+            decision_boundary?: components["schemas"]["DecisionBoundaryData"] | null;
         };
         /**
          * KMeansTrainRequest
@@ -1237,6 +1251,18 @@ export interface components {
              * @default 100
              */
             max_iterations: number;
+            /**
+             * Include Boundary
+             * @description Whether to include decision boundary
+             * @default true
+             */
+            include_boundary: boolean;
+            /**
+             * Boundary Resolution
+             * @description Resolution of boundary mesh
+             * @default 50
+             */
+            boundary_resolution: number;
         };
         /**
          * KMeansTrainResponse
@@ -1280,6 +1306,8 @@ export interface components {
             visualisation_feature_indices: number[];
             /** Visualisation Feature Names */
             visualisation_feature_names: string[];
+            /** @description Decision boundary visualization data */
+            decision_boundary?: components["schemas"]["DecisionBoundaryData"] | null;
         };
         /**
          * KNNParameters

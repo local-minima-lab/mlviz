@@ -1,15 +1,15 @@
 /**
- * KNN Prediction Visualization
- * Displays training data, query points, and neighbor connections
- * Integrates with KNN context to make predictions and display results
+ * KMeans Prediction Visualization
+ * Displays training data, query points, and cluster assignments
+ * Integrates with KMeans context to make predictions and display results
  */
 
-import { renderKNNPrediction } from "@/components/knn/classifier/KNNRenderer";
-import type { KNNVisualizationData } from "@/components/knn/classifier/types";
+import { renderKMeansPrediction } from "@/components/kmeans/clustering/KMeansRenderer";
+import type { KMeansVisualizationData } from "@/components/kmeans/clustering/types";
 import { DEFAULT_2D_ZOOM_CONFIG } from "@/components/plots/utils/zoomConfig";
 import BaseVisualisation from "@/components/visualisation/BaseVisualisation";
 import type { VisualisationRenderContext } from "@/components/visualisation/types";
-import { useKNN } from "@/contexts/models/KNNContext";
+import { useKMeans } from "@/contexts/models/KMeansContext";
 import * as d3 from "d3";
 import { useCallback, useEffect, useMemo } from "react";
 
@@ -25,9 +25,7 @@ const Visualisation: React.FC<VisualisationProps> = ({ points }) => {
         visualizationData,
         loadVisualization,
         isVisualizationLoading,
-    } = useKNN();
-
-
+    } = useKMeans();
 
     // Load visualization data if not already loaded
     useEffect(() => {
@@ -36,58 +34,65 @@ const Visualisation: React.FC<VisualisationProps> = ({ points }) => {
         }
     }, [visualizationData, predictionData, loadVisualization, isVisualizationLoading]);
 
-    // Use prediction data if available, otherwise fall back to visualization data
-    const knnData = predictionData || visualizationData;
-
+    // Always use visualization data for training data
+    // predictionData only contains prediction results, not training data
+    const kmeansData = visualizationData;
 
     // Get dimensions robustly from visualization-specific data only:
-    const dimensions = 
-        (knnData as any)?.visualisation_feature_indices?.length || 
-        (knnData?.training_points?.[0]?.length) || 
+    const dimensions =
+        (kmeansData as any)?.visualisation_feature_indices?.length ||
+        (kmeansData as any)?.data_points?.[0]?.length ||
         2;
 
-    const visualizationData_transformed: KNNVisualizationData = useMemo(() => {
-        if (!knnData) {
+    const visualizationData_transformed: KMeansVisualizationData = useMemo(() => {
+        if (!kmeansData) {
             return {
-                trainingPoints: [],
-                trainingLabels: [],
+                dataPoints: [],
+                iterations: [],
+                totalIterations: 0,
+                converged: false,
+                finalCentroids: [],
+                finalAssignments: [],
                 decisionBoundary: undefined,
                 featureNames: [],
-                classNames: [],
                 nDimensions: 0,
-                k: 5,
+                nClusters: 0,
                 queries: undefined,
             };
         }
 
-        const decisionBoundary = knnData.decision_boundary
+        // For prediction mode, use the training data iterations (not prediction assignments)
+        // Prediction assignments are only for query points, not training data
+        const iterations = (kmeansData as any).iterations || [];
+
+        const decisionBoundary = (kmeansData as any).decision_boundary
             ? {
-                  meshPoints: knnData.decision_boundary.mesh_points,
-                  predictions: knnData.decision_boundary.predictions,
+                  meshPoints: (kmeansData as any).decision_boundary.mesh_points,
+                  predictions: (kmeansData as any).decision_boundary.predictions,
                   dimensions: dimensions,
               }
             : undefined;
 
         // Resolve the effective feature names for visualization
-        const allFeatureNames = 
-             ((knnData as any).metadata?.feature_names as string[]) ||
-             ((knnData as any).feature_names as string[]) ||
-             [];
-             
-        const vizIndices = (knnData as any).visualisation_feature_indices as number[];
-        const explicitVizNames = (knnData as any).visualisation_feature_names as string[];
-        
+        const allFeatureNames =
+            ((kmeansData as any).metadata?.feature_names as string[]) ||
+            ((kmeansData as any).feature_names as string[]) ||
+            [];
+
+        const vizIndices = (kmeansData as any).visualisation_feature_indices as number[];
+        const explicitVizNames = (kmeansData as any).visualisation_feature_names as string[];
+
         // Infer features from points if provided and no explicit visualization features are set
         const pointsFeatures = points ? Object.keys(points).filter(k => allFeatureNames.includes(k)) : [];
         const inferredVizNames = pointsFeatures.length > 0 ? pointsFeatures : [];
 
-        const effectiveVizFeatureNames = 
+        const effectiveVizFeatureNames =
             (explicitVizNames && explicitVizNames.length > 0) ? explicitVizNames :
             (vizIndices && vizIndices.length > 0 && allFeatureNames.length > 0) ? vizIndices.map(i => allFeatureNames[i]) :
             (inferredVizNames.length > 0) ? inferredVizNames :
             allFeatureNames.slice(0, dimensions);
 
-        console.log("[KNN Visualisation] Feature debug:", {
+        console.log("[KMeans Visualisation] Feature debug:", {
             allFeatureNames,
             vizIndices,
             explicitVizNames,
@@ -98,64 +103,62 @@ const Visualisation: React.FC<VisualisationProps> = ({ points }) => {
 
         const featureNames = effectiveVizFeatureNames;
 
-        const classNames =
-            ((knnData as any).metadata?.class_names as string[]) ||
-            ((knnData as any).class_names as string[]) ||
-            [];
-
         // Transform prediction data to include queries
         const queries = predictionData
-            ? predictionData.predictions.map((prediction, idx) => {
-                  // Construct query point vector strictly from the visualized features
-                  const queryPoint = effectiveVizFeatureNames.map((name: string) => {
-                      const val = Number(points?.[name]);
-                      console.log(`[KNN Viz] Mapping feature '${name}':`, points?.[name], "->", val);
-                      return isNaN(val) ? 0 : val;
-                  });
-
+            ? predictionData.query_points.map((queryPoint, idx) => {
                   return {
-                      queryPoint,
-                      neighbors: predictionData.neighbors_info[idx].map((n) => ({
-                          index: n.index,
-                          distance: n.distance,
-                          label: n.label,
-                      })),
-                      prediction: prediction,
-                      predictionIndex: predictionData.prediction_indices[idx],
-                      allDistances: predictionData.all_distances[idx],
+                      queryPoint: queryPoint, // Use the actual query point from API
+                      assignment: predictionData.assignments[idx],
+                      distances: predictionData.distance_matrix[idx],
+                      assignedDistance: predictionData.assigned_distances[idx],
                   };
               })
             : undefined;
 
-        return {
-            trainingPoints: knnData.training_points || [],
-            trainingLabels: knnData.training_labels || [],
+
+        const result = {
+            dataPoints: (kmeansData as any).data_points || [],
+            iterations,
+            totalIterations: iterations.length,
+            converged: (kmeansData as any).converged || false,
+            finalCentroids: predictionData?.centroids || (kmeansData as any).final_centroids || [],
+            finalAssignments: (kmeansData as any).final_assignments || [],
             decisionBoundary,
             featureNames,
-            classNames,
             nDimensions: dimensions,
-            k:
-                (predictionData as any)?.neighbors_info?.[0]?.length ||
-                ((knnData as any).metadata as any)?.trained_k ||
-                5,
+            nClusters: predictionData?.centroids?.length || (kmeansData as any).metadata?.n_clusters || 0,
             queries,
         };
-    }, [knnData, predictionData, dimensions, points]);
+        
+        console.log('[KMeans Prediction Viz] Transformed data:', {
+            dataPointsLength: result.dataPoints.length,
+            iterationsLength: result.iterations.length,
+            finalCentroidsLength: result.finalCentroids.length,
+            finalAssignmentsLength: result.finalAssignments.length,
+            queriesLength: result.queries?.length,
+            nClusters: result.nClusters,
+        });
+        
+        return result;
+    }, [kmeansData, predictionData, dimensions, points]);
 
     // Create color scale - Use category10 to match the renderer's default
-    const colorScale = useMemo(
-        () =>
-            d3
-                .scaleOrdinal<string>()
-                .domain(visualizationData_transformed.classNames)
-                .range(
-                    d3.schemeCategory10.slice(
-                        0,
-                        visualizationData_transformed.classNames.length
-                    )
-                ),
-        [visualizationData_transformed.classNames]
-    );
+    const colorScale = useMemo(() => {
+        const nClusters = visualizationData_transformed.nClusters;
+        const clusterNames = nClusters > 0
+            ? Array.from({ length: nClusters }, (_, i) => `Cluster ${i}`)
+            : [];
+
+        return d3
+            .scaleOrdinal<string>()
+            .domain(clusterNames)
+            .range(
+                d3.schemeCategory10.slice(
+                    0,
+                    clusterNames.length
+                )
+            );
+    }, [visualizationData_transformed.nClusters]);
 
 
 
@@ -165,19 +168,17 @@ const Visualisation: React.FC<VisualisationProps> = ({ points }) => {
             _data: any,
             context: VisualisationRenderContext
         ) => {
-            renderKNNPrediction({
+            renderKMeansPrediction({
                 container,
                 data: visualizationData_transformed,
                 context,
                 props: {
                     colorScale,
-                    k: visualizationData_transformed.k,
-                    showNeighborLines: true,
-                    showDistanceCircles: false,
-                    neighborLineColor: "#666",
-                    neighborLineWidth: 1.5,
+                    showCentroidLines: true,
+                    centroidLineColor: "#666",
+                    centroidLineWidth: 1.5,
                     queryPointSize: 8,
-                    highlightColor: "#ff6b6b",
+                    highlightColor: "#666",
                 },
             });
         },
@@ -221,7 +222,7 @@ const Visualisation: React.FC<VisualisationProps> = ({ points }) => {
         );
     }
 
-    if (!knnData) return null;
+    if (!kmeansData) return null;
 
     return (
         <BaseVisualisation

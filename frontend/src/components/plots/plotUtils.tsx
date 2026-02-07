@@ -33,6 +33,7 @@ import {
     renderScatter3D,
     type Scatter3DRotation,
 } from "@/components/plots/utils/scatterRenderers";
+import { createZoomConfig } from "@/components/plots/utils/zoomConfig";
 import BaseVisualisation from "@/components/visualisation/BaseVisualisation";
 import type { VisualisationRenderContext } from "@/components/visualisation/types";
 import * as d3 from "d3";
@@ -256,13 +257,7 @@ const BasePlot: React.FC<BasePlotProps> = ({
                     autoPlay: false,
                 },
             }),
-            zoomable: {
-                scaleExtent:
-                    zoomConfig?.scaleExtent || ([0.5, 5] as [number, number]),
-                enableReset: true,
-                enablePan: zoomConfig?.enablePan ?? true,
-                panMargin: zoomConfig?.panMargin ?? 50,
-            },
+            zoomable: createZoomConfig(zoomConfig),
         };
     }, [enablePlayback, maxSteps, stepDuration, zoomConfig]);
 

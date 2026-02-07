@@ -108,10 +108,20 @@ export function renderScatter2D(
     // Create color scale
     const colorScale = createScatterColorScale(config);
 
-    // Create separate groups for axes (fixed) and content (zoomable)
-    // Axes group created FIRST so it renders below content
-    const axesGroup = container.append("g").attr("class", "axes-fixed");
+    // Create separate groups in proper z-order (bottom to top):
+    // 1. Grid (bottom layer - behind everything)
+    const gridGroup = container.append("g").attr("class", "grid-fixed");
+    // 2. Main plot content (decision boundaries, points) - zoomable
     const contentGroup = container.append("g").attr("class", "zoom-content");
+    // 3. Axes (top layer - above content with white backgrounds)
+    const axesGroup = container.append("g").attr("class", "axes-fixed");
+    // 4. Overlay group for components that must be on top (legend, etc.)
+    const overlayGroup = container.append("g").attr("class", "overlay-fixed");
+
+    // Render grid first (bottom layer - fixed, updates with zoom)
+    if (showGrid) {
+        renderGrid2D(gridGroup, xScale, yScale, innerWidth, innerHeight);
+    }
 
     // Render decision boundary if provided (in content group - zoomable)
     if (decisionBoundary && decisionBoundary.dimensions === 2) {
@@ -137,12 +147,7 @@ export function renderScatter2D(
         onPointHover
     );
 
-    // Render grid (in axes group - fixed, updates with zoom)
-    if (showGrid) {
-        renderGrid2D(axesGroup, xScale, yScale, innerWidth, innerHeight);
-    }
-
-    // Render axes (in axes group - fixed, not zoomable)
+    // Render axes on top (in axes group - fixed, not zoomable, with white backgrounds)
     if (showAxes) {
         renderAxes2D(
             axesGroup,
@@ -150,13 +155,14 @@ export function renderScatter2D(
             yScale,
             featureNames,
             innerWidth,
-            innerHeight
+            innerHeight,
+            margin
         );
     }
 
-    // Render legend (in axes group - fixed)
+    // Render legend (in overlay group - always on top)
     if (showLegend) {
-        renderLegend2D(axesGroup, config, innerWidth);
+        renderLegend2D(overlayGroup, config, innerWidth);
     }
 
     // Return scales, groups, and bounds for zoom handling
@@ -166,6 +172,7 @@ export function renderScatter2D(
         colorScale, 
         contentGroup, 
         axesGroup,
+        gridGroup,
         bounds: { innerWidth, innerHeight }
     };
 }
@@ -221,13 +228,15 @@ function renderDecisionBoundary2D(
     Array.from(gridData.values()).forEach((cell) => {
         let fillColor: string;
 
-        if (boundary.type === "classification") {
-            const categoricalScale = createColorScale(
-                config.type === "classification" ? config.classNames : [],
-                config.type === "classification"
+        if (boundary.type === "classification" || boundary.type === "clustering") {
+            const names = 
+                config.type === "classification" ? config.classNames :
+                config.type === "clustering" ? config.clusterNames : [];
+            const scheme = 
+                config.type === "classification" || config.type === "clustering"
                     ? config.colorScheme || "default"
-                    : "default"
-            );
+                    : "default";
+            const categoricalScale = createColorScale(names, scheme);
             fillColor = categoricalScale(cell.prediction as string);
         } else {
             const valueRange =
@@ -313,8 +322,55 @@ function renderAxes2D(
     yScale: d3.ScaleLinear<number, number>,
     featureNames: string[],
     width: number,
-    height: number
+    height: number,
+    margin: { top: number; right: number; bottom: number; left: number } = DEFAULT_MARGIN
 ) {
+    // Calculate background coverage based on actual margins
+    const leftCoverage = margin.left + 10;  // Left margin + padding
+    const bottomCoverage = margin.bottom + 20;  // Bottom margin + padding for labels
+    const topCoverage = margin.top + 10;  // Top margin + padding
+    const rightCoverage = margin.right + 10;  // Right margin + padding
+
+    // Add white background for X-axis (bottom, extended to cover corners)
+    g.append("rect")
+        .attr("class", "x-axis-background")
+        .attr("x", -leftCoverage)
+        .attr("y", height - 1)
+        .attr("width", width + leftCoverage + rightCoverage)
+        .attr("height", bottomCoverage)
+        .attr("fill", "white")
+        .attr("opacity", 1);
+
+    // Add white background for Y-axis (left)
+    g.append("rect")
+        .attr("class", "y-axis-background")
+        .attr("x", -leftCoverage)
+        .attr("y", -10)
+        .attr("width", leftCoverage)
+        .attr("height", height + 20)
+        .attr("fill", "white")
+        .attr("opacity", 1);
+
+    // Add white background for top edge (extended to cover corners)
+    g.append("rect")
+        .attr("class", "top-edge-background")
+        .attr("x", -leftCoverage)
+        .attr("y", -topCoverage)
+        .attr("width", width + leftCoverage + rightCoverage)
+        .attr("height", topCoverage)
+        .attr("fill", "white")
+        .attr("opacity", 1);
+
+    // Add white background for right edge
+    g.append("rect")
+        .attr("class", "right-edge-background")
+        .attr("x", width)
+        .attr("y", -10)
+        .attr("width", rightCoverage)
+        .attr("height", height + 20)
+        .attr("fill", "white")
+        .attr("opacity", 1);
+
     // X-axis
     const xAxis = g
         .append("g")
@@ -460,36 +516,53 @@ function renderLegend2D(
     config: Config,
     width: number
 ) {
+    if (config.type !== "classification" && config.type !== "clustering") return;
+
+    const names = config.type === "classification" ? config.classNames : config.clusterNames;
+    const categoricalScale = createColorScale(
+        names,
+        config.colorScheme || "default"
+    );
+
     const legendGroup = g
         .append("g")
         .attr("class", "legend")
-        .attr("transform", `translate(${width - 120}, 10)`);
+        .attr("transform", `translate(${width - 130}, 10)`);
 
-    if (config.type === "classification") {
-        const categoricalScale = createColorScale(
-            config.classNames,
-            config.colorScheme || "default"
-        );
+    // Add white background with elevation-like shadow/border
+    const padding = { top: 12, right: 12, bottom: 6, left: 12 };
+    const itemHeight = 15;
+    const legendWidth = 120;
+    const legendHeight = names.length * itemHeight + padding.top + padding.bottom - 4;
 
-        config.classNames.forEach((className: string, i: number) => {
-            const legendRow = legendGroup
-                .append("g")
-                .attr("transform", `translate(0, ${i * 20})`);
+    legendGroup
+        .insert("rect", ":first-child")
+        .attr("x", -padding.left)
+        .attr("y", -padding.top)
+        .attr("width", legendWidth)
+        .attr("height", legendHeight)
+        .attr("fill", "white")
+        .attr("fill-opacity", 1)
+        .attr("rx", 10)
+        .attr("class", "shadow-sm font-medium");
 
-            legendRow
-                .append("circle")
-                .attr("cx", 0)
-                .attr("cy", 0)
-                .attr("r", 5)
-                .attr("fill", categoricalScale(className));
+    names.forEach((name: string, i: number) => {
+        const legendRow = legendGroup
+            .append("g")
+            .attr("transform", `translate(0, ${(i) * itemHeight})`);
 
-            legendRow
-                .append("text")
-                .attr("x", 10)
-                .attr("y", 4)
-                .attr("font-size", "11px")
-                .attr("fill", "#374151")
-                .text(className);
-        });
-    }
+        legendRow
+            .append("circle")
+            .attr("cx", 2)
+            .attr("cy", 0)
+            .attr("r", 4)
+            .attr("fill", categoricalScale(name));
+
+        legendRow
+            .append("text")
+            .attr("x", 12)
+            .attr("y", 4)
+            .attr("class", "text-[10px] font-medium fill-slate-700 select-none")
+            .text(name);
+    });
 }

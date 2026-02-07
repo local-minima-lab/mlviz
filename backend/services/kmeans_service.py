@@ -97,6 +97,12 @@ class KMeansService:
                 - assignments: Array of shape (n_points,) with centroid index for each point
                 - distance_matrix: Array of shape (n_points, n_centroids) with all distances
         """
+        if centroids.shape[0] == 0:
+            # Handle case with no centroids
+            assignments = np.full(points.shape[0], -1)
+            distance_matrix = np.zeros((points.shape[0], 0))
+            return assignments, distance_matrix
+
         distance_matrix = self._calculate_distance_matrix(points, centroids, metric)
         assignments = np.argmin(distance_matrix, axis=1)
         return assignments, distance_matrix
@@ -177,6 +183,9 @@ class KMeansService:
             X_data = X_data[:, :n_features]
             centroids = centroids[:, :n_features]
         
+        if centroids.shape[0] == 0:
+            return None
+
         if n_features == 1:
             # 1D: Create a line of points
             x_min, x_max = X_data[:, 0].min(), X_data[:, 0].max()
@@ -230,7 +239,7 @@ class KMeansService:
     async def step(
         self,
         parameters: KMeansParameters,
-        centroids: List[List[float]],
+        centroids: Optional[List[List[float]]] = None,
         dataset_param: Optional[Union[Dict[str, Any], PredefinedDataset, Dataset]] = None,
         visualisation_features: Optional[List[int]] = None,
         include_boundary: bool = True,
@@ -270,33 +279,50 @@ class KMeansService:
 
         # Extract visualization features
         X_viz = X_full[:, visualisation_features]
-        centroids_array = np.array(centroids)
+        
+        # Initialize centroids - if empty, we start with 0 clusters
+        # Ensure dimensionality matches visualization features
+        if centroids is None or len(centroids) == 0:
+            centroids_array = np.zeros((0, len(visualisation_features)))
+            n_clusters = 0
+        else:
+            centroids_array = np.array(centroids)
+            n_clusters = centroids_array.shape[0]
 
-        # Assign points to centroids
-        assignments, distance_matrix = self._assign_centroids(
-            X_viz, centroids_array, parameters.metric
-        )
+        if n_clusters == 0:
+            # Special case: Return state with no clusters
+            assignments = np.full(X_viz.shape[0], -1)
+            distance_matrix = np.zeros((X_viz.shape[0], 0))
+            new_centroids = np.zeros((0, n_features))
+            centroid_shifts = np.zeros(0)
+            converged = True
+            cluster_info = []
+        else:
+            # Assign points to centroids
+            assignments, distance_matrix = self._assign_centroids(
+                X_viz, centroids_array, parameters.metric
+            )
 
-        # Update centroids
-        new_centroids = self._update_centroids(
-            X_viz, assignments, len(centroids)
-        )
+            # Update centroids
+            new_centroids = self._update_centroids(
+                X_viz, assignments, n_clusters
+            )
 
-        # Check convergence
-        converged, centroid_shifts = self._check_convergence(
-            centroids_array, new_centroids
-        )
+            # Check convergence
+            converged, centroid_shifts = self._check_convergence(
+                centroids_array, new_centroids
+            )
 
-        # Get cluster info
-        cluster_info = []
-        for k in range(len(centroids)):
-            mask = assignments == k
-            cluster_info.append({
-                "cluster_id": k,
-                "centroid": new_centroids[k].tolist(),
-                "n_points": int(np.sum(mask)),
-                "point_indices": np.where(mask)[0].tolist(),
-            })
+            # Get cluster info
+            cluster_info = []
+            for k in range(n_clusters):
+                mask = assignments == k
+                cluster_info.append({
+                    "cluster_id": k,
+                    "centroid": new_centroids[k].tolist(),
+                    "n_points": int(np.sum(mask)),
+                    "point_indices": np.where(mask)[0].tolist(),
+                })
 
         # Get visualization feature names
         viz_feature_names = [dataset.feature_names[i] for i in visualisation_features]
@@ -322,7 +348,7 @@ class KMeansService:
                 "feature_names": dataset.feature_names,
                 "n_features": n_features,
                 "n_samples": len(X_full),
-                "n_clusters": len(centroids),
+                "n_clusters": centroids_array.shape[0],
             },
             "visualisation_feature_indices": visualisation_features,
             "visualisation_feature_names": viz_feature_names,
@@ -334,7 +360,7 @@ class KMeansService:
     async def train(
         self,
         parameters: KMeansParameters,
-        centroids: List[List[float]],
+        centroids: Optional[List[List[float]]] = None,
         dataset_param: Optional[Union[Dict[str, Any], PredefinedDataset, Dataset]] = None,
         visualisation_features: Optional[List[int]] = None,
         max_iterations: int = 100,
@@ -376,7 +402,15 @@ class KMeansService:
 
         # Extract visualization features
         X_viz = X_full[:, visualisation_features]
-        current_centroids = np.array(centroids)
+        
+        # Initialize centroids - if empty, we start with 0 clusters
+        # Ensure dimensionality matches visualization features
+        if centroids is None or len(centroids) == 0:
+            current_centroids = np.zeros((0, len(visualisation_features)))
+            n_clusters = 0
+        else:
+            current_centroids = np.array(centroids)
+            n_clusters = len(centroids)
 
         # Get visualization feature names
         viz_feature_names = [dataset.feature_names[i] for i in visualisation_features]
@@ -384,50 +418,66 @@ class KMeansService:
         iterations = []
         converged = False
 
-        for iteration in range(max_iterations):
-            # Assign points to centroids
-            assignments, distance_matrix = self._assign_centroids(
-                X_viz, current_centroids, parameters.metric
-            )
-
-            # Update centroids
-            new_centroids = self._update_centroids(
-                X_viz, assignments, len(centroids)
-            )
-
-            # Check convergence
-            converged, centroid_shifts = self._check_convergence(
-                current_centroids, new_centroids
-            )
-
-            # Get cluster info
-            cluster_info = []
-            for k in range(len(centroids)):
-                mask = assignments == k
-                cluster_info.append({
-                    "cluster_id": k,
-                    "centroid": new_centroids[k].tolist(),
-                    "n_points": int(np.sum(mask)),
-                    "point_indices": np.where(mask)[0].tolist(),
-                })
-
-            # Store iteration data
+        if n_clusters == 0:
+            # Special case: Return single iteration with no clusters
+            assignments = np.full(X_viz.shape[0], -1)
+            distance_matrix = np.zeros((X_viz.shape[0], 0))
             iterations.append({
-                "iteration": iteration,
+                "iteration": 0,
                 "assignments": assignments.tolist(),
                 "distance_matrix": distance_matrix.tolist(),
-                "centroids": current_centroids.tolist(),
-                "new_centroids": new_centroids.tolist(),
-                "centroid_shifts": centroid_shifts.tolist(),
-                "converged": converged,
-                "cluster_info": cluster_info,
+                "centroids": [],
+                "new_centroids": [],
+                "centroid_shifts": [],
+                "converged": True,
+                "cluster_info": [],
             })
+            converged = True
+        else:
+            for iteration in range(max_iterations):
+                # Assign points to centroids
+                assignments, distance_matrix = self._assign_centroids(
+                    X_viz, current_centroids, parameters.metric
+                )
 
-            # Update centroids for next iteration
-            current_centroids = new_centroids
+                # Update centroids
+                new_centroids = self._update_centroids(
+                    X_viz, assignments, n_clusters
+                )
 
-            if converged:
-                break
+                # Check convergence
+                converged, centroid_shifts = self._check_convergence(
+                    current_centroids, new_centroids
+                )
+
+                # Get cluster info
+                cluster_info = []
+                for k in range(n_clusters):
+                    mask = assignments == k
+                    cluster_info.append({
+                        "cluster_id": k,
+                        "centroid": new_centroids[k].tolist(),
+                        "n_points": int(np.sum(mask)),
+                        "point_indices": np.where(mask)[0].tolist(),
+                    })
+
+                # Store iteration data
+                iterations.append({
+                    "iteration": iteration,
+                    "assignments": assignments.tolist(),
+                    "distance_matrix": distance_matrix.tolist(),
+                    "centroids": current_centroids.tolist(),
+                    "new_centroids": new_centroids.tolist(),
+                    "centroid_shifts": centroid_shifts.tolist(),
+                    "converged": converged,
+                    "cluster_info": cluster_info,
+                })
+
+                # Update centroids for next iteration
+                current_centroids = new_centroids
+
+                if converged:
+                    break
 
         # Generate decision boundary if requested (using final centroids)
         decision_boundary = None
@@ -448,7 +498,7 @@ class KMeansService:
                 "feature_names": dataset.feature_names,
                 "n_features": n_features,
                 "n_samples": len(X_full),
-                "n_clusters": len(centroids),
+                "n_clusters": n_clusters,
             },
             "visualisation_feature_indices": visualisation_features,
             "visualisation_feature_names": viz_feature_names,

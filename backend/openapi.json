@@ -2034,6 +2034,20 @@
             ],
             "title": "Visualisation Features",
             "description": "Feature indices for visualization (defaults to [feature_1, feature_2])"
+          },
+          "include_boundary": {
+            "type": "boolean",
+            "title": "Include Boundary",
+            "description": "Whether to include decision boundary",
+            "default": true
+          },
+          "boundary_resolution": {
+            "type": "integer",
+            "maximum": 200.0,
+            "minimum": 10.0,
+            "title": "Boundary Resolution",
+            "description": "Resolution of boundary mesh",
+            "default": 50
           }
         },
         "type": "object",
@@ -2138,6 +2152,17 @@
             },
             "type": "array",
             "title": "Visualisation Feature Names"
+          },
+          "decision_boundary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DecisionBoundaryData"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Decision boundary visualization data"
           }
         },
         "type": "object",
@@ -2212,6 +2237,20 @@
             "title": "Max Iterations",
             "description": "Maximum iterations before stopping",
             "default": 100
+          },
+          "include_boundary": {
+            "type": "boolean",
+            "title": "Include Boundary",
+            "description": "Whether to include decision boundary",
+            "default": true
+          },
+          "boundary_resolution": {
+            "type": "integer",
+            "maximum": 200.0,
+            "minimum": 10.0,
+            "title": "Boundary Resolution",
+            "description": "Resolution of boundary mesh",
+            "default": 50
           }
         },
         "type": "object",
@@ -2291,6 +2330,17 @@
             },
             "type": "array",
             "title": "Visualisation Feature Names"
+          },
+          "decision_boundary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DecisionBoundaryData"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Decision boundary visualization data"
           }
         },
         "type": "object",

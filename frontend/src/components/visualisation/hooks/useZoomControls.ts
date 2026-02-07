@@ -80,13 +80,33 @@ export const useZoomControls = ({
                     const scaledWidth = currentBounds.width * transform.k;
                     const scaledHeight = currentBounds.height * transform.k;
 
-                    // Calculate bounds using fixed pixel margin
-                    // Allow panning panMargin pixels beyond content edges
-                    const minX = -currentPanMargin;
-                    const maxX = viewportWidth - scaledWidth + currentPanMargin;
-                    const minY = -currentPanMargin;
-                    const maxY =
-                        viewportHeight - scaledHeight + currentPanMargin;
+                    // Calculate bounds based on whether content is larger or smaller than viewport
+                    let minX: number, maxX: number, minY: number, maxY: number;
+
+                    if (scaledWidth > viewportWidth) {
+                        // Content is wider than viewport - constrain to show only content
+                        // maxX = 0: when pan.x = 0, left edge of content aligns with left edge of viewport
+                        // minX = viewport - scaled: when pan.x = minX, right edge of content aligns with right edge of viewport
+                        // This allows panning from 0 (see left) to negative (see right)
+                        maxX = 0;
+                        minX = viewportWidth - scaledWidth;
+                    } else {
+                        // Content is smaller than viewport - allow margin
+                        minX = -currentPanMargin;
+                        maxX = viewportWidth - scaledWidth + currentPanMargin;
+                    }
+
+                    if (scaledHeight > viewportHeight) {
+                        // Content is taller than viewport - constrain to show only content
+                        // maxY = 0: when pan.y = 0, top edge of content aligns with top edge of viewport
+                        // minY = viewport - scaled: when pan.y = minY, bottom edge of content aligns with bottom edge of viewport
+                        maxY = 0;
+                        minY = viewportHeight - scaledHeight;
+                    } else {
+                        // Content is smaller than viewport - allow margin
+                        minY = -currentPanMargin;
+                        maxY = viewportHeight - scaledHeight + currentPanMargin;
+                    }
 
                     // Debug logging
                     console.log("Bounds calculation:", {
@@ -97,9 +117,10 @@ export const useZoomControls = ({
                         },
                         scaled: { width: scaledWidth, height: scaledHeight },
                         bounds: { minX, maxX, minY, maxY },
-                        validRange: {
-                            x: maxX - minX,
-                            y: maxY - minY,
+                        transform: { x: transform.x, y: transform.y, k: transform.k },
+                        isContentLarger: {
+                            width: scaledWidth > viewportWidth,
+                            height: scaledHeight > viewportHeight,
                         },
                     });
 
@@ -162,6 +183,11 @@ export const useZoomControls = ({
                     rubberBandTimer = setTimeout(() => {
                         const currentTransform = getCurrentTransform();
                         if (currentTransform && svgSelectionRef.current) {
+                            const currentBounds = dynamicBoundsRef.current;
+                            const currentPanMargin = dynamicPanMarginRef.current || 200;
+
+                            if (!currentBounds) return;
+
                             const extent = [
                                 [0, 0],
                                 [
@@ -171,23 +197,50 @@ export const useZoomControls = ({
                                 ],
                             ] as [[number, number], [number, number]];
 
-                            // Calculate where we should snap back to
-                            const idealTransform = applyRubberBand(
-                                currentTransform,
-                                extent
-                            );
+                            const [[x0, y0], [x1, y1]] = extent;
+                            const viewportWidth = x1 - x0;
+                            const viewportHeight = y1 - y0;
 
-                            // Only snap back if we're significantly outside bounds
-                            const deltaX = Math.abs(
-                                currentTransform.x - idealTransform.x
-                            );
-                            const deltaY = Math.abs(
-                                currentTransform.y - idealTransform.y
-                            );
+                            const scaledWidth = currentBounds.width * currentTransform.k;
+                            const scaledHeight = currentBounds.height * currentTransform.k;
 
-                            if (deltaX > 10 || deltaY > 10) {
-                                console.log("Snapping back from rubber band");
-                                setZoom(idealTransform, true);
+                            // Calculate proper bounds
+                            let minX: number, maxX: number, minY: number, maxY: number;
+
+                            if (scaledWidth > viewportWidth) {
+                                minX = viewportWidth - scaledWidth;
+                                maxX = 0;
+                            } else {
+                                minX = -currentPanMargin;
+                                maxX = viewportWidth - scaledWidth + currentPanMargin;
+                            }
+
+                            if (scaledHeight > viewportHeight) {
+                                minY = viewportHeight - scaledHeight;
+                                maxY = 0;
+                            } else {
+                                minY = -currentPanMargin;
+                                maxY = viewportHeight - scaledHeight + currentPanMargin;
+                            }
+
+                            // Constrain to bounds
+                            const constrainedX = Math.max(minX, Math.min(maxX, currentTransform.x));
+                            const constrainedY = Math.max(minY, Math.min(maxY, currentTransform.y));
+
+                            // Only snap back if we're outside bounds
+                            const deltaX = Math.abs(currentTransform.x - constrainedX);
+                            const deltaY = Math.abs(currentTransform.y - constrainedY);
+
+                            if (deltaX > 1 || deltaY > 1) {
+                                console.log("Snapping back to bounds:", {
+                                    from: { x: currentTransform.x, y: currentTransform.y },
+                                    to: { x: constrainedX, y: constrainedY },
+                                    bounds: { minX, maxX, minY, maxY }
+                                });
+                                const constrainedTransform = d3.zoomIdentity
+                                    .translate(constrainedX, constrainedY)
+                                    .scale(currentTransform.k);
+                                setZoom(constrainedTransform, true);
                             }
                         }
                     }, 150); // Small delay to feel natural
@@ -249,8 +302,8 @@ export const useZoomControls = ({
                                 xAxisGroup.call(d3.axisBottom(newXScale) as any);
                                 yAxisGroup.call(d3.axisLeft(newYScale) as any);
 
-                                // Update the grid to match rescaled axes
-                                const gridGroup = axesGroup.select(".grid");
+                                // Update the grid to match rescaled axes (grid is now in a separate group)
+                                const gridGroup = contentGroup.select(".grid-fixed .grid");
                                 if (!gridGroup.empty()) {
                                     // Get grid dimensions from stored data
                                     const gridData = (gridGroup.node() as any).__gridDimensions__;

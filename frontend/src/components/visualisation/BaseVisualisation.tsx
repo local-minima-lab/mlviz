@@ -73,8 +73,20 @@ const BaseVisualisation: React.FC<BaseVisualisationProps> = ({
             .append("g")
             .attr("transform", `translate(${MARGIN.left}, ${MARGIN.top})`);
 
+        // Calculate inner dimensions
+        const innerWidth = containerWidth - MARGIN.left - MARGIN.right;
+        const innerHeight = containerHeight - MARGIN.top - MARGIN.bottom;
+
         if (capabilities.zoomable && zoomControls) {
             const extendedZoomControls = zoomControls as any;
+
+            // Update content bounds with actual inner dimensions
+            if (extendedZoomControls.updateContentBounds) {
+                extendedZoomControls.updateContentBounds({
+                    width: innerWidth,
+                    height: innerHeight,
+                });
+            }
 
             extendedZoomControls.createZoomBehavior(
                 svg,

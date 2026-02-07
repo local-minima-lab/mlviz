@@ -66,7 +66,8 @@ const { Provider: BaseProvider, useBaseModel } =
     });
 
 interface KMeansContextType
-    extends TrainableModelContext<KMeansModelData>,
+    extends
+        TrainableModelContext<KMeansModelData>,
         PredictableModelContext<
             KMeansModelData,
             KMeansPredictionAdditionalData
@@ -95,6 +96,13 @@ interface KMeansContextType
     getClusterCount: () => number | null;
     getCentroids: () => number[][] | null;
     isVisualizationReady: () => boolean;
+
+    // Centroid selection state
+    selectedCentroids: number[][];
+    setSelectedCentroids: React.Dispatch<React.SetStateAction<number[][]>>;
+    clearSelectedCentroids: () => void;
+    isPlacingCentroids: boolean;
+    setIsPlacingCentroids: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const KMeansContext = createContext<KMeansContextType | undefined>(undefined);
@@ -107,9 +115,7 @@ interface KMeansProviderProps {
     children: ReactNode;
 }
 
-export const KMeansProvider: React.FC<KMeansProviderProps> = ({
-    children,
-}) => {
+export const KMeansProvider: React.FC<KMeansProviderProps> = ({ children }) => {
     return (
         <BaseProvider>
             <KMeansProviderInner>{children}</KMeansProviderInner>
@@ -134,8 +140,9 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
     // Extract values from currentModelData or use defaults
     const [isVisualizationLoading, setIsVisualizationLoading] =
         React.useState<boolean>(false);
-    const [visualizationError, setVisualizationError] =
-        React.useState<string | null>(null);
+    const [visualizationError, setVisualizationError] = React.useState<
+        string | null
+    >(null);
 
     // For backward compatibility and specialized use
     const visualizationData = currentModelData || null;
@@ -144,20 +151,33 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
     const [isStepLoading, setIsStepLoading] = React.useState<boolean>(false);
     const [stepError, setStepError] = React.useState<string | null>(null);
     const [stepData, setStepData] = React.useState<KMeansStepResponse | null>(
-        null
+        null,
     );
 
     // Prediction state (Local to avoid infinite loops with persisted state)
     const [isPredictionLoading, setIsPredictionLoading] =
         React.useState<boolean>(false);
     const [predictionError, setPredictionError] = React.useState<string | null>(
-        null
+        null,
     );
     const [predictionData, setPredictionData] =
         React.useState<KMeansPredictResponse | null>(null);
     const [queryPoints, setQueryPoints] = React.useState<number[][] | null>(
-        currentModelData?.queryPoints || null
+        currentModelData?.queryPoints || null,
     );
+
+    // Centroid selection state
+    const [selectedCentroids, setSelectedCentroids] = React.useState<
+        number[][]
+    >([]);
+    const [isPlacingCentroids, setIsPlacingCentroids] =
+        React.useState<boolean>(true);
+    const selectedCentroidsRef = React.useRef<number[][]>(selectedCentroids);
+
+    // Keep ref in sync with state for API calls without triggering re-renders of stable callbacks
+    React.useEffect(() => {
+        selectedCentroidsRef.current = selectedCentroids;
+    }, [selectedCentroids]);
 
     // Sync queryPoints from currentModelData if needed
     useEffect(() => {
@@ -176,7 +196,19 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
             setVisualizationError(null);
 
             try {
-                const data = await trainAPI(params || {});
+                // Automatically include selected centroids if not provided
+                // Use Ref for stability to break infinite loops in components that auto-train
+                const currentCentroids = selectedCentroidsRef.current;
+                const requestParams = {
+                    ...params,
+                    centroids:
+                        params?.centroids ||
+                        (currentCentroids.length > 0
+                            ? currentCentroids
+                            : undefined),
+                };
+
+                const data = await trainAPI(requestParams);
 
                 if (data.success) {
                     console.log("Training successful:", data);
@@ -184,6 +216,13 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
                         ...data,
                         queryPoints: null,
                     });
+
+                    // Update selected centroids to the final results
+                    if (data.final_centroids) {
+                        setSelectedCentroids(data.final_centroids);
+                    }
+
+                    setIsPlacingCentroids(false);
                     setIsVisualizationLoading(false);
                     setVisualizationError(null);
                     setLastParams(params || {});
@@ -194,11 +233,11 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
                 setVisualizationError(
                     error instanceof Error
                         ? error.message
-                        : "Unknown error training KMeans"
+                        : "Unknown error training KMeans",
                 );
             }
         },
-        [setCurrentModelData, setLastParams]
+        [setCurrentModelData, setLastParams],
     );
 
     const loadVisualization = useCallback(
@@ -206,15 +245,8 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
             // For KMeans, visualization is the same as training
             await trainModel(request);
         },
-        [trainModel]
+        [trainModel],
     );
-
-    const clearVisualization = useCallback(() => {
-        setCurrentModelData(null);
-        setIsVisualizationLoading(false);
-        setVisualizationError(null);
-        setLastParams({});
-    }, [setCurrentModelData, setLastParams]);
 
     // ========================================================================
     // Step Method (for manual iteration control)
@@ -226,15 +258,33 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
             setStepError(null);
 
             try {
-                const data = await stepAPI(request);
+                // Automatically include selected centroids if not provided
+                const currentCentroids = selectedCentroidsRef.current;
+                const requestParams = {
+                    ...request,
+                    centroids:
+                        request?.centroids ||
+                        (currentCentroids.length > 0
+                            ? currentCentroids
+                            : undefined),
+                };
+
+                const data = await stepAPI(requestParams);
 
                 if (data.success) {
                     setStepData(data);
+
+                    // Update selected centroids to the new positions
+                    if (data.new_centroids) {
+                        setSelectedCentroids(data.new_centroids);
+                    }
+
+                    setIsPlacingCentroids(false);
                     setIsStepLoading(false);
                     setStepError(null);
                 } else {
                     throw new Error(
-                        "Step failed - API returned success: false"
+                        "Step failed - API returned success: false",
                     );
                 }
             } catch (error) {
@@ -244,11 +294,11 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
                 setStepError(
                     error instanceof Error
                         ? error.message
-                        : "Unknown error performing step"
+                        : "Unknown error performing step",
                 );
             }
         },
-        []
+        [],
     );
 
     // ========================================================================
@@ -261,8 +311,7 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
 
     const getPredictiveFeatureNames = useCallback((): string[] | null => {
         return (
-            visualizationData?.visualisation_feature_names ||
-            getFeatureNames()
+            visualizationData?.visualisation_feature_names || getFeatureNames()
         );
     }, [visualizationData, getFeatureNames]);
 
@@ -288,6 +337,10 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
             visualizationData?.final_centroids
         );
     }, [visualizationData]);
+
+    const clearSelectedCentroids = useCallback(() => {
+        setSelectedCentroids([]);
+    }, []);
 
     // ========================================================================
     // Prediction Methods
@@ -316,7 +369,7 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
                     }
                 } else {
                     throw new Error(
-                        "Prediction failed - API returned success: false"
+                        "Prediction failed - API returned success: false",
                     );
                 }
             } catch (error) {
@@ -326,20 +379,21 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
                 setPredictionError(
                     error instanceof Error
                         ? error.message
-                        : "Unknown error making prediction"
+                        : "Unknown error making prediction",
                 );
             }
         },
-        [currentModelData, setCurrentModelData]
+        [currentModelData, setCurrentModelData],
     );
 
     const predict = useCallback(
         async (points: Record<string, number>) => {
-            const featureNames = getFeatureNames();
+            const featureNames = getPredictiveFeatureNames(); // Use visualization features, not all features
             const centroids = getCentroids();
             if (!featureNames || !centroids) return;
 
             // Convert points object to array format expected by API
+            // Only use the features that were used for training (visualization features)
             const queryPoint = featureNames.map((name) => points[name] || 0);
 
             await makePrediction({
@@ -347,7 +401,7 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
                 centroids: centroids,
             });
         },
-        [getFeatureNames, getCentroids, makePrediction]
+        [getPredictiveFeatureNames, getCentroids, makePrediction],
     );
 
     const clearPrediction = useCallback(() => {
@@ -395,14 +449,18 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
 
     const predictionResult: PredictionResult<KMeansPredictionAdditionalData> | null =
         React.useMemo(() => {
-            if (!predictionData || !predictionData.assignments?.[0] === undefined)
+            if (
+                !predictionData ||
+                predictionData.assignments?.[0] === undefined
+            )
                 return null;
 
             const clusterNames = getClassNames();
             const clusterIndex = predictionData.assignments[0];
 
             return {
-                predictedClass: clusterNames?.[clusterIndex] || `Cluster ${clusterIndex}`,
+                predictedClass:
+                    clusterNames?.[clusterIndex] || `Cluster ${clusterIndex}`,
                 predictedClassIndex: clusterIndex,
                 additionalData: {
                     assignments: predictionData.assignments,
@@ -459,6 +517,13 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
         getClusterCount,
         getCentroids,
         isVisualizationReady,
+
+        // Centroid selection
+        selectedCentroids,
+        setSelectedCentroids,
+        clearSelectedCentroids,
+        isPlacingCentroids,
+        setIsPlacingCentroids,
     };
 
     return (

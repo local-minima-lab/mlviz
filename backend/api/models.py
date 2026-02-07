@@ -526,8 +526,9 @@ class KMeansTrainRequest(BaseModel):
     parameters: KMeansParameters = Field(
         default_factory=KMeansParameters, description="K-Means algorithm parameters"
     )
-    centroids: List[List[float]] = Field(
-        description="Initial centroid positions [[x, y], ...]"
+    centroids: Optional[List[List[float]]] = Field(
+        None,
+        description="Initial centroid positions [[x, y], ...]. If not provided or empty, will initialize with one random centroid."
     )
     dataset: Optional[Union[Dataset, PredefinedDataset]] = Field(
         None, description="Dataset to use. Defaults to Iris dataset."
@@ -587,8 +588,9 @@ class KMeansStepRequest(BaseModel):
     parameters: KMeansParameters = Field(
         default_factory=KMeansParameters, description="K-Means algorithm parameters"
     )
-    centroids: List[List[float]] = Field(
-        description="Current centroid positions [[x, y], ...]"
+    centroids: Optional[List[List[float]]] = Field(
+        None,
+        description="Current centroid positions [[x, y], ...]. If not provided or empty, will initialize with one random centroid."
     )
     dataset: Optional[Union[Dataset, PredefinedDataset]] = Field(
         None, description="Dataset to use. Defaults to Iris dataset."

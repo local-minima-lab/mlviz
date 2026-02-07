@@ -5,9 +5,6 @@ from pydantic import BaseModel, Field
 class KMeansParameters(BaseModel):
     """Core K-Means algorithm parameters for manual step-by-step clustering."""
 
-    n_clusters: int = Field(
-        3, ge=1, le=10, description="Number of clusters to form"
-    )
     metric: Literal["euclidean", "manhattan"] = Field(
         "euclidean",
         description="Distance metric for assigning points to clusters"
