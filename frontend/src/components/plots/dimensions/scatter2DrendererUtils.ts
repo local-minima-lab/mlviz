@@ -163,7 +163,56 @@ export function renderScatter2D(
 
     // Render legend (in overlay group - always on top)
     if (showLegend) {
-        renderLegend(overlayGroup, config, innerWidth, innerHeight);
+        const legend = renderLegend(overlayGroup, config, innerWidth, innerHeight);
+        if (legend) {
+            legend.onFilterChange((focusedNames) => {
+                // Update data points
+                const points = contentGroup.select(".data-points").selectAll<SVGCircleElement, PlotPoint>("circle");
+                points
+                    .transition()
+                    .duration(200)
+                    .attr("fill", (d) => {
+                        if (focusedNames === null) return colorScale(d);
+                        const label = d.type === "classification" ? d.label : "";
+                        return focusedNames.has(label) ? colorScale(d) : "#d1d5db";
+                    })
+                    .attr("opacity", (d) => {
+                        if (focusedNames === null) return pointOpacity;
+                        const label = d.type === "classification" ? d.label : "";
+                        return focusedNames.has(label) ? pointOpacity : 0.3;
+                    });
+
+                // Update decision boundary regions
+                const boundaryRects = contentGroup.select(".decision-boundary").selectAll<SVGRectElement, unknown>("rect");
+                if (!boundaryRects.empty()) {
+                    const names =
+                        config.type === "classification"
+                            ? config.classNames
+                            : config.type === "clustering"
+                              ? config.clusterNames
+                              : [];
+                    const scheme =
+                        config.type === "classification" || config.type === "clustering"
+                            ? config.colorScheme || "default"
+                            : "default";
+                    const categoricalScale = createColorScale(names, scheme);
+
+                    boundaryRects
+                        .transition()
+                        .duration(200)
+                        .attr("fill", function () {
+                            const prediction = d3.select(this).attr("data-prediction");
+                            if (focusedNames === null) return categoricalScale(prediction);
+                            return focusedNames.has(prediction) ? categoricalScale(prediction) : "#e5e7eb";
+                        })
+                        .attr("opacity", function () {
+                            if (focusedNames === null) return 0.3;
+                            const prediction = d3.select(this).attr("data-prediction");
+                            return focusedNames.has(prediction) ? 0.3 : 0.1;
+                        });
+                }
+            });
+        }
     }
 
     // Return scales, groups, and bounds for zoom handling
@@ -269,7 +318,8 @@ function renderDecisionBoundary2D(
             .attr("width", cellWidth)
             .attr("height", cellHeight)
             .attr("fill", fillColor)
-            .attr("opacity", 0.3);
+            .attr("opacity", 0.3)
+            .attr("data-prediction", String(cell.prediction));
     });
 }
 

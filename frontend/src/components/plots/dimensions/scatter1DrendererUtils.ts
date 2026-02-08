@@ -124,7 +124,41 @@ export function renderScatter1D(
 
     // Render legend
     if (showLegend) {
-        renderLegend(container, config, innerWidth, innerHeight);
+        const legend = renderLegend(container, config, innerWidth, innerHeight);
+        if (legend) {
+            legend.onFilterChange((focusedNames) => {
+                // Update data points
+                const points = container.select(".data-points").selectAll<SVGCircleElement, PlotPoint>("circle");
+                points
+                    .transition()
+                    .duration(200)
+                    .attr("fill", (d) => {
+                        if (focusedNames === null) return colorScale(d);
+                        const label = d.type === "classification" ? d.label : "";
+                        return focusedNames.has(label) ? colorScale(d) : "#d1d5db";
+                    })
+                    .attr("opacity", (d) => {
+                        if (focusedNames === null) return pointOpacity;
+                        const label = d.type === "classification" ? d.label : "";
+                        return focusedNames.has(label) ? pointOpacity : 0.3;
+                    });
+
+                // Update decision boundary regions
+                const boundaryRects = container.select(".decision-boundary").selectAll<SVGRectElement, unknown>("rect");
+                if (!boundaryRects.empty()) {
+                    const getColor = createBoundaryColorScale(config);
+
+                    boundaryRects
+                        .transition()
+                        .duration(200)
+                        .attr("fill", function () {
+                            const prediction = d3.select(this).attr("data-prediction");
+                            if (focusedNames === null) return getColor(prediction);
+                            return focusedNames.has(prediction) ? getColor(prediction) : "#e5e7eb";
+                        });
+                }
+            });
+        }
     }
 
     return { xScale, colorScale };
@@ -174,7 +208,8 @@ function renderDecisionBoundary1D(
             .attr("y", stripCenter - stripHeight / 2)
             .attr("width", x2 - x1)
             .attr("height", stripHeight)
-            .attr("fill", getColor(current.prediction));
+            .attr("fill", getColor(current.prediction))
+            .attr("data-prediction", String(current.prediction));
     }
 }
 
