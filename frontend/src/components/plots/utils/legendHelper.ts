@@ -12,7 +12,6 @@ interface LegendOptions {
     position?: "top-right" | "top-left" | "bottom-right" | "bottom-left";
 }
 
-/** Callback type for when the focused set of classes changes */
 export type LegendFilterCallback = (focusedNames: Set<string> | null) => void;
 
 /**
@@ -32,7 +31,8 @@ export function renderLegend(
 ) {
     const { position = "top-right" } = options;
 
-    if (config.type !== "classification" && config.type !== "clustering") return null;
+    if (config.type !== "classification" && config.type !== "clustering")
+        return null;
 
     const names =
         config.type === "classification"
@@ -40,12 +40,8 @@ export function renderLegend(
             : config.clusterNames;
     if (names.length === 0) return null;
 
-    const colorScale = createColorScale(
-        names,
-        config.colorScheme || "default",
-    );
+    const colorScale = createColorScale(names, config.colorScheme || "default");
 
-    // Track which names are focused (null = all focused / no filter)
     let focusedNames: Set<string> | null = null;
     let filterCallback: LegendFilterCallback | null = null;
 
@@ -55,7 +51,6 @@ export function renderLegend(
     const paddingY = 16;
     const foHeight = names.length * itemHeight + paddingY;
 
-    // Position based on option
     let x = 0;
     let y = 0;
     switch (position) {
@@ -93,22 +88,30 @@ export function renderLegend(
             "bg-gradient-to-br from-blue-50 to-purple-50 backdrop-blur-sm border border-gray-200/50 rounded-lg px-3 py-2 shadow-sm",
         );
 
-    const rows: Map<string, d3.Selection<HTMLDivElement, unknown, null, undefined>> = new Map();
+    const rows: Map<
+        string,
+        d3.Selection<HTMLDivElement, unknown, null, undefined>
+    > = new Map();
 
     function updateRowStyles() {
         rows.forEach((row, name) => {
             const isActive = focusedNames === null || focusedNames.has(name);
 
             row.select(".legend-swatch")
-                .style("background-color", isActive ? colorScale(name) : "#d1d5db")
+                .style(
+                    "background-color",
+                    isActive ? colorScale(name) : "#d1d5db",
+                )
                 .style("transition", "background-color 0.2s ease");
 
             row.select(".legend-label")
                 .style("color", isActive ? "#334155" : "#9ca3af")
                 .style("transition", "color 0.2s ease");
 
-            row.style("opacity", isActive ? "1" : "0.5")
-                .style("transition", "opacity 0.2s ease");
+            row.style("opacity", isActive ? "1" : "0.5").style(
+                "transition",
+                "opacity 0.2s ease",
+            );
         });
     }
 
@@ -120,7 +123,12 @@ export function renderLegend(
             .style("cursor", "pointer")
             .style("user-select", "none")
             .style("border-radius", "4px")
-            .style("padding", "1px 2px") as unknown as d3.Selection<HTMLDivElement, unknown, null, undefined>;
+            .style("padding", "1px 2px") as unknown as d3.Selection<
+            HTMLDivElement,
+            unknown,
+            null,
+            undefined
+        >;
 
         row.append("xhtml:span")
             .attr("class", "rounded-full flex-shrink-0 legend-swatch")
