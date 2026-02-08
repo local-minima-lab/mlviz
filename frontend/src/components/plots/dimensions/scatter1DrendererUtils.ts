@@ -121,9 +121,10 @@ export function renderScatter1D(
         onPointHover
     );
 
-    // Render legend
+    // Render legend (at the end so it's on top)
     if (showLegend) {
-        renderLegend1D(container, config, innerWidth);
+        const legendGroup = container.append("g").attr("class", "legend-layer");
+        renderLegend1D(legendGroup, config, innerWidth);
     }
 
     return { xScale, colorScale };
@@ -383,33 +384,52 @@ function renderLegend1D(
     config: Config,
     width: number
 ) {
+    if (config.type !== "classification" && config.type !== "clustering") return;
+
+    const categoricalScale = createBoundaryColorScale(config);
+    const names = config.type === "classification" ? config.classNames : config.clusterNames;
+
     const legendGroup = g
         .append("g")
         .attr("class", "legend")
-        .attr("transform", `translate(${width - 120}, -30)`);
+        .attr("transform", `translate(${width - 130}, -30)`);
 
-    if (config.type === "classification") {
-        const categoricalScale = createBoundaryColorScale(config);
+    // Add white background with elevation-like shadow/border
+    const padding = { top: 12, right: 12, bottom: 12, left: 12 };
+    const itemHeight = 18;
+    const legendWidth = 120;
+    const legendHeight = names.length * itemHeight + padding.top + padding.bottom - 4;
 
-        config.classNames.forEach((className: string, i: number) => {
-            const legendRow = legendGroup
-                .append("g")
-                .attr("transform", `translate(0, ${i * 18})`);
+    legendGroup
+        .insert("rect", ":first-child")
+        .attr("x", -padding.left)
+        .attr("y", -padding.top)
+        .attr("width", legendWidth)
+        .attr("height", legendHeight)
+        .attr("fill", "white")
+        .attr("fill-opacity", 0.9)
+        .attr("rx", 8)
+        .attr("stroke", "#e5e7eb")
+        .attr("stroke-width", 1)
+        .attr("class", "shadow-sm");
 
-            legendRow
-                .append("circle")
-                .attr("cx", 0)
-                .attr("cy", 0)
-                .attr("r", 5)
-                .attr("fill", categoricalScale(className));
+    names.forEach((name: string, i: number) => {
+        const legendRow = legendGroup
+            .append("g")
+            .attr("transform", `translate(0, ${i * itemHeight})`);
 
-            legendRow
-                .append("text")
-                .attr("x", 10)
-                .attr("y", 4)
-                .attr("font-size", "11px")
-                .attr("fill", "#374151")
-                .text(className);
-        });
-    }
+        legendRow
+            .append("circle")
+            .attr("cx", 0)
+            .attr("cy", 0)
+            .attr("r", 4)
+            .attr("fill", categoricalScale(name));
+
+        legendRow
+            .append("text")
+            .attr("x", 12)
+            .attr("y", 4)
+            .attr("class", "text-[10px] font-medium fill-slate-700 select-none")
+            .text(name);
+    });
 }

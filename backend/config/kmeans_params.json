@@ -1,0 +1,25 @@
+{
+  "parameters": [
+    {
+      "name": "metric",
+      "type": "select",
+      "default": "euclidean",
+      "options": ["euclidean", "manhattan"],
+      "description": "Distance metric for assigning points to clusters"
+    },
+    {
+      "name": "feature_1",
+      "type": "select",
+      "default": 0,
+      "options": "dynamic:features",
+      "description": "First feature for visualization"
+    },
+    {
+      "name": "feature_2",
+      "type": "select",
+      "default": 1,
+      "options": "dynamic:features",
+      "description": "Second feature for visualization"
+    }
+  ]
+}

@@ -2,67 +2,77 @@
 
 # Base types
 from .base import (
-    Index,
-    Slide,
     BasePage,
-    StaticParameters,
-    StaticPage,
-    DynamicPageAbstract,
     DynamicPage,
-    ModelNames,
+    DynamicPageAbstract,
+    Index,
     ModelComponentTypes,
+    ModelNames,
     ModelPage,
+    Slide,
+    StaticPage,
+    StaticParameters,
 )
 
 # Conditions
 from .conditions import (
-    BaseCondition,
-    BypassCheck,
-    SlideCheck,
-    ParameterCheck,
-    TimeCheck,
-    ButtonPress,
-    Lambda,
     AndCondition,
-    OrCondition,
+    BaseCondition,
+    ButtonPress,
+    BypassCheck,
     Condition,
-)
-
-# Decision Tree Pages
-from .decision_tree_page import (
-    DTreeManualParameters,
-    DTreeTrainParameters,
-    DTreePredictParameters,
-    DTreePage,
-    DTreeManualPage,
-    DTreeTrainPage,
-    DTreePredictPage,
-    DTreePageUnion,
-)
-
-# KNN Pages
-from .knn_page import (
-    KNNVizParameters,
-    KNNPage,
-    KNNVizPage,
-    KNNTrainPage,
-    KNNPageUnion,
-)
-
-# Story
-from .story import (
-    EdgeNode,
-    Edge,
-    StoryNode,
-    Story,
+    Lambda,
+    OrCondition,
+    ParameterCheck,
+    SlideCheck,
+    TimeCheck,
 )
 
 # Config and Unions
 from .config import (
-    ModelPageUnion,
-    DynamicPageUnion,
-    PageUnion,
     Config,
+    DynamicPageUnion,
+    ModelPageUnion,
+    PageUnion,
+)
+
+# Decision Tree Pages
+from .decision_tree_page import (
+    DTreeManualPage,
+    DTreeManualParameters,
+    DTreePage,
+    DTreePageUnion,
+    DTreePredictPage,
+    DTreePredictParameters,
+    DTreeTrainPage,
+    DTreeTrainParameters,
+)
+
+# KMeans Pages
+from .kmeans_page import (
+    KMeansPage,
+    KMeansPageUnion,
+    KMeansPredictPage,
+    KMeansTrainPage,
+    KMeansTrainParameters,
+)
+
+# KNN Pages
+from .knn_page import (
+    KNNPage,
+    KNNPageUnion,
+    KNNPredictPage,
+    KNNTrainPage,
+    KNNVizPage,
+    KNNVizParameters,
+)
+
+# Story
+from .story import (
+    Edge,
+    EdgeNode,
+    Story,
+    StoryNode,
 )
 
 # Utils
@@ -78,7 +88,10 @@ model_pages = {
     "Decision Tree: Train": DTreeTrainPage,
     "Decision Tree: Predict": DTreePredictPage,
     "KNN: Viz": KNNVizPage,
-    "KNN: Train": KNNTrainPage
+    "KNN: Train": KNNTrainPage,
+    "KNN: Predict": KNNPredictPage,
+    "KMeans: Train": KMeansTrainPage,
+    "KMeans: Predict": KMeansPredictPage,
 }
 
 __all__ = [
@@ -91,7 +104,6 @@ __all__ = [
     "ModelNames",
     "ModelComponentTypes",
     "ModelPage",
-    
     # Conditions
     "BaseCondition",
     "BypassCheck",
@@ -103,11 +115,9 @@ __all__ = [
     "AndCondition",
     "OrCondition",
     "Condition",
-    
     # Static
     "StaticParameters",
     "StaticPage",
-    
     # Decision Tree
     "DTreeManualParameters",
     "DTreeTrainParameters",
@@ -117,29 +127,31 @@ __all__ = [
     "DTreeTrainPage",
     "DTreePredictPage",
     "DTreePageUnion",
-    
     # KNN
     "KNNVizParameters",
     "KNNPage",
     "KNNVizPage",
-    "KNNPageUnion",
-    
+    "KNNTrainPage",
+    "KNNPredictPageKNNPageUnion",
+    # KMeans
+    "KMeansTrainParameters",
+    "KMeansPage",
+    "KMeansTrainPage",
+    "KMeansPredictPage",
+    "KMeansPageUnion",
     # Story
     "EdgeNode",
     "Edge",
     "StoryNode",
     "Story",
-    
     # Config and Unions
     "ModelPageUnion",
     "DynamicPageUnion",
     "PageUnion",
     "Config",
-    
     # Utils
     "compute_object_hash",
     "create_page_dict",
-    
     # Registry
     "model_pages",
 ]

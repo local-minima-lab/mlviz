@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 
 # Type definitions
 Index = int
-ModelNames = Literal["decision_tree", "knn"]
+ModelNames = Literal["decision_tree", "knn", "kmeans"]
 ModelComponentTypes = Literal["manual", "train", "predict", "viz_only"]
 
 class Slide(BaseModel):

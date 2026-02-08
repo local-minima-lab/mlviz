@@ -129,6 +129,47 @@
                     }
                 }
             ]
+        },
+        "kmeans": {
+            "name": "kmeans",
+            "description": "",
+            "start_page": 0,
+            "nodes": [
+                {
+                    "index": 226795735
+                },
+                {
+                    "index": 1544018667
+                }
+            ],
+            "edges": [
+                {
+                    "start": {
+                        "local_index": 0,
+                        "story_name": null
+                    },
+                    "end": {
+                        "local_index": 1,
+                        "story_name": null
+                    },
+                    "condition": {
+                        "condition_type": "Bypass"
+                    }
+                },
+                {
+                    "start": {
+                        "local_index": 1,
+                        "story_name": null
+                    },
+                    "end": {
+                        "local_index": 0,
+                        "story_name": null
+                    },
+                    "condition": {
+                        "condition_type": "Bypass"
+                    }
+                }
+            ]
         }
     },
     "pages": {
@@ -207,6 +248,25 @@
                 "visualisation_features": [0, 1],
                 "include_boundary": true
             }
+        },
+        "226795735": {
+            "name": "",
+            "page_type": "dynamic",
+            "dynamic_type": "model",
+            "model_name": "kmeans",
+            "component_type": "train",
+            "parameters": {
+                "visualisation_features": [0, 1],
+                "include_boundary": true,
+                "max_iterations": 100
+            }
+        },
+        "1544018667": {
+            "name": "",
+            "page_type": "dynamic",
+            "dynamic_type": "model",
+            "model_name": "kmeans",
+            "component_type": "predict"
         }
     }
 }

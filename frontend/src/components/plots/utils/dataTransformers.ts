@@ -72,17 +72,17 @@ export function createRegressionPoints(
 }
 
 /**
- * Universal plot point creator that handles both classification and regression
+ * Universal plot point creator that handles classification, clustering, and regression
  */
 export function createPlotPoints(
     data: number[][],
     config: Config
 ): PlotPoint[] {
-    if (config.type === "classification") {
+    if (config.type === "classification" || config.type === "clustering") {
         return createClassificationPoints(
             data,
             config.labels,
-            config.classNames
+            config.type === "classification" ? config.classNames : config.clusterNames
         );
     } else {
         return createRegressionPoints(data, config.values);
@@ -284,6 +284,15 @@ export function validatePlotData(
         }
         if (config.classNames.length === 0) {
             errors.push("classNames array is empty");
+        }
+    } else if (config.type === "clustering") {
+        if (config.labels.length !== data.length) {
+            errors.push(
+                `Labels length (${config.labels.length}) does not match data length (${data.length})`
+            );
+        }
+        if (config.clusterNames.length === 0) {
+            errors.push("clusterNames array is empty");
         }
     } else {
         if (config.values.length !== data.length) {

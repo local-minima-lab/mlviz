@@ -15,6 +15,10 @@ from .knn import (
     NeighborInfo,
     DecisionBoundaryData,
 )
+from .kmeans import (
+    KMeansParameters,
+    ClusterInfo,
+)
 
 __all__ = [
     "ClassificationMetrics",
@@ -33,4 +37,6 @@ __all__ = [
     "KNNParameters",
     "NeighborInfo",
     "DecisionBoundaryData",
+    "KMeansParameters",
+    "ClusterInfo",
 ]

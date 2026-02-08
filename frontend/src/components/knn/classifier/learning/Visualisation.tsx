@@ -6,6 +6,7 @@
 
 import { renderKNNTraining } from "@/components/knn/classifier/KNNRenderer";
 import type { KNNVisualizationData } from "@/components/knn/classifier/types";
+import { DEFAULT_2D_ZOOM_CONFIG } from "@/components/plots/utils/zoomConfig";
 import BaseVisualisation from "@/components/visualisation/BaseVisualisation";
 import type { VisualisationRenderContext } from "@/components/visualisation/types";
 import type { components } from "@/types/api";
@@ -82,30 +83,7 @@ const Visualisation: React.FC<VisualisationProps> = ({ data: knnData }) => {
         [visualizationData.classNames]
     );
 
-    // Calculate content bounds for zoom restrictions
-    // Use decision boundary bounds if available, otherwise use training data bounds
-    const contentBounds = useMemo(() => {
-        if (!visualizationData.decisionBoundary) return undefined;
 
-        // Get all mesh points to calculate bounds
-        const meshPoints = visualizationData.decisionBoundary.meshPoints;
-        if (meshPoints.length === 0) return undefined;
-
-        // Calculate min/max for each dimension
-        const xValues = meshPoints.map(p => p[0]);
-        const yValues = meshPoints.map(p => p[1]);
-
-        const xMin = Math.min(...xValues);
-        const xMax = Math.max(...xValues);
-        const yMin = Math.min(...yValues);
-        const yMax = Math.max(...yValues);
-
-        // Return bounds in the format expected by zoom controls
-        return {
-            width: xMax - xMin,
-            height: yMax - yMin,
-        };
-    }, [visualizationData.decisionBoundary]);
 
     const renderCallback = useCallback(
         (
@@ -136,13 +114,7 @@ const Visualisation: React.FC<VisualisationProps> = ({ data: knnData }) => {
                 renderContent: renderCallback,
             }}
             capabilities={{
-                zoomable: {
-                    scaleExtent: [1.0, 5],  // Min zoom 1.0 = can't zoom out beyond initial view
-                    enableReset: true,
-                    enablePan: true,
-                    panMargin: 50,
-                    contentBounds: contentBounds,  // Restrict panning to decision boundary area
-                },
+                zoomable: DEFAULT_2D_ZOOM_CONFIG,
             }}
             controlsConfig={{
                 controlsPosition: "top-left",
