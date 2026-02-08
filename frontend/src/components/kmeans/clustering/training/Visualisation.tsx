@@ -51,7 +51,7 @@ const Visualisation: React.FC<VisualisationProps> = () => {
         ) {
             loadVisualization(lastVisualizationParams);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Only run on mount
 
     // Get dimensions from visualization data
@@ -82,7 +82,8 @@ const Visualisation: React.FC<VisualisationProps> = () => {
             decisionBoundary: kmeansData.decision_boundary
                 ? {
                       meshPoints: kmeansData.decision_boundary.mesh_points,
-                      predictions: kmeansData.decision_boundary.predictions as unknown as number[],
+                      predictions: kmeansData.decision_boundary
+                          .predictions as unknown as number[],
                       dimensions: dimensions,
                   }
                 : undefined,
@@ -92,7 +93,8 @@ const Visualisation: React.FC<VisualisationProps> = () => {
                 [],
             nDimensions: dimensions,
             nClusters: kmeansData.metadata?.n_clusters || 0,
-            visualisationFeatureIndices: kmeansData.visualisation_feature_indices,
+            visualisationFeatureIndices:
+                kmeansData.visualisation_feature_indices,
             visualisationFeatureNames: kmeansData.visualisation_feature_names,
         };
     }, [kmeansData, dimensions]);
@@ -100,23 +102,31 @@ const Visualisation: React.FC<VisualisationProps> = () => {
     // Create color scale for clusters
     const colorScale = useMemo(() => {
         if (!visualizationData) return d3.scaleOrdinal<string>();
-        
-        const nClusters = selectedCentroids.length || visualizationData.nClusters;
-        const clusterNames = nClusters > 0
-            ? Array.from({ length: nClusters }, (_, i) => `Cluster ${i}`)
-            : [];
-        
+
+        const nClusters =
+            selectedCentroids.length || visualizationData.nClusters;
+        const clusterNames =
+            nClusters > 0
+                ? Array.from({ length: nClusters }, (_, i) => `Cluster ${i}`)
+                : [];
+
         // Always include "Unassigned" to match renderer and handle unassigned points
         if (!clusterNames.includes("Unassigned")) {
             clusterNames.push("Unassigned");
         }
-        
-        console.log('[KMeans Visualisation] Creating clusters for color scale:', {
-            nClusters,
-            clusterNames,
-            source: selectedCentroids.length > 0 ? 'selectedCentroids' : 'visualizationData',
-        });
-        
+
+        console.log(
+            "[KMeans Visualisation] Creating clusters for color scale:",
+            {
+                nClusters,
+                clusterNames,
+                source:
+                    selectedCentroids.length > 0
+                        ? "selectedCentroids"
+                        : "visualizationData",
+            },
+        );
+
         return d3
             .scaleOrdinal<string>()
             .domain(clusterNames)
@@ -126,30 +136,35 @@ const Visualisation: React.FC<VisualisationProps> = () => {
     // Handle centroid placement click
     const handleVisualizationClick = useCallback(
         (event: MouseEvent, svg: SVGSVGElement) => {
-            if (!isPlacingCentroids || !scalesRef.current.xScale || !scalesRef.current.yScale || !visualizationData) {
+            if (
+                !isPlacingCentroids ||
+                !scalesRef.current.xScale ||
+                !scalesRef.current.yScale ||
+                !visualizationData
+            ) {
                 return;
             }
 
             // Get click coordinates relative to the content group (not SVG root)
-            const contentGroup = d3.select(svg).select('.zoom-content');
-            
+            const contentGroup = d3.select(svg).select(".zoom-content");
+
             if (contentGroup.empty()) {
-                console.warn('[KMeans Visualisation] Content group not found');
+                console.warn("[KMeans Visualisation] Content group not found");
                 return;
             }
 
             // Get pointer position relative to the content group itself
             const point = d3.pointer(event, contentGroup.node() as Element);
-            
+
             // The scales are already set up to map from data space to pixel space
             // within the content group, so we just need to invert them
             const clickX = scalesRef.current.xScale.invert(point[0]);
             const clickY = scalesRef.current.yScale.invert(point[1]);
 
-            console.log('[KMeans Visualisation] Click coordinates:', {
+            console.log("[KMeans Visualisation] Click coordinates:", {
                 svgPoint: d3.pointer(event, svg),
                 contentGroupPoint: point,
-                dataCoordinates: [clickX, clickY]
+                dataCoordinates: [clickX, clickY],
             });
 
             // Find the nearest data point to the click location
@@ -170,38 +185,51 @@ const Visualisation: React.FC<VisualisationProps> = () => {
             });
 
             if (!nearestPoint) {
-                console.warn('[KMeans Visualisation] No data points available');
+                console.warn("[KMeans Visualisation] No data points available");
                 return;
             }
 
             // Check if this point is already selected as a centroid
             const alreadySelectedIndex = selectedCentroids.findIndex(
-                (centroid) => centroid[0] === nearestPoint![0] && centroid[1] === nearestPoint![1]
+                (centroid) =>
+                    centroid[0] === nearestPoint![0] &&
+                    centroid[1] === nearestPoint![1],
             );
 
             if (alreadySelectedIndex !== -1) {
                 // Point is already a centroid - try to remove it
                 if (selectedCentroids.length > 1) {
-                    console.log('[KMeans Visualisation] Removing centroid:', nearestPoint);
-                    setSelectedCentroids((prev) => prev.filter((_, i) => i !== alreadySelectedIndex));
+                    console.log(
+                        "[KMeans Visualisation] Removing centroid:",
+                        nearestPoint,
+                    );
+                    setSelectedCentroids((prev) =>
+                        prev.filter((_, i) => i !== alreadySelectedIndex),
+                    );
                 } else {
-                    console.log('[KMeans Visualisation] Cannot remove last centroid:', nearestPoint);
+                    console.log(
+                        "[KMeans Visualisation] Cannot remove last centroid:",
+                        nearestPoint,
+                    );
                 }
                 return;
             }
 
             // Use only the first two dimensions for 2D visualization
             const newCentroid = [nearestPoint[0], nearestPoint[1]];
-            console.log('[KMeans Visualisation] User selected data point as centroid:', {
-                clickPosition: [clickX, clickY],
-                nearestDataPoint: newCentroid,
-                distance: minDistance,
-                totalCentroids: selectedCentroids.length + 1,
-                allCentroids: [...selectedCentroids, newCentroid]
-            });
+            console.log(
+                "[KMeans Visualisation] User selected data point as centroid:",
+                {
+                    clickPosition: [clickX, clickY],
+                    nearestDataPoint: newCentroid,
+                    distance: minDistance,
+                    totalCentroids: selectedCentroids.length + 1,
+                    allCentroids: [...selectedCentroids, newCentroid],
+                },
+            );
             setSelectedCentroids((prev) => [...prev, newCentroid]);
         },
-        [isPlacingCentroids, visualizationData, selectedCentroids]
+        [isPlacingCentroids, visualizationData, selectedCentroids],
     );
 
     // Render selected centroids as temporary markers
@@ -209,9 +237,11 @@ const Visualisation: React.FC<VisualisationProps> = () => {
         (
             container: d3.Selection<SVGGElement, unknown, null, undefined>,
             xScale: d3.ScaleLinear<number, number>,
-            yScale: d3.ScaleLinear<number, number>
+            yScale: d3.ScaleLinear<number, number>,
         ) => {
-            const centroidGroup = container.append("g").attr("class", "selected-centroids");
+            const centroidGroup = container
+                .append("g")
+                .attr("class", "selected-centroids");
 
             selectedCentroids.forEach((centroid, index) => {
                 const cx = xScale(centroid[0]);
@@ -277,14 +307,14 @@ const Visualisation: React.FC<VisualisationProps> = () => {
                     .text(`C${index}`);
             });
         },
-        [selectedCentroids, colorScale]
+        [selectedCentroids, colorScale],
     );
 
     const renderCallback = useCallback(
         (
             container: d3.Selection<SVGGElement, unknown, null, undefined>,
             _data: unknown,
-            context: VisualisationRenderContext
+            context: VisualisationRenderContext,
         ) => {
             if (!visualizationData) return;
 
@@ -299,9 +329,10 @@ const Visualisation: React.FC<VisualisationProps> = () => {
                     colorScale,
                     currentIteration,
                     showCentroidMovement: true,
-                    centroidSize: 10,
+                    centroidSize: 6,
                     isPlacementMode: isPlacingCentroids,
-                    activeClusterCount: selectedCentroids.length || visualizationData.nClusters,
+                    activeClusterCount:
+                        selectedCentroids.length || visualizationData.nClusters,
                 },
             });
 
@@ -315,7 +346,11 @@ const Visualisation: React.FC<VisualisationProps> = () => {
                 // Render selected centroids if in placement mode
                 if (isPlacingCentroids && selectedCentroids.length > 0) {
                     const targetGroup = renderResult.contentGroup || container;
-                    renderSelectedCentroids(targetGroup, renderResult.xScale, renderResult.yScale);
+                    renderSelectedCentroids(
+                        targetGroup,
+                        renderResult.xScale,
+                        renderResult.yScale,
+                    );
                 }
             }
 
@@ -323,33 +358,43 @@ const Visualisation: React.FC<VisualisationProps> = () => {
             if (isPlacingCentroids && context.state.svgSelection) {
                 const svg = context.state.svgSelection;
                 const svgNode = svg.node();
-                
+
                 if (svgNode) {
                     // Remove previous click handler
-                    svg.on('click.centroid', null);
-                    
+                    svg.on("click.centroid", null);
+
                     // Add new click handler
-                    svg.on('click.centroid', function(event: MouseEvent) {
+                    svg.on("click.centroid", function (event: MouseEvent) {
                         handleVisualizationClick(event, svgNode);
                     });
                 }
             } else if (context.state.svgSelection) {
                 // Remove click handler when not in placement mode
-                context.state.svgSelection.on('click.centroid', null);
+                context.state.svgSelection.on("click.centroid", null);
             }
         },
-        [visualizationData, colorScale, isPlacingCentroids, selectedCentroids, renderSelectedCentroids, handleVisualizationClick]
+        [
+            visualizationData,
+            colorScale,
+            isPlacingCentroids,
+            selectedCentroids,
+            renderSelectedCentroids,
+            handleVisualizationClick,
+        ],
     );
 
     // Handle train button click
     const handleTrain = useCallback(async () => {
         if (selectedCentroids.length === 0) return;
 
-        console.log('[KMeans Visualisation] Starting training with user-placed centroids:', {
-            nClusters: selectedCentroids.length,
-            centroids: selectedCentroids,
-            params: lastVisualizationParams
-        });
+        console.log(
+            "[KMeans Visualisation] Starting training with user-placed centroids:",
+            {
+                nClusters: selectedCentroids.length,
+                centroids: selectedCentroids,
+                params: lastVisualizationParams,
+            },
+        );
 
         // Train with selected centroids (now handled automatically by context if not passed)
         await train(lastVisualizationParams);
@@ -375,7 +420,9 @@ const Visualisation: React.FC<VisualisationProps> = () => {
             <div className="flex items-center justify-center h-full">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">Loading visualization...</p>
+                    <p className="text-muted-foreground">
+                        Loading visualization...
+                    </p>
                 </div>
             </div>
         );
@@ -385,8 +432,12 @@ const Visualisation: React.FC<VisualisationProps> = () => {
         return (
             <div className="flex items-center justify-center h-full">
                 <div className="text-center p-8">
-                    <p className="text-destructive mb-2">Error loading visualization</p>
-                    <p className="text-sm text-muted-foreground">{visualizationError}</p>
+                    <p className="text-destructive mb-2">
+                        Error loading visualization
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                        {visualizationError}
+                    </p>
                 </div>
             </div>
         );
@@ -397,7 +448,8 @@ const Visualisation: React.FC<VisualisationProps> = () => {
             <div className="flex items-center justify-center h-full">
                 <div className="text-center p-8">
                     <p className="text-muted-foreground">
-                        No visualization data available. Please configure and train the model.
+                        No visualization data available. Please configure and
+                        train the model.
                     </p>
                 </div>
             </div>
@@ -441,7 +493,11 @@ const Visualisation: React.FC<VisualisationProps> = () => {
             {/* Reset button when showing results */}
             {!isPlacingCentroids && visualizationData.totalIterations > 0 && (
                 <div className="absolute top-4 right-4 z-10">
-                    <Button size="sm" variant="outline" onClick={handleReset}>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleReset}
+                    >
                         Place New Centroids
                     </Button>
                 </div>
@@ -454,11 +510,14 @@ const Visualisation: React.FC<VisualisationProps> = () => {
                 }}
                 capabilities={{
                     zoomable: DEFAULT_2D_ZOOM_CONFIG,
-                    playable: maxSteps > 0 ? {
-                        maxSteps: maxSteps,
-                        autoPlay: false,
-                        stepDuration: 1000,
-                    } : undefined,
+                    playable:
+                        maxSteps > 0
+                            ? {
+                                  maxSteps: maxSteps,
+                                  autoPlay: false,
+                                  stepDuration: 1000,
+                              }
+                            : undefined,
                 }}
                 controlsConfig={{
                     controlsPosition: "top-left",

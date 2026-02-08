@@ -33,11 +33,6 @@ export interface ScatterRenderOptions {
     onPointHover?: (index: number | null) => void;
 }
 
-export interface Scatter3DRotation {
-    alpha: number;
-    beta: number;
-}
-
 // ============================================================================
 // Constants
 // ============================================================================

@@ -72,6 +72,7 @@ export type Parameters = Record<string, any>;
 
 interface BasePage {
     page_type: "static" | "dynamic";
+    name?: string;
     parameters?: Parameters;
 }
 

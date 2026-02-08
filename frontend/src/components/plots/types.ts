@@ -73,7 +73,10 @@ export interface RegressionBoundary extends BaseBoundary {
     predictions: number[]; // Numeric prediction at each mesh point
 }
 
-export type DecisionBoundary = ClassificationBoundary | ClusteringBoundary | RegressionBoundary;
+export type DecisionBoundary =
+    | ClassificationBoundary
+    | ClusteringBoundary
+    | RegressionBoundary;
 
 // ============================================================================
 // Plot Configuration Types
@@ -126,7 +129,6 @@ export interface RegressionConfig extends BaseConfig {
 
 export type Config = ClassificationConfig | ClusteringConfig | RegressionConfig;
 
-
 export type Prediction = string | number;
 // ============================================================================
 // Component Props Types
@@ -177,4 +179,4 @@ export interface BasePlotRendererProps extends BaseScatterPlotProps {
 /**
  * Supported dimensions for visualization
  */
-export type SupportedDimensions = 1 | 2 | 3;
+export type SupportedDimensions = 1 | 2;
