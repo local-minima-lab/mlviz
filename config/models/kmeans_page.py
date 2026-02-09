@@ -2,7 +2,7 @@ from typing import Annotated, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
 
-from .base import ModelPage
+from .base import ModelPage, ProblemType
 
 
 # Parameters
@@ -23,6 +23,7 @@ class KMeansTrainParameters(BaseModel):
 # Pages
 class KMeansPage(ModelPage):
     model_name: Literal["kmeans"] = "kmeans"
+    problem_type: ProblemType = "clustering"
 
 
 class KMeansTrainPage(KMeansPage):

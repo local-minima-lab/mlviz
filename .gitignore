@@ -82,3 +82,6 @@ quartz/replit.nix
 
 # Temporary
 .github/SERVICE_NAMES.md
+
+
+config/old_configs

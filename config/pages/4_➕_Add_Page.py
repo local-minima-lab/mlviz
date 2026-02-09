@@ -43,7 +43,8 @@ page_instance = generate_form_with_validation(
     selected_model,
     title=None,  # We already have a subheader
     submit_label=f"➕ Add {page_type}",
-    exclude_fields=["page_type", "dynamic_type"]  # These are set automatically
+    exclude_fields=["page_type", "dynamic_type"],  # These are set automatically
+    key_prefix=f"{page_type}_"
 )
 
 if page_instance:

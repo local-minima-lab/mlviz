@@ -99,6 +99,7 @@ export interface ModelPage extends DynamicPageParameters {
     dynamic_type: "model";
     model_name: string;
     component_type: "train" | "predict" | "manual" | "viz_only";
+    problem_type: "classifier" | "clustering" | "prediction";
 }
 
 export type DynamicPageUnion = DynamicPage | ModelPage;

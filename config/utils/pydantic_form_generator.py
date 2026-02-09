@@ -214,37 +214,39 @@ def get_streamlit_widget(field_name: str, field_info: FieldInfo, annotation: Any
 def generate_form_from_pydantic(
     model_class: Type[BaseModel],
     title: str | None = None,
-    exclude_fields: list[str] | None = None
+    exclude_fields: list[str] | None = None,
+    key_prefix: str = ""
 ) -> dict[str, Any]:
     """
     Automatically generate a Streamlit form from a Pydantic model.
-    
+
     Args:
         model_class: Pydantic model class to generate form for
         title: Optional title for the form section
         exclude_fields: List of field names to exclude from the form
-    
+        key_prefix: Prefix for widget keys to ensure uniqueness across different models
+
     Returns:
         Dictionary of field values from the form
     """
     exclude_fields = exclude_fields or []
-    
+
     if title:
         st.subheader(title)
-    
+
     form_data = {}
-    
+
     # Iterate through model fields
     for field_name, field_info in model_class.model_fields.items():
         if field_name in exclude_fields:
             continue
-        
+
         # Get the field's type annotation
         annotation = field_info.annotation
-        
+
         # Generate widget and collect value
-        form_data[field_name] = get_streamlit_widget(field_name, field_info, annotation)
-    
+        form_data[field_name] = get_streamlit_widget(field_name, field_info, annotation, prefix=key_prefix)
+
     return form_data
 
 
@@ -252,21 +254,23 @@ def generate_form_with_validation(
     model_class: Type[BaseModel],
     title: str | None = None,
     exclude_fields: list[str] | None = None,
-    submit_label: str = "Submit"
+    submit_label: str = "Submit",
+    key_prefix: str = ""
 ) -> BaseModel | None:
     """
     Generate a Streamlit form with a submit button and automatic validation.
-    
+
     Args:
         model_class: Pydantic model class to generate form for
         title: Optional title for the form section
         exclude_fields: List of field names to exclude from the form
         submit_label: Label for the submit button
-    
+        key_prefix: Prefix for widget keys to ensure uniqueness across different models
+
     Returns:
         Validated Pydantic model instance if submitted successfully, None otherwise
     """
-    form_data = generate_form_from_pydantic(model_class, title, exclude_fields)
+    form_data = generate_form_from_pydantic(model_class, title, exclude_fields, key_prefix=key_prefix)
     
     if st.button(submit_label, type="primary"):
         try:

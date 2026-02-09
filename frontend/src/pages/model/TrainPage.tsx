@@ -8,27 +8,30 @@ import type { ModelPage as ModelPageProps, Parameters } from "@/types/story";
 import { filterParameters } from "@/utils/conditions";
 import { useContext, useEffect, useMemo, useState } from "react";
 
-type TrainPageProps = Pick<ModelPageProps, "model_name" | "parameters">;
+type TrainPageProps = Pick<
+    ModelPageProps,
+    "model_name" | "parameters" | "problem_type"
+>;
 
-const TrainPage: React.FC<TrainPageProps> = ({ model_name, parameters }) => {
+const TrainPage: React.FC<TrainPageProps> = ({
+    model_name,
+    parameters,
+    problem_type,
+}) => {
     const model = useModel();
-    const {
-        isLoading,
-        data,
-        train,
-        getParameters,
-    } = model;
-    
+    const { isLoading, data, train, getParameters } = model;
+
     // Try to get lastParams from context (different models use different names)
     // Use useMemo to maintain stable reference
     const lastParams = useMemo(
-        () => (model as any).lastParams || (model as any).lastTrainedParams || {},
-        [(model as any).lastParams, (model as any).lastTrainedParams]
+        () =>
+            (model as any).lastParams || (model as any).lastTrainedParams || {},
+        [(model as any).lastParams, (model as any).lastTrainedParams],
     );
-    
+
     // Get feature names from model context (for KNN dynamic feature dropdowns)
     const featureNames = useMemo(() => {
-        if (typeof (model as any).getFeatureNames === 'function') {
+        if (typeof (model as any).getFeatureNames === "function") {
             return (model as any).getFeatureNames();
         }
         // Fallback to metadata if available
@@ -50,7 +53,7 @@ const TrainPage: React.FC<TrainPageProps> = ({ model_name, parameters }) => {
     }, []);
 
     const [trainingParams, setTrainingParams] = useState<Parameters>(
-        parameters == null ? lastParams : parameters
+        parameters == null ? lastParams : parameters,
     );
 
     useEffect(() => {
@@ -68,7 +71,6 @@ const TrainPage: React.FC<TrainPageProps> = ({ model_name, parameters }) => {
         updateParams({ trainParams: trainingParams });
     };
 
-
     return (
         <div className="grid grid-cols-10 mx-auto w-full h-full">
             <div className="col-span-2 shadow-lg justify-between overflow-auto p-4 bg-gradient-to-br from-blue-50 to-purple-50">
@@ -81,19 +83,24 @@ const TrainPage: React.FC<TrainPageProps> = ({ model_name, parameters }) => {
                     featureNames={featureNames}
                 />
             </div>
-            <div className="col-span-6 shadow-lg overflow-hidden">
+
+            <div
+                className={`${problem_type === "classifier" ? "col-span-6" : "col-span-8"} shadow-lg overflow-hidden`}
+            >
                 <TrainComponent
                     data={data}
                     componentName={model_name}
                 />
             </div>
 
-            <div className="col-span-2 p-4 shadow-lg bg-gradient-to-br from-blue-50 to-purple-50">
-                <ClassifierResults 
-                metrics={data?.metrics}
-                metadata={data?.metadata} 
-                />
-            </div>
+            {problem_type === "classifier" && (
+                <div className="col-span-2 p-4 shadow-lg bg-gradient-to-br from-blue-50 to-purple-50">
+                    <ClassifierResults
+                        metrics={data?.metrics}
+                        metadata={data?.metadata}
+                    />
+                </div>
+            )}
         </div>
     );
 };

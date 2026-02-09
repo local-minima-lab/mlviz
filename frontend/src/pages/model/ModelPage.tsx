@@ -13,6 +13,7 @@ const ModelPage: React.FC<ModelPageProps> = ({
     model_name,
     component_type,
     parameters,
+    problem_type,
 }) => {
     if (component_type == "predict") {
         return (
@@ -26,6 +27,7 @@ const ModelPage: React.FC<ModelPageProps> = ({
             <TrainPage
                 model_name={model_name}
                 parameters={parameters}
+                problem_type={problem_type}
             />
         );
     } else if (component_type == "manual") {
@@ -35,8 +37,7 @@ const ModelPage: React.FC<ModelPageProps> = ({
                 parameters={parameters}
             />
         );
-    }
-    else if (component_type == "viz_only") {
+    } else if (component_type == "viz_only") {
         return (
             <VizOnlyPage
                 model_name={model_name}

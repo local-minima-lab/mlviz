@@ -11,7 +11,7 @@ const StoryPageWrapper: React.FC = () => {
 
     const location = useLocation();
 
-    const storyConfig = config as Config;
+    const storyConfig = config as unknown as Config;
     const stories: Record<string, Story> = storyConfig.stories;
     const pages: Record<string, PageUnion> = storyConfig.pages;
 

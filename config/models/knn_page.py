@@ -2,7 +2,7 @@ from typing import Annotated, Literal, Union
 
 from pydantic import BaseModel, Field
 
-from .base import ModelPage
+from .base import ModelPage, ProblemType
 
 
 # Parameters
@@ -20,6 +20,7 @@ class KNNVizParameters(BaseModel):
 # Pages
 class KNNPage(ModelPage):
     model_name: Literal["knn"] = "knn"
+    problem_type: ProblemType = "classifier"
 
 
 class KNNTrainPage(KNNPage):
