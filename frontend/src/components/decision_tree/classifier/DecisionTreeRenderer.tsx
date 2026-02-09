@@ -329,7 +329,8 @@ export const renderDecisionTree = ({
             distribution,
             120,
             externalColorScale,
-            interpolationFactor
+            interpolationFactor,
+            data.classes || []
         );
         
         // In manual mode, add click handler for split nodes

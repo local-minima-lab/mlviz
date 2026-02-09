@@ -1,7 +1,6 @@
 ---
-
 kanban-plugin: list
-
+draft: "true"
 ---
 
 ## by next meeting

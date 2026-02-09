@@ -251,8 +251,8 @@ class ManualTreeService:
             feature_values,
             y_node,
             request.threshold,
-            feature_idx,
-            thresholds=[request.threshold]
+            feature_idx
+            # Don't pass thresholds parameter - use default num_bins for granular visualization
         )
 
         return ManualNodeStatsResponse(

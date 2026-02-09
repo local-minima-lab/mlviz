@@ -64,7 +64,8 @@ export const renderIntegratedSplitNode = (
     distribution: ClassDistribution[],
     totalWidth: number,
     colorScale?: ((className: string) => string) | d3.ScaleOrdinal<string, string>,
-    interpolationFactor?: number
+    interpolationFactor?: number,
+    classNames?: string[]
 ) => {
     const histogramHeight = 40;
     const textHeight = 30;
@@ -94,7 +95,8 @@ export const renderIntegratedSplitNode = (
             histogramHeight - 5,
             -totalWidth / 2 + 5,
             -totalHeight / 2 + 5,
-            colorScale
+            colorScale,
+            classNames
         );
     }
 
@@ -287,7 +289,8 @@ const renderHistogramComponent = (
     height: number,
     xOffset: number,
     yOffset: number,
-    colorScale?: ((className: string) => string) | d3.ScaleOrdinal<string, string>
+    colorScale?: ((className: string) => string) | d3.ScaleOrdinal<string, string>,
+    classNames?: string[]
 ) => {
     if (!histogramData.bins || histogramData.bins.length < 2) return;
 
@@ -305,11 +308,14 @@ const renderHistogramComponent = (
     
     console.log('[renderHistogramComponent] Keys:', keys);
     console.log('[renderHistogramComponent] Sorted Keys:', sortedKeys);
+    console.log('[renderHistogramComponent] Class names:', classNames);
     
-    const colorScheme = colorScale
-        ? sortedKeys.map((cls) => {
-              const color = colorScale(cls);
-              console.log(`[renderHistogramComponent] Mapping class "${cls}" to color:`, color);
+    const colorScheme = colorScale && classNames
+        ? sortedKeys.map((classIndex) => {
+              // Convert class index (e.g., "0") to class name (e.g., "setosa")
+              const className = classNames[parseInt(classIndex)];
+              const color = colorScale(className);
+              console.log(`[renderHistogramComponent] Mapping class index "${classIndex}" -> name "${className}" -> color:`, color);
               return color;
           })
         : undefined;
