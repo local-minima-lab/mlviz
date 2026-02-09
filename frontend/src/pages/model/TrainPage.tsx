@@ -1,6 +1,7 @@
 import ClassifierResults from "@/components/ClassifierResults";
 import ModelOptionsForm from "@/components/input/ModelOptionsForm";
 import { TrainComponent } from "@/components/TrainComponent";
+import { SuccessAlert } from "@/components/ui/CustomAlerts";
 import { useModel } from "@/contexts/ModelContext";
 import { CurrentStoryContext } from "@/contexts/StoryContext";
 import type { ModelOption } from "@/types/parameters";
@@ -66,13 +67,21 @@ const TrainPage: React.FC<TrainPageProps> = ({
         train(parameters || {});
     }, [parameters, train]);
 
-    const handleTrainModel = () => {
-        train(trainingParams);
+    const [showAlert, setShowAlert] = useState(false);
+
+    const handleTrainModel = async () => {
+        await train(trainingParams);
         updateParams({ trainParams: trainingParams });
+        setShowAlert(true);
+        setTimeout(() => setShowAlert(false), 2000);
     };
 
     return (
-        <div className="grid grid-cols-10 mx-auto w-full h-full">
+        <div className="grid grid-cols-10 mx-auto w-full h-full relative">
+            {showAlert && (
+                <SuccessAlert description="Model trained successfully." />
+            )}
+
             <div className="col-span-2 shadow-lg justify-between overflow-auto p-4 bg-gradient-to-br from-blue-50 to-purple-50">
                 <ModelOptionsForm
                     optionsConfig={options}

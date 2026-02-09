@@ -3,6 +3,7 @@ import { PredictComponent } from "@/components/PredictComponent";
 import { useModel } from "@/contexts/ModelContext";
 import { CurrentStoryContext } from "@/contexts/StoryContext";
 import type { ModelPage as ModelPageProps } from "@/types/story";
+import { SuccessAlert } from "@/components/ui/CustomAlerts";
 import React, { useContext, useEffect, useRef, useState } from "react";
 
 type PredictPageProps = Pick<ModelPageProps, "model_name" | "parameters">;
@@ -77,12 +78,16 @@ const PredictPage: React.FC<PredictPageProps> = ({
 
     const lastPredictedPointsRef = useRef<string>("");
 
+    const [showAlert, setShowAlert] = useState(false);
+
     const handlePredict = (newPoints: Record<string, number>) => {
         setPredictionInputPoints(newPoints);
         updateParams({ predictParams: newPoints });
         // Trigger prediction immediately on user action
         predict(newPoints);
         lastPredictedPointsRef.current = JSON.stringify(newPoints) + currentFeatures.join(",");
+        setShowAlert(true);
+        setTimeout(() => setShowAlert(false), 2000);
     };
 
     // Auto-predict on mount, when features change, or when inputs change
@@ -108,7 +113,10 @@ const PredictPage: React.FC<PredictPageProps> = ({
     }
 
     return (
-        <div className="grid grid-cols-10 w-full h-full">
+        <div className="grid grid-cols-10 w-full h-full relative">
+            {showAlert && (
+                <SuccessAlert description="Prediction completed." />
+            )}
             <div className="col-span-2 shadow-lg justify-between overflow-auto p-4 bg-gradient-to-br from-blue-50 to-purple-50">
                 <PredictionInputForm
                     features={currentFeatures}

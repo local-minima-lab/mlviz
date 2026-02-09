@@ -59,8 +59,8 @@ export const StoryPage: React.FC<StoryPageProps> = ({
                 </div>
             </div>
 
-            <div className="shrink-0 h-[5dvh] flex flex-row justify-between items-center bg-gray-100">
-                <p className="bg-gradient-to-r from-fuchsia-800 to-cyan-800 bg-clip-text text-transparent px-4 font-bold font-mono text-xs">
+            <footer className="shrink-0 border-t border-gray-200 px-4 py-2 flex items-center justify-between text-sm tracking-tight">
+                <p className="bg-gradient-to-r from-fuchsia-500 to-cyan-500 bg-clip-text text-transparent font-semibold font-mono">
                     story/{story.name}
                 </p>
                 <Link to={"/"}>
@@ -71,7 +71,7 @@ export const StoryPage: React.FC<StoryPageProps> = ({
                         <House />
                     </Button>
                 </Link>
-            </div>
+            </footer>
         </div>
     );
 };
