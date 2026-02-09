@@ -4,7 +4,7 @@ import type { Config } from "@/types/story";
 import { Link } from "react-router-dom"; // Import Link
 
 const IndexPage = () => {
-    const storyConfig = config as Config;
+    const storyConfig = config as unknown as Config;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-neutral-100 to-stone-50">
@@ -35,14 +35,20 @@ const IndexPage = () => {
                 ))}
             </div>
 
-            <div className="h-[1dvh] border-t-1">
-                <p className="text-center p-2 text-sm tracking-tight bg-gradient-to-r from-fuchsia-500 to-cyan-500 bg-clip-text text-transparent">
-                    a project by{" "}
-                    <span className="px-1 font-bold font-mono">
-                        @zaidansani
-                    </span>
-                </p>
-            </div>
+            <footer className="border-t border-gray-200 px-4 py-2 flex items-center justify-between text-sm tracking-tight">
+                <Link
+                    className="px-3 py-1.5 rounded-md bg-gradient-to-r from-fuchsia-500 to-cyan-500 bg-clip-text text-transparent font-semibold font-mono hover:opacity-80 transition-opacity"
+                    to={"https://github.com/local-minima-lab"}
+                >
+                    a project by Local Minima Lab
+                </Link>
+                <Link
+                    className="px-3 py-1.5 rounded-md bg-gradient-to-r from-fuchsia-500 to-cyan-500 bg-clip-text text-transparent font-mono hover:opacity-80 transition-opacity"
+                    to={"https://github.com/zaidansani"}
+                >
+                    @zaidansani
+                </Link>
+            </footer>
         </div>
     );
 };

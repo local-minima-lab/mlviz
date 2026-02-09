@@ -16,6 +16,7 @@ import type {
     PlotPoint,
     Prediction,
 } from "@/components/plots/types";
+import { renderLegend } from "@/components/plots/utils/legendHelper";
 import {
     createColorScale,
     createContinuousColorScale,
@@ -33,7 +34,7 @@ export function renderScatter2D(
     featureNames: string[],
     config: Config,
     decisionBoundary: DecisionBoundary | undefined,
-    options: ScatterRenderOptions
+    options: ScatterRenderOptions,
 ) {
     console.log("[scatter2D] Rendering with:", {
         plotPointsCount: plotPoints.length,
@@ -51,7 +52,7 @@ export function renderScatter2D(
         showGrid = true,
         showLegend = true,
         showAxes = true,
-        useNiceScales = true,  // Default to true for backward compatibility
+        useNiceScales = true, // Default to true for backward compatibility
         onPointClick,
         onPointHover,
     } = options;
@@ -75,7 +76,7 @@ export function renderScatter2D(
         .scaleLinear()
         .domain([bounds.min[0], bounds.max[0]])
         .range([0, innerWidth]);
-    
+
     // Only apply .nice() if useNiceScales is true
     if (useNiceScales) {
         xScale.nice();
@@ -85,7 +86,7 @@ export function renderScatter2D(
         .scaleLinear()
         .domain([bounds.min[1], bounds.max[1]])
         .range([innerHeight, 0]);
-    
+
     // Only apply .nice() if useNiceScales is true
     if (useNiceScales) {
         yScale.nice();
@@ -115,7 +116,7 @@ export function renderScatter2D(
     const contentGroup = container.append("g").attr("class", "zoom-content");
     // 3. Axes (top layer - above content with white backgrounds)
     const axesGroup = container.append("g").attr("class", "axes-fixed");
-    // 4. Overlay group for components that must be on top (legend, etc.)
+    // 4. Overlay group for components that must be on top
     const overlayGroup = container.append("g").attr("class", "overlay-fixed");
 
     // Render grid first (bottom layer - fixed, updates with zoom)
@@ -130,7 +131,7 @@ export function renderScatter2D(
             decisionBoundary,
             xScale,
             yScale,
-            config
+            config,
         );
     }
 
@@ -144,7 +145,7 @@ export function renderScatter2D(
         pointRadius,
         pointOpacity,
         onPointClick,
-        onPointHover
+        onPointHover,
     );
 
     // Render axes on top (in axes group - fixed, not zoomable, with white backgrounds)
@@ -156,24 +157,73 @@ export function renderScatter2D(
             featureNames,
             innerWidth,
             innerHeight,
-            margin
+            margin,
         );
     }
 
     // Render legend (in overlay group - always on top)
     if (showLegend) {
-        renderLegend2D(overlayGroup, config, innerWidth);
+        const legend = renderLegend(overlayGroup, config, innerWidth, innerHeight);
+        if (legend) {
+            legend.onFilterChange((focusedNames) => {
+                // Update data points
+                const points = contentGroup.select(".data-points").selectAll<SVGCircleElement, PlotPoint>("circle");
+                points
+                    .transition()
+                    .duration(200)
+                    .attr("fill", (d) => {
+                        if (focusedNames === null) return colorScale(d);
+                        const label = d.type === "classification" ? d.label : "";
+                        return focusedNames.has(label) ? colorScale(d) : "#d1d5db";
+                    })
+                    .attr("opacity", (d) => {
+                        if (focusedNames === null) return pointOpacity;
+                        const label = d.type === "classification" ? d.label : "";
+                        return focusedNames.has(label) ? pointOpacity : 0.3;
+                    });
+
+                // Update decision boundary regions
+                const boundaryRects = contentGroup.select(".decision-boundary").selectAll<SVGRectElement, unknown>("rect");
+                if (!boundaryRects.empty()) {
+                    const names =
+                        config.type === "classification"
+                            ? config.classNames
+                            : config.type === "clustering"
+                              ? config.clusterNames
+                              : [];
+                    const scheme =
+                        config.type === "classification" || config.type === "clustering"
+                            ? config.colorScheme || "default"
+                            : "default";
+                    const categoricalScale = createColorScale(names, scheme);
+
+                    boundaryRects
+                        .transition()
+                        .duration(200)
+                        .attr("fill", function () {
+                            const prediction = d3.select(this).attr("data-prediction");
+                            if (focusedNames === null) return categoricalScale(prediction);
+                            return focusedNames.has(prediction) ? categoricalScale(prediction) : "#e5e7eb";
+                        })
+                        .attr("opacity", function () {
+                            if (focusedNames === null) return 0.3;
+                            const prediction = d3.select(this).attr("data-prediction");
+                            return focusedNames.has(prediction) ? 0.3 : 0.1;
+                        });
+                }
+            });
+        }
     }
 
     // Return scales, groups, and bounds for zoom handling
-    return { 
-        xScale, 
-        yScale, 
-        colorScale, 
-        contentGroup, 
+    return {
+        xScale,
+        yScale,
+        colorScale,
+        contentGroup,
         axesGroup,
         gridGroup,
-        bounds: { innerWidth, innerHeight }
+        bounds: { innerWidth, innerHeight },
     };
 }
 
@@ -186,7 +236,7 @@ function renderDecisionBoundary2D(
     boundary: DecisionBoundary,
     xScale: d3.ScaleLinear<number, number>,
     yScale: d3.ScaleLinear<number, number>,
-    config: Config
+    config: Config,
 ) {
     const { meshPoints, predictions } = boundary;
 
@@ -207,10 +257,10 @@ function renderDecisionBoundary2D(
 
     // Estimate cell size based on mesh resolution
     const xValues = Array.from(
-        new Set(meshPoints.map((p: number[]) => p[0]))
+        new Set(meshPoints.map((p: number[]) => p[0])),
     ).sort((a, b) => a - b);
     const yValues = Array.from(
-        new Set(meshPoints.map((p: number[]) => p[1]))
+        new Set(meshPoints.map((p: number[]) => p[1])),
     ).sort((a, b) => a - b);
 
     const cellWidth =
@@ -228,11 +278,17 @@ function renderDecisionBoundary2D(
     Array.from(gridData.values()).forEach((cell) => {
         let fillColor: string;
 
-        if (boundary.type === "classification" || boundary.type === "clustering") {
-            const names = 
-                config.type === "classification" ? config.classNames :
-                config.type === "clustering" ? config.clusterNames : [];
-            const scheme = 
+        if (
+            boundary.type === "classification" ||
+            boundary.type === "clustering"
+        ) {
+            const names =
+                config.type === "classification"
+                    ? config.classNames
+                    : config.type === "clustering"
+                      ? config.clusterNames
+                      : [];
+            const scheme =
                 config.type === "classification" || config.type === "clustering"
                     ? config.colorScheme || "default"
                     : "default";
@@ -250,7 +306,7 @@ function renderDecisionBoundary2D(
                 valueRange,
                 config.type === "regression"
                     ? config.colorScheme || "viridis"
-                    : "viridis"
+                    : "viridis",
             );
             fillColor = continuousScale(cell.prediction as number);
         }
@@ -262,7 +318,8 @@ function renderDecisionBoundary2D(
             .attr("width", cellWidth)
             .attr("height", cellHeight)
             .attr("fill", fillColor)
-            .attr("opacity", 0.3);
+            .attr("opacity", 0.3)
+            .attr("data-prediction", String(cell.prediction));
     });
 }
 
@@ -271,7 +328,7 @@ function renderGrid2D(
     xScale: d3.ScaleLinear<number, number>,
     yScale: d3.ScaleLinear<number, number>,
     width: number,
-    height: number
+    height: number,
 ) {
     const gridGroup = g.append("g").attr("class", "grid");
 
@@ -287,14 +344,14 @@ function renderGrid2D(
             d3
                 .axisBottom(xScale)
                 .tickSize(-height)
-                .tickFormat(() => "")
+                .tickFormat(() => ""),
         )
         .call((g) => g.select(".domain").remove())
         .call((g) =>
             g
                 .selectAll(".tick line")
                 .attr("stroke", "#e5e7eb")
-                .attr("stroke-opacity", 0.7)
+                .attr("stroke-opacity", 0.7),
         );
 
     // Y-axis grid
@@ -305,14 +362,14 @@ function renderGrid2D(
             d3
                 .axisLeft(yScale)
                 .tickSize(-width)
-                .tickFormat(() => "")
+                .tickFormat(() => ""),
         )
         .call((g) => g.select(".domain").remove())
         .call((g) =>
             g
                 .selectAll(".tick line")
                 .attr("stroke", "#e5e7eb")
-                .attr("stroke-opacity", 0.7)
+                .attr("stroke-opacity", 0.7),
         );
 }
 
@@ -323,13 +380,18 @@ function renderAxes2D(
     featureNames: string[],
     width: number,
     height: number,
-    margin: { top: number; right: number; bottom: number; left: number } = DEFAULT_MARGIN
+    margin: {
+        top: number;
+        right: number;
+        bottom: number;
+        left: number;
+    } = DEFAULT_MARGIN,
 ) {
     // Calculate background coverage based on actual margins
-    const leftCoverage = margin.left + 10;  // Left margin + padding
-    const bottomCoverage = margin.bottom + 20;  // Bottom margin + padding for labels
-    const topCoverage = margin.top + 10;  // Top margin + padding
-    const rightCoverage = margin.right + 10;  // Right margin + padding
+    const leftCoverage = margin.left + 10; // Left margin + padding
+    const bottomCoverage = margin.bottom + 20; // Bottom margin + padding for labels
+    const topCoverage = margin.top + 10; // Top margin + padding
+    const rightCoverage = margin.right + 10; // Right margin + padding
 
     // Add white background for X-axis (bottom, extended to cover corners)
     g.append("rect")
@@ -434,12 +496,12 @@ function renderDataPoints2D(
     radius: number,
     opacity: number,
     onPointClick?: (index: number, point: number[]) => void,
-    onPointHover?: (index: number | null) => void
+    onPointHover?: (index: number | null) => void,
 ) {
     console.log(
         "[renderDataPoints2D] Creating points group with",
         plotPoints.length,
-        "points"
+        "points",
     );
 
     const pointsGroup = g
@@ -501,68 +563,13 @@ function renderDataPoints2D(
     circles.append("title").text((d) => {
         if (d.type === "classification") {
             return `${d.label}\n(${d.coordinates[0].toFixed(
-                2
+                2,
             )}, ${d.coordinates[1].toFixed(2)})`;
         } else {
             return `Value: ${d.value.toFixed(3)}\n(${d.coordinates[0].toFixed(
-                2
+                2,
             )}, ${d.coordinates[1].toFixed(2)})`;
         }
     });
 }
 
-function renderLegend2D(
-    g: d3.Selection<SVGGElement, unknown, null, undefined>,
-    config: Config,
-    width: number
-) {
-    if (config.type !== "classification" && config.type !== "clustering") return;
-
-    const names = config.type === "classification" ? config.classNames : config.clusterNames;
-    const categoricalScale = createColorScale(
-        names,
-        config.colorScheme || "default"
-    );
-
-    const legendGroup = g
-        .append("g")
-        .attr("class", "legend")
-        .attr("transform", `translate(${width - 130}, 10)`);
-
-    // Add white background with elevation-like shadow/border
-    const padding = { top: 12, right: 12, bottom: 6, left: 12 };
-    const itemHeight = 15;
-    const legendWidth = 120;
-    const legendHeight = names.length * itemHeight + padding.top + padding.bottom - 4;
-
-    legendGroup
-        .insert("rect", ":first-child")
-        .attr("x", -padding.left)
-        .attr("y", -padding.top)
-        .attr("width", legendWidth)
-        .attr("height", legendHeight)
-        .attr("fill", "white")
-        .attr("fill-opacity", 1)
-        .attr("rx", 10)
-        .attr("class", "shadow-sm font-medium");
-
-    names.forEach((name: string, i: number) => {
-        const legendRow = legendGroup
-            .append("g")
-            .attr("transform", `translate(0, ${(i) * itemHeight})`);
-
-        legendRow
-            .append("circle")
-            .attr("cx", 2)
-            .attr("cy", 0)
-            .attr("r", 4)
-            .attr("fill", categoricalScale(name));
-
-        legendRow
-            .append("text")
-            .attr("x", 12)
-            .attr("y", 4)
-            .attr("class", "text-[10px] font-medium fill-slate-700 select-none")
-            .text(name);
-    });
-}

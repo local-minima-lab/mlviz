@@ -14,6 +14,7 @@ import type {
     DecisionBoundary,
     PlotPoint,
 } from "@/components/plots/types";
+import { renderLegend } from "@/components/plots/utils/legendHelper";
 import * as d3 from "d3";
 
 // ============================================================================
@@ -121,10 +122,43 @@ export function renderScatter1D(
         onPointHover
     );
 
-    // Render legend (at the end so it's on top)
+    // Render legend
     if (showLegend) {
-        const legendGroup = container.append("g").attr("class", "legend-layer");
-        renderLegend1D(legendGroup, config, innerWidth);
+        const legend = renderLegend(container, config, innerWidth, innerHeight);
+        if (legend) {
+            legend.onFilterChange((focusedNames) => {
+                // Update data points
+                const points = container.select(".data-points").selectAll<SVGCircleElement, PlotPoint>("circle");
+                points
+                    .transition()
+                    .duration(200)
+                    .attr("fill", (d) => {
+                        if (focusedNames === null) return colorScale(d);
+                        const label = d.type === "classification" ? d.label : "";
+                        return focusedNames.has(label) ? colorScale(d) : "#d1d5db";
+                    })
+                    .attr("opacity", (d) => {
+                        if (focusedNames === null) return pointOpacity;
+                        const label = d.type === "classification" ? d.label : "";
+                        return focusedNames.has(label) ? pointOpacity : 0.3;
+                    });
+
+                // Update decision boundary regions
+                const boundaryRects = container.select(".decision-boundary").selectAll<SVGRectElement, unknown>("rect");
+                if (!boundaryRects.empty()) {
+                    const getColor = createBoundaryColorScale(config);
+
+                    boundaryRects
+                        .transition()
+                        .duration(200)
+                        .attr("fill", function () {
+                            const prediction = d3.select(this).attr("data-prediction");
+                            if (focusedNames === null) return getColor(prediction);
+                            return focusedNames.has(prediction) ? getColor(prediction) : "#e5e7eb";
+                        });
+                }
+            });
+        }
     }
 
     return { xScale, colorScale };
@@ -174,7 +208,8 @@ function renderDecisionBoundary1D(
             .attr("y", stripCenter - stripHeight / 2)
             .attr("width", x2 - x1)
             .attr("height", stripHeight)
-            .attr("fill", getColor(current.prediction));
+            .attr("fill", getColor(current.prediction))
+            .attr("data-prediction", String(current.prediction));
     }
 }
 
@@ -379,57 +414,3 @@ function renderDataPoints1D(
     });
 }
 
-function renderLegend1D(
-    g: d3.Selection<SVGGElement, unknown, null, undefined>,
-    config: Config,
-    width: number
-) {
-    if (config.type !== "classification" && config.type !== "clustering") return;
-
-    const categoricalScale = createBoundaryColorScale(config);
-    const names = config.type === "classification" ? config.classNames : config.clusterNames;
-
-    const legendGroup = g
-        .append("g")
-        .attr("class", "legend")
-        .attr("transform", `translate(${width - 130}, -30)`);
-
-    // Add white background with elevation-like shadow/border
-    const padding = { top: 12, right: 12, bottom: 12, left: 12 };
-    const itemHeight = 18;
-    const legendWidth = 120;
-    const legendHeight = names.length * itemHeight + padding.top + padding.bottom - 4;
-
-    legendGroup
-        .insert("rect", ":first-child")
-        .attr("x", -padding.left)
-        .attr("y", -padding.top)
-        .attr("width", legendWidth)
-        .attr("height", legendHeight)
-        .attr("fill", "white")
-        .attr("fill-opacity", 0.9)
-        .attr("rx", 8)
-        .attr("stroke", "#e5e7eb")
-        .attr("stroke-width", 1)
-        .attr("class", "shadow-sm");
-
-    names.forEach((name: string, i: number) => {
-        const legendRow = legendGroup
-            .append("g")
-            .attr("transform", `translate(0, ${i * itemHeight})`);
-
-        legendRow
-            .append("circle")
-            .attr("cx", 0)
-            .attr("cy", 0)
-            .attr("r", 4)
-            .attr("fill", categoricalScale(name));
-
-        legendRow
-            .append("text")
-            .attr("x", 12)
-            .attr("y", 4)
-            .attr("class", "text-[10px] font-medium fill-slate-700 select-none")
-            .text(name);
-    });
-}

@@ -3,7 +3,7 @@
  *
  * This component uses pure D3 render functions (following the pattern from histogramUtils).
  * It handles:
- * - Auto-detection of data dimensions (1D, 2D, 3D)
+ * - Auto-detection of data dimensions (1D, 2D)
  * - Routing to appropriate D3 render function based on dimensions
  * - Standardized data transformation via VisualisationRenderContext
  * - Integration with BaseVisualisation capabilities (zoom, pan, playback)
@@ -12,7 +12,7 @@
  * - KNN visualization (showing K-nearest neighbors over time)
  * - SVM decision boundaries
  * - Clustering algorithms (K-means, DBSCAN, etc.)
- * - Any ML algorithm requiring 1D-3D feature space visualization
+ * - Any ML algorithm requiring 1D-2D feature space visualization
  */
 
 import type {
@@ -30,21 +30,21 @@ import {
 import {
     renderScatter1D,
     renderScatter2D,
-    renderScatter3D,
-    type Scatter3DRotation,
 } from "@/components/plots/utils/scatterRenderers";
 import { createZoomConfig } from "@/components/plots/utils/zoomConfig";
 import BaseVisualisation from "@/components/visualisation/BaseVisualisation";
 import type { VisualisationRenderContext } from "@/components/visualisation/types";
 import * as d3 from "d3";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo } from "react";
 
 // ============================================================================
 // BasePlot Props
 // ============================================================================
 
-export interface BasePlotProps
-    extends Omit<BaseScatterPlotProps, "capabilities"> {
+export interface BasePlotProps extends Omit<
+    BaseScatterPlotProps,
+    "capabilities"
+> {
     // Layout customization
     topControls?: React.ReactNode;
     bottomInfo?: React.ReactNode;
@@ -99,16 +99,6 @@ const BasePlot: React.FC<BasePlotProps> = ({
     customRenderer,
 }) => {
     // ============================================================================
-    // State Management
-    // ============================================================================
-
-    // 3D rotation state (only used for 3D plots)
-    const [rotation, setRotation] = useState<Scatter3DRotation>({
-        alpha: 0.35, // Horizontal rotation: slight angle from side
-        beta: 0.25,  // Vertical rotation: pulled down view
-    });
-
-    // ============================================================================
     // Dimension Detection
     // ============================================================================
 
@@ -129,7 +119,7 @@ const BasePlot: React.FC<BasePlotProps> = ({
         (
             container: d3.Selection<SVGGElement, unknown, null, undefined>,
             plotData: number[][],
-            context: VisualisationRenderContext
+            context: VisualisationRenderContext,
         ) => {
             // Clear previous render
             container.selectAll("*").remove();
@@ -164,7 +154,7 @@ const BasePlot: React.FC<BasePlotProps> = ({
             const bounds = calculateCombinedBounds(
                 plotData,
                 decisionBoundary,
-                0.1
+                0.1,
             );
 
             // Get dimensions from context
@@ -194,7 +184,7 @@ const BasePlot: React.FC<BasePlotProps> = ({
                         featureNames,
                         config,
                         decisionBoundary,
-                        renderOptions
+                        renderOptions,
                     );
                     break;
                 case 2:
@@ -205,19 +195,7 @@ const BasePlot: React.FC<BasePlotProps> = ({
                         featureNames,
                         config,
                         decisionBoundary,
-                        renderOptions
-                    );
-                    break;
-                case 3:
-                    renderScatter3D(
-                        container,
-                        plotPoints,
-                        bounds,
-                        featureNames,
-                        config,
-                        decisionBoundary,
-                        rotation,
-                        renderOptions
+                        renderOptions,
                     );
                     break;
                 default:
@@ -237,9 +215,7 @@ const BasePlot: React.FC<BasePlotProps> = ({
             onPointClick,
             onPointHover,
             dimensions,
-            rotation,
-            setRotation,
-        ]
+        ],
     );
 
     // ============================================================================
@@ -261,92 +237,6 @@ const BasePlot: React.FC<BasePlotProps> = ({
         };
     }, [enablePlayback, maxSteps, stepDuration, zoomConfig]);
 
-    // ============================================================================
-    // 3D Rotation Controls
-    // ============================================================================
-
-    const rotation3DControls =
-        dimensions === 3 ? (
-            <div className="bg-white rounded-lg shadow-md p-4 space-y-3">
-                <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                    <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-                        />
-                    </svg>
-                    3D Rotation
-                </h3>
-
-                {/* Horizontal Rotation (Alpha - Y axis) */}
-                <div className="space-y-1">
-                    <label className="flex justify-between text-xs text-gray-600">
-                        <span>Horizontal (α)</span>
-                        <span className="font-mono text-gray-500">
-                            {Math.round(rotation.alpha * 360)}°
-                        </span>
-                    </label>
-                    <input
-                        type="range"
-                        min="0"
-                        max="2"
-                        step="0.01"
-                        value={rotation.alpha}
-                        onChange={(e) =>
-                            setRotation((prev) => ({
-                                ...prev,
-                                alpha: parseFloat(e.target.value),
-                            }))
-                        }
-                        className="w-full h-2 bg-blue-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
-                    />
-                </div>
-
-                {/* Vertical Rotation (Beta - X axis) */}
-                <div className="space-y-1">
-                    <label className="flex justify-between text-xs text-gray-600">
-                        <span>Vertical (β)</span>
-                        <span className="font-mono text-gray-500">
-                            {Math.round(rotation.beta * 360)}°
-                        </span>
-                    </label>
-                    <input
-                        type="range"
-                        min="-0.5"
-                        max="0.5"
-                        step="0.01"
-                        value={rotation.beta}
-                        onChange={(e) =>
-                            setRotation((prev) => ({
-                                ...prev,
-                                beta: parseFloat(e.target.value),
-                            }))
-                        }
-                        className="w-full h-2 bg-green-100 rounded-lg appearance-none cursor-pointer accent-green-600"
-                    />
-                </div>
-
-                {/* Reset Button */}
-                <button
-                    onClick={() => setRotation({ alpha: 0.35, beta: 0.25 })}
-                    className="w-full px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-                >
-                    Reset View
-                </button>
-            </div>
-        ) : null;
-
-    // ============================================================================
-    // Render
-    // ============================================================================
-
     return (
         <BaseVisualisation
             dataConfig={{
@@ -359,12 +249,7 @@ const BasePlot: React.FC<BasePlotProps> = ({
                 controlsStyle: "overlay",
             }}
             layoutConfig={{
-                topControls: (
-                    <>
-                        {rotation3DControls}
-                        {topControls}
-                    </>
-                ),
+                topControls,
                 bottomInfo,
             }}
             eventHandlers={{

@@ -6,7 +6,7 @@
 
 import type {
     KMeansVisualizationData,
-    RenderKMeansProps
+    RenderKMeansProps,
 } from "@/components/kmeans/clustering/types";
 import type { ClusteringConfig, PlotPoint } from "@/components/plots/types";
 import {
@@ -39,7 +39,7 @@ export function renderKMeansTraining({
         colorScale,
         currentIteration = 0,
         showCentroidMovement = true,
-        centroidSize = 10,
+        centroidSize = 6,
     } = props;
 
     // Clear previous render
@@ -49,7 +49,7 @@ export function renderKMeansTraining({
     // Special case: if no iterations exist (prediction mode), use final state
     let iterationData: { assignments: number[]; centroids: number[][] };
     let iterationIndex: number;
-    
+
     if (!data.iterations || data.iterations.length === 0) {
         // No iterations - use final state (prediction mode)
         iterationData = {
@@ -61,12 +61,17 @@ export function renderKMeansTraining({
         // Use Math.floor and clamp to handle indices from interpolation/playback boundaries
         iterationIndex = Math.min(
             Math.floor(currentIteration),
-            data.iterations.length - 1
+            data.iterations.length - 1,
         );
         iterationData = data.iterations[iterationIndex];
-        
+
         if (!iterationData) {
-            console.warn("[KMeansRenderer] No iteration data for index:", currentIteration, "clamped to:", iterationIndex);
+            console.warn(
+                "[KMeansRenderer] No iteration data for index:",
+                currentIteration,
+                "clamped to:",
+                iterationIndex,
+            );
             return;
         }
     }
@@ -74,27 +79,32 @@ export function renderKMeansTraining({
     // Prepare plot data with cluster assignments
     const plotData = data.dataPoints;
     // Use activeClusterCount from props if available, otherwise fallback to data's nClusters
-    const nClusters = props.activeClusterCount !== undefined ? props.activeClusterCount : data.nClusters;
-    
+    const nClusters =
+        props.activeClusterCount !== undefined
+            ? props.activeClusterCount
+            : data.nClusters;
+
     // If no clusters, use a default unassigned state
-    const clusterNames = nClusters > 0 
-        ? Array.from({ length: nClusters }, (_, i) => `Cluster ${i}`)
-        : [];
-    
+    const clusterNames =
+        nClusters > 0
+            ? Array.from({ length: nClusters }, (_, i) => `Cluster ${i}`)
+            : [];
+
     // Always include "Unassigned" if there are any unassigned points or if nClusters is 0
-    const hasUnassignedPoints = nClusters === 0 || iterationData.assignments.some(id => id === -1);
+    const hasUnassignedPoints =
+        nClusters === 0 || iterationData.assignments.some((id) => id === -1);
     if (hasUnassignedPoints && !clusterNames.includes("Unassigned")) {
         clusterNames.push("Unassigned");
     }
-    
-    console.log('[KMeansRenderer] Rendering state:', {
+
+    console.log("[KMeansRenderer] Rendering state:", {
         currentIteration,
         iterationIndex,
         nClusters,
         clusterNames,
         totalDataPoints: plotData.length,
     });
-    
+
     // Map assignments to cluster names
     // If nClusters is 0, all points should be considered "Unassigned"
     const labels = iterationData.assignments.map((clusterId) => {
@@ -147,24 +157,24 @@ export function renderKMeansTraining({
 
     // Transform data to plot points
     const plotPoints = createPlotPoints(plotData, config);
-    
-    console.log('[KMeansRenderer] Plot data debug:', {
+
+    console.log("[KMeansRenderer] Plot data debug:", {
         plotDataLength: plotData.length,
         plotPointsLength: plotPoints.length,
         samplePlotData: plotData[0],
         hasDecisionBoundary: !!decisionBoundary,
     });
-    
+
     // Safety check for empty data
     if (plotData.length === 0) {
         console.warn("[KMeansRenderer] No data points to render");
         return;
     }
-    
+
     const bounds = calculateCombinedBounds(
         plotData,
         decisionBoundary,
-        decisionBoundary ? 0 : 0.1
+        decisionBoundary ? 0 : 0.1,
     );
 
     // Render options
@@ -181,12 +191,19 @@ export function renderKMeansTraining({
     };
 
     // Render appropriate scatter plot based on dimensions
-    let renderResult: {
-        xScale: d3.ScaleLinear<number, number>;
-        yScale?: d3.ScaleLinear<number, number>;
-        colorScale?: (point: PlotPoint) => string;
-        contentGroup?: d3.Selection<SVGGElement, unknown, null, undefined>;
-    } | undefined;
+    let renderResult:
+        | {
+              xScale: d3.ScaleLinear<number, number>;
+              yScale?: d3.ScaleLinear<number, number>;
+              colorScale?: (point: PlotPoint) => string;
+              contentGroup?: d3.Selection<
+                  SVGGElement,
+                  unknown,
+                  null,
+                  undefined
+              >;
+          }
+        | undefined;
     const dimensions_to_render = data.nDimensions;
 
     switch (dimensions_to_render) {
@@ -198,7 +215,7 @@ export function renderKMeansTraining({
                 data.featureNames,
                 config,
                 decisionBoundary,
-                renderOptions
+                renderOptions,
             );
             break;
         case 2:
@@ -209,13 +226,16 @@ export function renderKMeansTraining({
                 data.featureNames,
                 config,
                 decisionBoundary,
-                renderOptions
+                renderOptions,
             );
             break;
     }
 
     if (!renderResult) {
-        console.warn("[KMeansRenderer] No render result for dimensions:", dimensions_to_render);
+        console.warn(
+            "[KMeansRenderer] No render result for dimensions:",
+            dimensions_to_render,
+        );
         return;
     }
 
@@ -234,7 +254,7 @@ export function renderKMeansTraining({
                 clusterNames,
                 opacity: props.isPlacementMode ? 0.3 : 1,
                 tooltipSuffix: props.isPlacementMode ? " (Previous)" : "",
-            }
+            },
         );
 
         // Show centroid movement if not first iteration
@@ -250,7 +270,7 @@ export function renderKMeansTraining({
                     {
                         colorScale,
                         clusterNames,
-                    }
+                    },
                 );
             }
         }
@@ -267,7 +287,7 @@ export function renderKMeansTraining({
                 clusterNames,
                 opacity: props.isPlacementMode ? 0.3 : 1,
                 tooltipSuffix: props.isPlacementMode ? " (Previous)" : "",
-            }
+            },
         );
 
         // Show centroid movement if not first iteration
@@ -283,7 +303,7 @@ export function renderKMeansTraining({
                     {
                         colorScale,
                         clusterNames,
-                    }
+                    },
                 );
             }
         }
@@ -327,10 +347,11 @@ export function renderKMeansPrediction({
     // First, render the base visualization (training data + decision boundary)
     // Use the last iteration (final state) for prediction mode
     // If no iterations exist, use -1 which will trigger final state rendering
-    const currentIteration = data.iterations && data.iterations.length > 0 
-        ? data.iterations.length - 1 
-        : -1;
-    
+    const currentIteration =
+        data.iterations && data.iterations.length > 0
+            ? data.iterations.length - 1
+            : -1;
+
     const baseRenderResult = renderKMeansTraining({
         container,
         data,
@@ -350,7 +371,9 @@ export function renderKMeansPrediction({
 
     // Guard check for baseRenderResult
     if (!baseRenderResult) {
-        console.warn("[KMeansRenderer] No base render result available for prediction mode");
+        console.warn(
+            "[KMeansRenderer] No base render result available for prediction mode",
+        );
         return;
     }
 
@@ -373,7 +396,7 @@ export function renderKMeansPrediction({
                     centroidLineWidth,
                     queryPointSize,
                     highlightColor,
-                }
+                },
             );
         } else if (dimensions_to_render === 1) {
             const { height, margin } = context.dimensions;
@@ -391,7 +414,7 @@ export function renderKMeansPrediction({
                     centroidLineWidth,
                     queryPointSize,
                     highlightColor,
-                }
+                },
             );
         }
     });
@@ -414,7 +437,7 @@ function render2DQueryVisualization(
         centroidLineWidth: number;
         queryPointSize: number;
         highlightColor: string;
-    }
+    },
 ) {
     const {
         colorScale,
@@ -425,12 +448,17 @@ function render2DQueryVisualization(
     } = options;
 
     if (!xScale || !yScale) {
-        console.error("[KMeansRenderer] Missing scales for 2D query visualization");
+        console.error(
+            "[KMeansRenderer] Missing scales for 2D query visualization",
+        );
         return;
     }
 
     if (!query?.queryPoint || query.queryPoint.length < 2) {
-        console.warn("[KMeansRenderer] Malformed query point for 2D visualization:", query);
+        console.warn(
+            "[KMeansRenderer] Malformed query point for 2D visualization:",
+            query,
+        );
         return;
     }
 
@@ -438,13 +466,16 @@ function render2DQueryVisualization(
     const qY = yScale(query.queryPoint[1]);
 
     if (isNaN(qX) || isNaN(qY)) {
-        console.warn("[KMeansRenderer] Query point resulted in NaN coordinates:", {
-            point: query.queryPoint,
-            qX,
-            qY,
-            xDomain: xScale.domain(),
-            yDomain: yScale.domain()
-        });
+        console.warn(
+            "[KMeansRenderer] Query point resulted in NaN coordinates:",
+            {
+                point: query.queryPoint,
+                qX,
+                qY,
+                xDomain: xScale.domain(),
+                yDomain: yScale.domain(),
+            },
+        );
         return;
     }
 
@@ -453,7 +484,9 @@ function render2DQueryVisualization(
 
     // Draw lines to all centroids if enabled
     if (showCentroidLines && data.finalCentroids) {
-        const linesGroup = queryGroup.append("g").attr("class", "centroid-lines");
+        const linesGroup = queryGroup
+            .append("g")
+            .attr("class", "centroid-lines");
         const pointRadius = 5;
 
         data.finalCentroids.forEach((centroid: number[], idx: number) => {
@@ -481,7 +514,10 @@ function render2DQueryVisualization(
             // Create line
             const line = linesGroup
                 .append("line")
-                .attr("class", isAssigned ? "kmeans-assigned-line" : "kmeans-other-line")
+                .attr(
+                    "class",
+                    isAssigned ? "kmeans-assigned-line" : "kmeans-other-line",
+                )
                 .attr("x1", x1)
                 .attr("y1", y1)
                 .attr("x2", x2)
@@ -504,13 +540,15 @@ function render2DQueryVisualization(
             const tooltipContent = `
                 <div class="font-semibold text-gray-900 mb-1">${clusterName}</div>
                 <div class="text-sm text-gray-700">Distance: ${distance.toFixed(4)}</div>
-                ${isAssigned ? '<div class="text-xs text-blue-600 font-semibold mt-1">Assigned Cluster</div>' : ''}
+                ${isAssigned ? '<div class="text-xs text-blue-600 font-semibold mt-1">Assigned Cluster</div>' : ""}
             `;
 
             hoverTarget
                 .on("mouseover", function (event: MouseEvent) {
-                    line.attr("stroke-width", isAssigned ? centroidLineWidth + 1 : 1.5)
-                        .attr("opacity", 0.9);
+                    line.attr(
+                        "stroke-width",
+                        isAssigned ? centroidLineWidth + 1 : 1.5,
+                    ).attr("opacity", 0.9);
                     tooltip.html(tooltipContent);
                     tooltip
                         .style("opacity", 0.95)
@@ -523,8 +561,10 @@ function render2DQueryVisualization(
                         .style("top", event.pageY - 10 + "px");
                 })
                 .on("mouseout", function () {
-                    line.attr("stroke-width", isAssigned ? centroidLineWidth : 0.5)
-                        .attr("opacity", isAssigned ? 0.7 : 0.15);
+                    line.attr(
+                        "stroke-width",
+                        isAssigned ? centroidLineWidth : 0.5,
+                    ).attr("opacity", isAssigned ? 0.7 : 0.15);
                     tooltip.style("opacity", 0);
                 });
         });
@@ -614,7 +654,7 @@ function render1DQueryVisualization(
         centroidLineWidth: number;
         queryPointSize: number;
         highlightColor: string;
-    }
+    },
 ) {
     const {
         colorScale,
@@ -625,22 +665,30 @@ function render1DQueryVisualization(
     } = options;
 
     if (!xScale) {
-        console.error("[KMeansRenderer] Missing xScale for 1D query visualization");
+        console.error(
+            "[KMeansRenderer] Missing xScale for 1D query visualization",
+        );
         return;
     }
 
     if (!query?.queryPoint || query.queryPoint.length < 1) {
-        console.warn("[KMeansRenderer] Malformed query point for 1D visualization:", query);
+        console.warn(
+            "[KMeansRenderer] Malformed query point for 1D visualization:",
+            query,
+        );
         return;
     }
 
     const qX = xScale(query.queryPoint[0]);
     if (isNaN(qX)) {
-        console.warn("[KMeansRenderer] Query point resulted in NaN coordinates (1D):", {
-            point: query.queryPoint,
-            qX,
-            domain: xScale.domain()
-        });
+        console.warn(
+            "[KMeansRenderer] Query point resulted in NaN coordinates (1D):",
+            {
+                point: query.queryPoint,
+                qX,
+                domain: xScale.domain(),
+            },
+        );
         return;
     }
 
@@ -649,7 +697,9 @@ function render1DQueryVisualization(
 
     // Draw lines to all centroids if enabled
     if (showCentroidLines && data.finalCentroids) {
-        const linesGroup = queryGroup.append("g").attr("class", "centroid-lines");
+        const linesGroup = queryGroup
+            .append("g")
+            .attr("class", "centroid-lines");
         const pointRadius = 6;
 
         data.finalCentroids.forEach((centroid: number[], idx: number) => {
@@ -668,7 +718,10 @@ function render1DQueryVisualization(
             // Create line
             const line = linesGroup
                 .append("line")
-                .attr("class", isAssigned ? "kmeans-assigned-line" : "kmeans-other-line")
+                .attr(
+                    "class",
+                    isAssigned ? "kmeans-assigned-line" : "kmeans-other-line",
+                )
                 .attr("x1", x1)
                 .attr("y1", stripCenter)
                 .attr("x2", x2)
@@ -691,13 +744,15 @@ function render1DQueryVisualization(
             const tooltipContent = `
                 <div class="font-semibold text-gray-900 mb-1">${clusterName}</div>
                 <div class="text-sm text-gray-700">Distance: ${distance.toFixed(4)}</div>
-                ${isAssigned ? '<div class="text-xs text-blue-600 font-semibold mt-1">Assigned Cluster</div>' : ''}
+                ${isAssigned ? '<div class="text-xs text-blue-600 font-semibold mt-1">Assigned Cluster</div>' : ""}
             `;
 
             hoverTarget
                 .on("mouseover", function (event: MouseEvent) {
-                    line.attr("stroke-width", isAssigned ? centroidLineWidth + 1 : 1.5)
-                        .attr("opacity", 0.9);
+                    line.attr(
+                        "stroke-width",
+                        isAssigned ? centroidLineWidth + 1 : 1.5,
+                    ).attr("opacity", 0.9);
                     tooltip.html(tooltipContent);
                     tooltip
                         .style("opacity", 0.95)
@@ -710,8 +765,10 @@ function render1DQueryVisualization(
                         .style("top", event.pageY - 10 + "px");
                 })
                 .on("mouseout", function () {
-                    line.attr("stroke-width", isAssigned ? centroidLineWidth : 0.5)
-                        .attr("opacity", isAssigned ? 0.7 : 0.15);
+                    line.attr(
+                        "stroke-width",
+                        isAssigned ? centroidLineWidth : 0.5,
+                    ).attr("opacity", isAssigned ? 0.7 : 0.15);
                     tooltip.style("opacity", 0);
                 });
         });
@@ -799,12 +856,20 @@ function renderCentroids2D(
         clusterNames: string[];
         opacity?: number;
         tooltipSuffix?: string;
-    }
+    },
 ) {
-    const { colorScale, centroidSize, clusterNames, opacity = 1, tooltipSuffix = "" } = options;
+    const {
+        colorScale,
+        centroidSize,
+        clusterNames,
+        opacity = 1,
+        tooltipSuffix = "",
+    } = options;
     const tooltip = setupCentroidTooltip();
 
-    const centroidGroup = container.append("g").attr("class", "kmeans-centroids");
+    const centroidGroup = container
+        .append("g")
+        .attr("class", "kmeans-centroids");
 
     centroids.forEach((centroid, clusterId) => {
         const cx = xScale(centroid[0]);
@@ -838,8 +903,10 @@ function renderCentroids2D(
             .attr("opacity", opacity);
 
         // Centroid marker (cross)
-        const markerGroup = centroidGroup.append("g").attr("class", "centroid-marker");
-        
+        const markerGroup = centroidGroup
+            .append("g")
+            .attr("class", "centroid-marker");
+
         const markerSize = centroidSize * 0.6;
         markerGroup
             .append("line")
@@ -875,12 +942,14 @@ function renderCentroids2D(
         // Tooltip
         const tooltipContent = `
             <div class="font-semibold text-gray-900 mb-1">${clusterName}${tooltipSuffix}</div>
-            <div class="text-sm text-gray-700">Position: [${centroid.map(v => v.toFixed(2)).join(", ")}]</div>
+            <div class="text-sm text-gray-700">Position: [${centroid.map((v) => v.toFixed(2)).join(", ")}]</div>
         `;
 
         hoverTarget
             .on("mouseover", function (event: MouseEvent) {
-                centroidCircle.attr("stroke-width", 4).attr("r", centroidSize + 1);
+                centroidCircle
+                    .attr("stroke-width", 4)
+                    .attr("r", centroidSize + 1);
                 tooltip.html(tooltipContent);
                 tooltip
                     .style("opacity", 0.95)
@@ -914,12 +983,20 @@ function renderCentroids1D(
         clusterNames: string[];
         opacity?: number;
         tooltipSuffix?: string;
-    }
+    },
 ) {
-    const { colorScale, centroidSize, clusterNames, opacity = 1, tooltipSuffix = "" } = options;
+    const {
+        colorScale,
+        centroidSize,
+        clusterNames,
+        opacity = 1,
+        tooltipSuffix = "",
+    } = options;
     const tooltip = setupCentroidTooltip();
 
-    const centroidGroup = container.append("g").attr("class", "kmeans-centroids");
+    const centroidGroup = container
+        .append("g")
+        .attr("class", "kmeans-centroids");
 
     centroids.forEach((centroid, clusterId) => {
         const cx = xScale(centroid[0]);
@@ -952,8 +1029,10 @@ function renderCentroids1D(
             .attr("opacity", opacity);
 
         // Centroid marker (cross)
-        const markerGroup = centroidGroup.append("g").attr("class", "centroid-marker");
-        
+        const markerGroup = centroidGroup
+            .append("g")
+            .attr("class", "centroid-marker");
+
         const markerSize = centroidSize * 0.6;
         markerGroup
             .append("line")
@@ -994,7 +1073,9 @@ function renderCentroids1D(
 
         hoverTarget
             .on("mouseover", function (event: MouseEvent) {
-                centroidCircle.attr("stroke-width", 4).attr("r", centroidSize + 1);
+                centroidCircle
+                    .attr("stroke-width", 4)
+                    .attr("r", centroidSize + 1);
                 tooltip.html(tooltipContent);
                 tooltip
                     .style("opacity", 0.95)
@@ -1026,10 +1107,12 @@ function renderCentroidMovement2D(
     options: {
         colorScale: d3.ScaleOrdinal<string, string>;
         clusterNames: string[];
-    }
+    },
 ) {
     const { colorScale, clusterNames } = options;
-    const movementGroup = container.append("g").attr("class", "centroid-movement");
+    const movementGroup = container
+        .append("g")
+        .attr("class", "centroid-movement");
 
     prevCentroids.forEach((prevCentroid, clusterId) => {
         const currentCentroid = currentCentroids[clusterId];
@@ -1101,10 +1184,12 @@ function renderCentroidMovement1D(
     options: {
         colorScale: d3.ScaleOrdinal<string, string>;
         clusterNames: string[];
-    }
+    },
 ) {
     const { colorScale, clusterNames } = options;
-    const movementGroup = container.append("g").attr("class", "centroid-movement");
+    const movementGroup = container
+        .append("g")
+        .attr("class", "centroid-movement");
 
     prevCentroids.forEach((prevCentroid, clusterId) => {
         const currentCentroid = currentCentroids[clusterId];
@@ -1161,8 +1246,15 @@ function renderCentroidMovement1D(
 // Tooltip Setup
 // ============================================================================
 
-function setupCentroidTooltip(): d3.Selection<HTMLDivElement, unknown, HTMLElement, unknown> {
-    let tooltip = d3.select("body").select<HTMLDivElement>(".kmeans-centroid-tooltip");
+function setupCentroidTooltip(): d3.Selection<
+    HTMLDivElement,
+    unknown,
+    HTMLElement,
+    unknown
+> {
+    let tooltip = d3
+        .select("body")
+        .select<HTMLDivElement>(".kmeans-centroid-tooltip");
 
     if (tooltip.empty()) {
         tooltip = d3
