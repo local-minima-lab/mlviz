@@ -25,7 +25,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({ edges, handler }) => {
     return (
         <div className="p-2 w-full">
             <p className="text-2xl pt-2 pb-4 text-center">Pathways</p>
-            <div className="h-full overflow-scroll flex flex-col gap-2">
+            <div className="h-full overflow-hidden flex flex-col gap-2">
                 {completeEdges.map((edge) => (
                     <NavigationButton
                         key={displayCondition(edge.condition)}

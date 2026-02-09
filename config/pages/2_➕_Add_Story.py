@@ -23,6 +23,12 @@ col1, col2 = st.columns(2)
 with col1:
     name = st.text_input("Name", value=story_name)
     description = st.text_area("Description", placeholder="Story description")
+    start_page_index = st.number_input(
+        "Start Page (node index)",
+        min_value=0,
+        value=0,
+        help="Index of the node to use as the starting page"
+    )
 
 with col2:
     # Get available pages
@@ -75,66 +81,21 @@ add_edges = st.checkbox("Add edges to this story")
 
 edges_data = []
 if add_edges:
-    if not available_pages:
-        st.warning("⚠️ No pages available. Add pages first to create edges.")
-    else:
-        num_edges = st.number_input("Number of edges", min_value=1, max_value=10, value=1)
-        
-        for i in range(num_edges):
-            with st.expander(f"Edge {i+1}", expanded=(i==0)):
-                col_a, col_b = st.columns(2)
-                
-                with col_a:
-                    st.markdown("**Start Node**")
-                    
-                    # Option to select from pages or enter manually
-                    start_mode = st.radio("Start node selection", ["Select from pages", "Manual index"], key=f"start_mode_{i}", horizontal=True)
-                    
-                    if start_mode == "Select from pages":
-                        page_options = {}
-                        for page_id in available_pages:
-                            page = st.session_state.config['pages'][page_id]
-                            display_name = page.get('name')
-                            if not display_name:
-                                display_name = page.get('page_type', 'unknown')
-                            page_options[page_id] = f"{page_id} - {display_name}"
-                        start_page_id = st.selectbox(
-                            "Start Page",
-                            options=list(page_options.keys()),
-                            format_func=lambda x: page_options[x],
-                            key=f"start_page_sel_{i}"
-                        )
-                        start_local_index = int(start_page_id)
-                    else:
-                        start_local_index = st.number_input(f"Start Local Index", min_value=0, value=0, key=f"start_idx_{i}")
-                    
-                    start_story_name = st.text_input(f"Start Story Name (optional)", key=f"start_story_{i}", placeholder="Leave empty for current story")
-                
-                with col_b:
-                    st.markdown("**End Node**")
-                    
-                    # Option to select from pages or enter manually
-                    end_mode = st.radio("End node selection", ["Select from pages", "Manual index"], key=f"end_mode_{i}", horizontal=True)
-                    
-                    if end_mode == "Select from pages":
-                        page_options = {}
-                        for page_id in available_pages:
-                            page = st.session_state.config['pages'][page_id]
-                            display_name = page.get('name')
-                            if not display_name:
-                                display_name = page.get('page_type', 'unknown')
-                            page_options[page_id] = f"{page_id} - {display_name}"
-                        end_page_id = st.selectbox(
-                            "End Page",
-                            options=list(page_options.keys()),
-                            format_func=lambda x: page_options[x],
-                            key=f"end_page_sel_{i}"
-                        )
-                        end_local_index = int(end_page_id)
-                    else:
-                        end_local_index = st.number_input(f"End Local Index", min_value=0, value=0, key=f"end_idx_{i}")
-                    
-                    end_story_name = st.text_input(f"End Story Name (optional)", key=f"end_story_{i}", placeholder="Leave empty for current story")
+    num_edges = st.number_input("Number of edges", min_value=1, max_value=10, value=1)
+
+    for i in range(num_edges):
+        with st.expander(f"Edge {i+1}", expanded=(i==0)):
+            col_a, col_b = st.columns(2)
+
+            with col_a:
+                st.markdown("**Start Node**")
+                start_local_index = st.number_input("Local Index", min_value=0, value=0, key=f"start_idx_{i}")
+                start_story_name = st.text_input("Story Name (optional)", key=f"start_story_{i}", placeholder="Leave empty for current story")
+
+            with col_b:
+                st.markdown("**End Node**")
+                end_local_index = st.number_input("Local Index", min_value=0, value=0, key=f"end_idx_{i}")
+                end_story_name = st.text_input("Story Name (optional)", key=f"end_story_{i}", placeholder="Leave empty for current story")
             
             # Condition
             st.markdown("**Condition**")
@@ -215,15 +176,14 @@ if st.button("➕ Add Story", type="primary"):
         st.error("Please provide a story name")
     elif not nodes_data:
         st.error("Please add at least one node to the story")
+    elif start_page_index >= len(nodes_data):
+        st.error(f"Start page index ({start_page_index}) must be less than the number of nodes ({len(nodes_data)})")
     else:
         try:
-            # Use the first node's index as start_page
-            start_page = nodes_data[0]["index"]
-            
             story_data = {
                 "name": name or story_name,
                 "description": description,
-                "start_page": start_page,
+                "start_page": start_page_index,
                 "nodes": nodes_data,
                 "edges": edges_data
             }

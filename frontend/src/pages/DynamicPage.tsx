@@ -18,6 +18,7 @@ const DynamicPage: React.FC<DynamicPageProps> = ({ page }) => {
                         model_name={page.model_name}
                         component_type={page.component_type}
                         parameters={page.parameters}
+                        problem_type={page.problem_type}
                     />
                 </ModelNameProvider>
             </ModelProvider>

@@ -6,18 +6,20 @@ import IndexPage from "./pages/IndexPage";
 
 function App() {
     return (
-        <StoryProvider>
-            <Routes>
-                <Route
-                    path="/"
-                    element={<IndexPage />}
-                />
-                <Route
-                    path="/story/:storyName"
-                    element={<StoryPageWrapper />}
-                />
-            </Routes>
-        </StoryProvider>
+        <div className="w-screen h-screen overflow-hidden">
+            <StoryProvider>
+                <Routes>
+                    <Route
+                        path="/"
+                        element={<IndexPage />}
+                    />
+                    <Route
+                        path="/story/:storyName"
+                        element={<StoryPageWrapper />}
+                    />
+                </Routes>
+            </StoryProvider>
+        </div>
     );
 }
 

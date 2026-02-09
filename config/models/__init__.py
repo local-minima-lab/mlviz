@@ -6,9 +6,10 @@ from .base import (
     DynamicPage,
     DynamicPageAbstract,
     Index,
-    ModelComponentTypes,
+    ModelComponentType,
     ModelNames,
     ModelPage,
+    ProblemType,
     Slide,
     StaticPage,
     StaticParameters,
@@ -102,8 +103,9 @@ __all__ = [
     "DynamicPageAbstract",
     "DynamicPage",
     "ModelNames",
-    "ModelComponentTypes",
+    "ModelComponentType",
     "ModelPage",
+    "ProblemType"
     # Conditions
     "BaseCondition",
     "BypassCheck",

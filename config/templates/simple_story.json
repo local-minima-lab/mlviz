@@ -1,0 +1,25 @@
+{
+    "stories": {
+        "intro": {
+            "name": "intro",
+            "description": "Introduction story",
+            "start_page": 0,
+            "nodes": [
+                {
+                    "index": 985220418
+                }
+            ],
+            "edges": []
+        }
+    },
+    "pages": {
+        "985220418": {
+            "name": null,
+            "page_type": "static",
+            "parameters": {
+                "text": "Welcome to MLviz!",
+                "link": null
+            }
+        }
+    }
+}
