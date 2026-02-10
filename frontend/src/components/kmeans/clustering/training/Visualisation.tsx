@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import BaseVisualisation from "@/components/visualisation/BaseVisualisation";
 import type { VisualisationRenderContext } from "@/components/visualisation/types";
 import { useKMeans } from "@/contexts/models/KMeansContext";
+import { UNASSIGNED_COLOR } from "@/utils/colorUtils";
 import * as d3 from "d3";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 
@@ -130,7 +131,7 @@ const Visualisation: React.FC<VisualisationProps> = () => {
         return d3
             .scaleOrdinal<string>()
             .domain(clusterNames)
-            .range(d3.schemeCategory10.slice(0, nClusters));
+            .range([...d3.schemeCategory10.slice(0, nClusters), UNASSIGNED_COLOR]);
     }, [visualizationData, selectedCentroids.length]);
 
     // Handle centroid placement click

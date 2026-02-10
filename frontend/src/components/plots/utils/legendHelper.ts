@@ -40,7 +40,12 @@ export function renderLegend(
             : config.clusterNames;
     if (names.length === 0) return null;
 
-    const colorScale = createColorScale(names, config.colorScheme || "default");
+    // Filter "Unassigned" if other labels exist
+    const filteredNames = names.length > 1 && names.includes("Unassigned")
+        ? names.filter(n => n !== "Unassigned")
+        : names;
+
+    const colorScale = createColorScale(filteredNames, config.colorScheme || "default");
 
     let focusedNames: Set<string> | null = null;
     let filterCallback: LegendFilterCallback | null = null;
@@ -49,7 +54,7 @@ export function renderLegend(
     const foWidth = 130;
     const itemHeight = 22;
     const paddingY = 16;
-    const foHeight = names.length * itemHeight + paddingY;
+    const foHeight = filteredNames.length * itemHeight + paddingY;
 
     let x = 0;
     let y = 0;
@@ -115,7 +120,7 @@ export function renderLegend(
         });
     }
 
-    names.forEach((name) => {
+    filteredNames.forEach((name) => {
         const row = div
             .append("xhtml:div")
             .attr("class", "flex items-center gap-2")

@@ -29,6 +29,7 @@ import {
     type BaseModelData,
     type PredictableModelContext,
     type PredictionResult,
+    type StepableModelContext,
     type TrainableModelContext,
     type VisualizableModelContext,
 } from "./BaseModelContext";
@@ -72,7 +73,8 @@ interface KMeansContextType
             KMeansModelData,
             KMeansPredictionAdditionalData
         >,
-        VisualizableModelContext<KMeansModelData> {
+        VisualizableModelContext<KMeansModelData>,
+        StepableModelContext<KMeansModelData, KMeansStepResponse> {
     // KMeans-specific properties
     isStepLoading: boolean;
     stepError: string | null;
@@ -169,7 +171,7 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
     // Centroid selection state
     const [selectedCentroids, setSelectedCentroids] = React.useState<
         number[][]
-    >([]);
+    >(currentModelData?.final_centroids || []);
     const [isPlacingCentroids, setIsPlacingCentroids] =
         React.useState<boolean>(true);
     const selectedCentroidsRef = React.useRef<number[][]>(selectedCentroids);
@@ -178,6 +180,14 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
     React.useEffect(() => {
         selectedCentroidsRef.current = selectedCentroids;
     }, [selectedCentroids]);
+
+    // PERSISTENCE SYNC: Update selected centroids when model data changes (e.g. from sidebar or step)
+    useEffect(() => {
+        if (currentModelData?.final_centroids) {
+            console.log("[KMeansContext] Syncing selectedCentroids from currentModelData");
+            setSelectedCentroids(currentModelData.final_centroids);
+        }
+    }, [currentModelData?.final_centroids]);
 
     // Sync queryPoints from currentModelData if needed
     useEffect(() => {
@@ -199,13 +209,37 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
                 // Automatically include selected centroids if not provided
                 // Use Ref for stability to break infinite loops in components that auto-train
                 const currentCentroids = selectedCentroidsRef.current;
-                const requestParams = {
-                    ...params,
+                
+                // Restructure parameters for API compatibility
+                const {
+                    include_boundary,
+                    boundary_resolution,
+                    max_iterations,
+                    feature_1,
+                    feature_2,
+                    ...paramsForAlgorithm
+                } = (params as any) || {};
+
+                // Map visualization features
+                const vizFeatures = feature_1 !== undefined 
+                    ? (feature_2 !== undefined && feature_2 !== feature_1 ? [feature_1, feature_2] : [feature_1])
+                    : undefined;
+
+                const requestParams: Partial<KMeansTrainRequest> = {
+                    parameters: {
+                        ...paramsForAlgorithm,
+                        feature_1: feature_1 ?? 0,
+                        feature_2: feature_2 ?? 1,
+                    } as any,
                     centroids:
                         params?.centroids ||
                         (currentCentroids.length > 0
                             ? currentCentroids
                             : undefined),
+                    visualisation_features: vizFeatures,
+                    include_boundary,
+                    boundary_resolution,
+                    max_iterations,
                 };
 
                 const data = await trainAPI(requestParams);
@@ -260,13 +294,35 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
             try {
                 // Automatically include selected centroids if not provided
                 const currentCentroids = selectedCentroidsRef.current;
-                const requestParams = {
-                    ...request,
+                
+                // Restructure parameters for API compatibility
+                const {
+                    include_boundary,
+                    boundary_resolution,
+                    feature_1,
+                    feature_2,
+                    ...paramsForAlgorithm
+                } = (request as any) || {};
+
+                // Map visualization features
+                const vizFeatures = feature_1 !== undefined 
+                    ? (feature_2 !== undefined && feature_2 !== feature_1 ? [feature_1, feature_2] : [feature_1])
+                    : undefined;
+
+                const requestParams: Partial<KMeansStepRequest> = {
+                    parameters: {
+                        ...paramsForAlgorithm,
+                        feature_1: feature_1 ?? 0,
+                        feature_2: feature_2 ?? 1,
+                    } as any,
                     centroids:
                         request?.centroids ||
                         (currentCentroids.length > 0
                             ? currentCentroids
                             : undefined),
+                    visualisation_features: vizFeatures,
+                    include_boundary,
+                    boundary_resolution,
                 };
 
                 const data = await stepAPI(requestParams);
@@ -277,6 +333,17 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
                     // Update selected centroids to the new positions
                     if (data.new_centroids) {
                         setSelectedCentroids(data.new_centroids);
+                    }
+
+                    // PERSISTENCE: Update the common model data so it survives refresh
+                    if (currentModelData) {
+                        setCurrentModelData({
+                            ...currentModelData,
+                            final_centroids: data.new_centroids,
+                            final_assignments: data.assignments,
+                            // Ensure iterations or other state is updated if needed
+                            // For step-by-step, we mostly care about the latest centroids
+                        });
                     }
 
                     setIsPlacingCentroids(false);
@@ -396,12 +463,20 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
             // Only use the features that were used for training (visualization features)
             const queryPoint = featureNames.map((name) => points[name] || 0);
 
+            // Extract algorithm parameters for prediction
+            const { feature_1, feature_2, ...paramsForAlgorithm } = lastParams || {};
+
             await makePrediction({
                 query_points: [queryPoint],
                 centroids: centroids,
+                parameters: {
+                    ...paramsForAlgorithm,
+                    feature_1: feature_1 ?? 0,
+                    feature_2: feature_2 ?? 1,
+                } as any
             });
         },
-        [getPredictiveFeatureNames, getCentroids, makePrediction],
+        [getPredictiveFeatureNames, getCentroids, makePrediction, lastParams],
     );
 
     const clearPrediction = useCallback(() => {
@@ -441,6 +516,20 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
     const resetModelData = useCallback(() => {
         console.log("[KMeansContext] Resetting model data");
         baseResetModelData();
+        
+        // Clear all model-specific local states
+        setVisualizationError(null);
+        setStepError(null);
+        setStepData(null);
+        setPredictionError(null);
+        setPredictionData(null);
+        setQueryPoints(null);
+        setSelectedCentroids([]);
+        selectedCentroidsRef.current = []; // Manual clear to ensure immediate trainModel call works
+        setIsPlacingCentroids(true);
+        setIsVisualizationLoading(false);
+        setIsStepLoading(false);
+        setIsPredictionLoading(false);
     }, [baseResetModelData]);
 
     // ========================================================================

@@ -1,5 +1,6 @@
 import ManualPage from "@/pages/model/ManualPage";
 import PredictPage from "@/pages/model/PredictPage";
+import StepPage from "@/pages/model/StepPage";
 import TrainPage from "@/pages/model/TrainPage";
 import VizOnlyPage from "@/pages/model/VizOnlyPage";
 import type { ModelPage as ModelPageType } from "@/types/story";
@@ -42,6 +43,14 @@ const ModelPage: React.FC<ModelPageProps> = ({
             <VizOnlyPage
                 model_name={model_name}
                 parameters={parameters}
+            />
+        );
+    } else if (component_type == "step") {
+        return (
+            <StepPage
+                model_name={model_name}
+                parameters={parameters}
+                problem_type={problem_type}
             />
         );
     }

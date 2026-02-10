@@ -5,6 +5,11 @@
 
 import * as d3 from "d3";
 
+/**
+ * Default grey color used for "Unassigned" labels or null values
+ */
+export const UNASSIGNED_COLOR = "#999999";
+
 // ============================================================================
 // Color Palettes
 // ============================================================================
@@ -55,10 +60,23 @@ export function createColorScale(
     palette: PaletteName = "default"
 ): d3.ScaleOrdinal<string, string> {
     const colors = COLOR_PALETTES[palette];
+    
+    // Create base range of colors
+    const range = colors.slice(0, Math.max(labels.length, colors.length));
+    
+    // Explicitly handle "Unassigned" if present in labels
+    const unassignedIndex = labels.indexOf("Unassigned");
+    if (unassignedIndex !== -1) {
+        // Ensure the range has enough slots
+        if (unassignedIndex < range.length) {
+            range[unassignedIndex] = UNASSIGNED_COLOR;
+        }
+    }
+
     return d3
         .scaleOrdinal<string>()
         .domain(labels)
-        .range(colors.slice(0, Math.max(labels.length, colors.length)));
+        .range(range);
 }
 
 /**

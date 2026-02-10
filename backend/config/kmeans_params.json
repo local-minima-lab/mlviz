@@ -8,6 +8,13 @@
       "description": "Distance metric for assigning points to clusters"
     },
     {
+      "name": "centroid_type",
+      "type": "select",
+      "default": "medoid",
+      "options": ["medoid", "centroid"],
+      "description": "Calculate cluster centers as either medoids (actual data points) or centroids (mean position)"
+    },
+    {
       "name": "feature_1",
       "type": "select",
       "default": 0,

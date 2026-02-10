@@ -53,6 +53,7 @@ export function renderScatter2D(
         showLegend = true,
         showAxes = true,
         useNiceScales = true, // Default to true for backward compatibility
+        legendPosition,
         onPointClick,
         onPointHover,
     } = options;
@@ -163,7 +164,7 @@ export function renderScatter2D(
 
     // Render legend (in overlay group - always on top)
     if (showLegend) {
-        const legend = renderLegend(overlayGroup, config, innerWidth, innerHeight);
+        const legend = renderLegend(overlayGroup, config, innerWidth, innerHeight, { position: legendPosition });
         if (legend) {
             legend.onFilterChange((focusedNames) => {
                 // Update data points

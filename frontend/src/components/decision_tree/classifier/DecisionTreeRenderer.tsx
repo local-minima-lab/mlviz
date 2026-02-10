@@ -5,6 +5,7 @@ import {
     getRevealClipPath,
     isElementVisible,
 } from "@/components/visualisation/utils/interpolationUtils";
+import { UNASSIGNED_COLOR } from "@/utils/colorUtils";
 import * as d3 from "d3";
 import {
     addNodeInteractions,
@@ -263,7 +264,7 @@ export const renderDecisionTree = ({
 
     console.log('[DecisionTreeRenderer] data.classes:', data.classes);
     // Use external color scale if provided (which should always be the case from BaseVisualisation)
-    const colorScale = externalColorScale || ((_className: string) => '#cccccc');
+    const colorScale = externalColorScale || ((_className: string) => UNASSIGNED_COLOR);
     
     console.log('[DecisionTreeRenderer] Color scale initialized');
 

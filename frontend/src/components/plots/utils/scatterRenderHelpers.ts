@@ -13,6 +13,7 @@ import type {
 import {
     createColorScale,
     createContinuousColorScale,
+    UNASSIGNED_COLOR,
 } from "@/utils/colorUtils";
 
 // ============================================================================
@@ -27,6 +28,7 @@ export interface ScatterRenderOptions {
     pointOpacity?: number;
     showGrid?: boolean;
     showLegend?: boolean;
+    legendPosition?: "top-right" | "top-left" | "bottom-right" | "bottom-left";
     showAxes?: boolean;
     useNiceScales?: boolean;  // Whether to round scale domains to nice values (default: true)
     onPointClick?: (index: number, point: number[]) => void;
@@ -64,11 +66,11 @@ export function createScatterColorScale(
         );
         return (point: PlotPoint) => {
             if (point.type === "classification" && point.label === "Unassigned") {
-                return "#000";
+                return UNASSIGNED_COLOR;
             }
             return point.type === "classification"
                 ? categoricalScale(point.label)
-                : "#000";
+                : UNASSIGNED_COLOR;
         };
     } else {
         const valueRange = config.valueRange || [

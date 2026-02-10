@@ -101,6 +101,19 @@ export interface VisualizableModelContext<TModelData extends BaseModelData>
 }
 
 /**
+ * StepPage capability interface
+ * Models that support step-by-step interactive training should extend this.
+ * This allows specialized pages for iterative algorithms like KMeans.
+ */
+export interface StepableModelContext<TModelData extends BaseModelData, TStepResponse = any>
+    extends BaseModelContextType<TModelData> {
+    isStepLoading: boolean;
+    stepError: string | null;
+    stepData: TStepResponse | null;
+    performStep: (params: Record<string, any>) => Promise<void>;
+}
+
+/**
  * Create a base model context with the specified configuration
  */
 export function createBaseModelContext<TModelData extends BaseModelData>(

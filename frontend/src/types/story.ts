@@ -98,7 +98,7 @@ export interface DynamicPage extends DynamicPageParameters {
 export interface ModelPage extends DynamicPageParameters {
     dynamic_type: "model";
     model_name: string;
-    component_type: "train" | "predict" | "manual" | "viz_only";
+    component_type: "train" | "predict" | "manual" | "viz_only" | "step";
     problem_type: "classifier" | "clustering" | "prediction";
 }
 
