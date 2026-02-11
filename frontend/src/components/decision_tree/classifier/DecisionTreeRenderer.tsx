@@ -11,11 +11,10 @@ import {
     addNodeInteractions,
     getClassDistribution,
     renderExpandableLeafNode,
-    renderInlineEditor,
     renderIntegratedSplitNode,
     renderLeafNode,
     setupTooltip,
-    type TransformedNode,
+    type TransformedNode
 } from "./rendererUtils";
 
 interface RenderMode {
@@ -515,49 +514,4 @@ export const renderDecisionTree = ({
     renderMode.applyLinkLabelStyles(linkLabels, pathLineColor, onPathColor);
 
     addNodeInteractions(node, tooltip, getTooltipContent);
-
-    // Render inline editor in manual mode when a node is selected
-    console.log('[DecisionTreeRenderer] Checking inline editor - mode:', mode, 'selectedNodePath:', props.selectedNodePath);
-    // Show editor only if path is not null (null means no selection)
-    if (mode === "manual" && props.selectedNodePath !== undefined && props.selectedNodePath !== null) {
-        console.log('[DecisionTreeRenderer] Attempting to render inline editor');
-        console.log('[DecisionTreeRenderer] Visible nodes:', visibleNodes.length);
-        
-        const selectedNode = visibleNodes.find(n => {
-            // For root node, path is empty array and depth is 0
-            // For child nodes, match by depth
-            if (props.selectedNodePath!.length === 0) {
-                return n.depth === 0;
-            }
-            return n.depth === props.selectedNodePath!.length;
-        });
-        
-        console.log('[DecisionTreeRenderer] Found selected node:', selectedNode);
-        console.log('[DecisionTreeRenderer] Node type:', selectedNode?.data.type);
-        console.log('[DecisionTreeRenderer] Feature names:', props.featureNames);
-        console.log('[DecisionTreeRenderer] Manual callbacks:', props.manualCallbacks);
-        
-        // Show editor for both leaf and split nodes (splitting a split node replaces its children)
-        if (selectedNode && props.featureNames && props.manualCallbacks) {
-            console.log('[DecisionTreeRenderer] Rendering inline editor!');
-            renderInlineEditor(
-                container,
-                selectedNode,
-                props.featureNames,
-                props.featureStats || null,
-                props.selectedFeature || null,
-                props.selectedThreshold || null,
-                colorScale,
-                data.classes || [],
-                props.manualCallbacks
-            );
-        } else {
-            console.log('[DecisionTreeRenderer] Not rendering editor - reason:', {
-                hasSelectedNode: !!selectedNode,
-                nodeType: selectedNode?.data.type,
-                hasFeatureNames: !!props.featureNames,
-                hasCallbacks: !!props.manualCallbacks
-            });
-        }
-    }
 };

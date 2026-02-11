@@ -5,6 +5,8 @@ import { useDecisionTree } from "@/contexts/models/DecisionTreeContext";
 import type { TreeNode } from "@/types/model";
 import { useCallback, useEffect } from "react";
 
+import ManualTreeHUD from "./ManualTreeHUD";
+
 const Visualisation: React.FC = () => {
     const {
         manualTree,
@@ -77,6 +79,7 @@ const Visualisation: React.FC = () => {
             value: node.value,
             histogram_data: (node as any).histogram_data || null, // Include histogram data for split nodes
             terminal: (node as any).terminal || false, // Include terminal flag
+            isOnPath: (node as any).isOnPath || false,
         };
         
         if (node.type === 'split') {
@@ -105,13 +108,22 @@ const Visualisation: React.FC = () => {
     }
     
     return (
-        <BaseDecisionTreeVisualization
-            data={{ tree: manualTree.tree, 
-                classes: getClassNames() || [] }}
-            transformTreeData={transformTreeData}
-            renderFunction={renderManualDecisionTree}
-            clickableSelector=".node, .inline-editor"
-        />
+        <div className="relative h-full w-full">
+            {/* Control HUD */}
+            <div className="absolute top-6 right-6 z-20 flex flex-col gap-4 w-96">
+                <ManualTreeHUD />
+            </div>
+
+            <BaseDecisionTreeVisualization
+                data={{ 
+                    tree: manualTree.tree, 
+                    classes: getClassNames() || [] 
+                }}
+                transformTreeData={transformTreeData}
+                renderFunction={renderManualDecisionTree}
+                clickableSelector=".node"
+            />
+        </div>
     );
 };
 
