@@ -20,7 +20,7 @@ const ModelOptionsForm = ({
     buttonLabel = "Train Model",
 }: ModelOptionsFormProps) => {
     return (
-        <div className="flex flex-col gap-4 h-full">
+        <div className="flex flex-col gap-4">
             {optionsConfig.map((option: ModelOption) => (
                 <ModelOptionWrapper
                     option={option}
