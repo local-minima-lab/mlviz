@@ -9,9 +9,10 @@ import { useLocation, useParams } from "react-router-dom";
 const StoryPageWrapper: React.FC = () => {
     const { config: storyConfig, loading, error } = useConfig();
     const { storyName } = useParams<{ storyName: string }>();
-    if (!storyName) throw new Error("No story name");
-
     const location = useLocation();
+    const context = useContext(StoryContext);
+
+    if (!storyName) throw new Error("No story name");
 
     if (loading) {
         return (
@@ -39,7 +40,6 @@ const StoryPageWrapper: React.FC = () => {
     const stories: Record<string, Story> = storyConfig.stories;
     const pages: Record<string, PageUnion> = storyConfig.pages;
 
-    const context = useContext(StoryContext);
     if (!context) throw new Error("Must be within StoryProvider");
 
     const story: Story | undefined = storyName ? stories[storyName] : undefined;

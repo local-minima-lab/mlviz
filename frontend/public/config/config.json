@@ -64,9 +64,6 @@
                 },
                 {
                     "index": "833078587"
-                },
-                {
-                    "index": "3623605709"
                 }
             ],
             "edges": [
@@ -136,28 +133,13 @@
                         "story_name": null
                     },
                     "end": {
-                        "local_index": 5,
-                        "story_name": null
-                    },
-                    "condition": {
-                        "condition_type": "Bypass",
-                        "name": "Rescue team",
-                        "description": "Time to try out making a decision tree yourself!"
-                    }
-                },
-                {
-                    "start": {
-                        "local_index": 5,
-                        "story_name": null
-                    },
-                    "end": {
                         "local_index": 0,
                         "story_name": "rescue_team"
                     },
                     "condition": {
                         "condition_type": "Bypass",
-                        "name": "Rescue data",
-                        "description": "Look at the rescue data for more insights!"
+                        "name": "Rescue team",
+                        "description": "Time to try out making a decision tree yourself!"
                     }
                 }
             ]
@@ -167,6 +149,9 @@
             "description": "An introduction to decision_trees!",
             "start_page": 0,
             "nodes": [
+                {
+                    "index": "3623605709"
+                },
                 {
                     "index": "2374066883"
                 },
@@ -207,8 +192,8 @@
                     },
                     "condition": {
                         "condition_type": "Bypass",
-                        "name": "Design tree",
-                        "description": "Time to design the tree!"
+                        "name": "Rescue data",
+                        "description": "Look at the rescue data for more insights!"
                     }
                 },
                 {
@@ -222,8 +207,8 @@
                     },
                     "condition": {
                         "condition_type": "Bypass",
-                        "name": "Call is in!",
-                        "description": "A call has arrived. Send out the right team when you are ready!"
+                        "name": "Design tree",
+                        "description": "Time to design the tree!"
                     }
                 },
                 {
@@ -233,6 +218,21 @@
                     },
                     "end": {
                         "local_index": 4,
+                        "story_name": null
+                    },
+                    "condition": {
+                        "condition_type": "Bypass",
+                        "name": "Call is in!",
+                        "description": "A call has arrived. Send out the right team when you are ready!"
+                    }
+                },
+                {
+                    "start": {
+                        "local_index": 4,
+                        "story_name": null
+                    },
+                    "end": {
+                        "local_index": 5,
                         "story_name": null
                     },
                     "condition": {
@@ -266,7 +266,7 @@
             "page_type": "static",
             "parameters": {
                 "text": "",
-                "link": "public/md/decision_tree/iris.md"
+                "link": "md/decision_tree/iris.md"
             }
         },
         "1859081650": {
