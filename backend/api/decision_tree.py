@@ -1,20 +1,22 @@
 from typing import List
+
 from fastapi import APIRouter, HTTPException
+from services import dt_service, manual_tree_service
+
 from .models import (
+    CacheInfoResponse,
     DecisionTreeTrainingRequest,
     DecisionTreeTrainingResponse,
     DecisionTreeTraversalPredictRequest,
     DecisionTreeTraversalPredictResponse,
-    ParameterInfo,
-    CacheInfoResponse,
-    ManualNodeStatsRequest,
-    ManualNodeStatsResponse,
     ManualFeatureStatsRequest,
     ManualFeatureStatsResponse,
+    ManualNodeStatsRequest,
+    ManualNodeStatsResponse,
     ManualTreeEvaluateRequest,
     ManualTreeEvaluateResponse,
+    ParameterInfo,
 )
-from services import dt_service, manual_tree_service
 
 router = APIRouter()
 
@@ -31,10 +33,12 @@ async def get_parameters() -> List[ParameterInfo]:
 
 
 @router.post("/train", response_model=DecisionTreeTrainingResponse)
-async def train_model(request: DecisionTreeTrainingRequest) -> DecisionTreeTrainingResponse:
+async def train_model(
+    request: DecisionTreeTrainingRequest,
+) -> DecisionTreeTrainingResponse:
     """Train a decision tree model with the specified parameters.
 
-    Supports both predefined datasets (iris, wine, breast_cancer, digits) 
+    Supports both predefined datasets (iris, wine, breast_cancer, digits)
     and custom datasets. Models are automatically cached for efficiency.
 
     Args:
@@ -123,8 +127,11 @@ async def get_cache_info():
 
 # Manual Tree Builder Endpoints
 
+
 @router.post("/manual/node-stats", response_model=ManualNodeStatsResponse)
-async def calculate_node_stats(request: ManualNodeStatsRequest) -> ManualNodeStatsResponse:
+async def calculate_node_stats(
+    request: ManualNodeStatsRequest,
+) -> ManualNodeStatsResponse:
     """Calculate statistics for a potential node split in manual tree building.
 
     This endpoint calculates entropy/gini, information gain, class distributions,
@@ -147,11 +154,15 @@ async def calculate_node_stats(request: ManualNodeStatsRequest) -> ManualNodeSta
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to calculate statistics: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to calculate statistics: {str(e)}"
+        )
 
 
 @router.post("/manual/feature-stats", response_model=ManualFeatureStatsResponse)
-async def calculate_feature_stats(request: ManualFeatureStatsRequest) -> ManualFeatureStatsResponse:
+async def calculate_feature_stats(
+    request: ManualFeatureStatsRequest,
+) -> ManualFeatureStatsResponse:
     """Calculate statistics for all possible thresholds of a feature.
 
     This endpoint returns statistics for all valid split points of a feature,
@@ -175,22 +186,26 @@ async def calculate_feature_stats(request: ManualFeatureStatsRequest) -> ManualF
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to calculate feature statistics: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to calculate feature statistics: {str(e)}"
+        )
 
 
 @router.post("/manual/evaluate", response_model=ManualTreeEvaluateResponse)
-async def evaluate_manual_tree(request: ManualTreeEvaluateRequest) -> ManualTreeEvaluateResponse:
+async def evaluate_manual_tree(
+    request: ManualTreeEvaluateRequest,
+) -> ManualTreeEvaluateResponse:
     """Evaluate a manually built tree against test data.
-    
+
     This endpoint calculates accuracy, precision, recall, and F1 scores
     by making predictions on the test set using the provided tree structure.
-    
+
     Args:
         request (ManualTreeEvaluateRequest): Contains tree structure and optional dataset
-    
+
     Raises:
         HTTPException: If evaluation fails
-    
+
     Returns:
         ManualTreeEvaluateResponse: Metrics (accuracy, precision, recall, F1) and confusion matrix
     """
@@ -198,4 +213,6 @@ async def evaluate_manual_tree(request: ManualTreeEvaluateRequest) -> ManualTree
         result = await dt_service.evaluate_manual_tree(request.tree, request.dataset)
         return ManualTreeEvaluateResponse(**result)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to evaluate tree: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to evaluate tree: {str(e)}"
+        )

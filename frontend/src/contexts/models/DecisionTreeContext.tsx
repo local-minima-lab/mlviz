@@ -9,10 +9,11 @@ import {
     calculateNodeStats,
     evaluateManualTree as evaluateManualTreeAPI,
     getParameters as getParametersAPI,
-    predictWithInstructions,
     trainModel as initiateTrainModel,
+    predictWithInstructions,
     type DecisionTreeResponse,
 } from "@/api/dt";
+import { useDataset } from "@/contexts/DatasetContext";
 import type { components } from "@/types/api";
 import type { ClassificationMetrics, TreeNode } from "@/types/model";
 import type { Parameters } from "@/types/story";
@@ -136,6 +137,9 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
     const baseContext = useBaseModel();
     const { currentModelData, lastParams, setCurrentModelData, setLastParams, resetModelData: baseResetModelData, getLastParams, getParameters } = baseContext;
 
+    // Access the active dataset from DatasetContext
+    const { activeDataset } = useDataset();
+
     const [isModelLoading, setIsModelLoading] = useState<boolean>(false);
     const [modelError, setModelError] = useState<string | null>(null);
 
@@ -204,7 +208,12 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
         setIsModelLoading(true);
         setModelError(null);
         try {
-            const data: DecisionTreeResponse = await initiateTrainModel(params);
+            // Include activeDataset if not already in params
+            const requestParams = {
+                ...params,
+                dataset: params.dataset || activeDataset || undefined,
+            };
+            const data: DecisionTreeResponse = await initiateTrainModel(requestParams);
             
             console.log('[trainNewModel] API response:', data);
             console.log('[trainNewModel] data.metadata:', data.metadata);
@@ -243,7 +252,7 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
         } finally {
             setIsModelLoading(false);
         }
-    }, [setCurrentModelData, setLastParams]);
+    }, [setCurrentModelData, setLastParams, activeDataset]);
 
     const clearStoredModelParams = useCallback(() => {
         baseResetModelData();
@@ -342,7 +351,17 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
         if (!currentModelData || treeMode !== 'manual') {
             console.log('[ManualTree] Loading dataset for manual tree...');
             try {
-                const datasetResponse = await loadDataset('iris'); // Default to iris
+                let datasetResponse;
+                if (activeDataset && 'type' in activeDataset && activeDataset.type === 'custom') {
+                    // Custom dataset already has the data inline
+                    datasetResponse = activeDataset as { X: number[][]; y: number[]; feature_names: string[]; target_names: string[] };
+                } else {
+                    // Predefined dataset — load from backend
+                    const datasetName = (activeDataset && typeof activeDataset === 'object' && 'name' in activeDataset)
+                        ? (activeDataset as any).name
+                        : 'iris';
+                    datasetResponse = await loadDataset(datasetName);
+                }
                 console.log('[ManualTree] Dataset loaded:', datasetResponse);
                 
                 // Calculate class distribution from dataset
@@ -419,7 +438,7 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
                 console.error('[ManualTree] Failed to load dataset:', error);
             }
         }
-    }, [currentModelData, treeMode, setCurrentModelData, setLastParams]);
+    }, [currentModelData, treeMode, setCurrentModelData, setLastParams, activeDataset]);
 
     const selectManualNode = useCallback((path: number[] | null) => {
         if (!currentModelData) return;
@@ -445,6 +464,7 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
                 parent_samples_mask: node.samples_mask || null, // Use node's sample indices
                 criterion: 'gini',
                 max_thresholds: 100,
+                dataset: activeDataset || undefined,
             });
             
             setCurrentModelData({
@@ -456,7 +476,7 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
         } catch (error) {
             console.error('Failed to load feature stats:', error);
         }
-    }, [currentModelData, manualTree, selectedNodePath, getNodeByPath, setCurrentModelData]);
+    }, [currentModelData, manualTree, selectedNodePath, getNodeByPath, setCurrentModelData, activeDataset]);
 
     const updateManualThreshold = useCallback((threshold: number) => {
         if (!currentModelData) return;
@@ -483,6 +503,7 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
                 threshold: selectedThreshold,
                 parent_samples_mask: node.samples_mask || null, // Use node's sample indices
                 criterion: 'gini',
+                dataset: activeDataset || undefined,
             });
             
             console.log('[ManualTree] Node stats received:', nodeStats);
@@ -546,7 +567,7 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
             try {
                 const result = await evaluateManualTreeAPI({
                     tree: newTree,
-                    dataset: null, // Uses default Iris dataset
+                    dataset: activeDataset || undefined,
                 });
                 
                 // Update with metrics
@@ -561,7 +582,7 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
         } catch (error) {
             console.error('Failed to split node:', error);
         }
-    }, [currentModelData, manualTree, selectedNodePath, selectedFeature, selectedThreshold, getNodeByPath, updateNodeAtPath, setCurrentModelData]);
+    }, [currentModelData, manualTree, selectedNodePath, selectedFeature, selectedThreshold, getNodeByPath, updateNodeAtPath, setCurrentModelData, activeDataset]);
 
     const markNodeAsLeaf = useCallback(async () => {
         if (!currentModelData || !manualTree || !selectedNodePath) return;
@@ -615,7 +636,7 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
             // Clean tree to remove frontend-only fields like 'terminal'
             const result = await evaluateManualTreeAPI({
                 tree: updatedTree,
-                dataset: null, // Uses default Iris dataset
+                dataset: activeDataset || undefined,
             });
             
             // Update with metrics
@@ -627,7 +648,7 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
             console.error('[ManualTree] Failed to evaluate tree after marking as leaf:', error);
             setCurrentModelData(updatedModelData);
         }
-    }, [currentModelData, manualTree, selectedNodePath, getNodeByPath, updateNodeAtPath, setCurrentModelData]);
+    }, [currentModelData, manualTree, selectedNodePath, getNodeByPath, updateNodeAtPath, setCurrentModelData, activeDataset]);
 
     const canSplitManualNode = useCallback(() => {
         if (!selectedNodePath) return false;
@@ -645,7 +666,7 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
             console.log('[ManualTree] Evaluating tree...');
             const result = await evaluateManualTreeAPI({
                 tree: currentModelData.tree,
-                dataset: null, // Use default (Iris)
+                dataset: activeDataset || undefined,
             });
             
             console.log('[ManualTree] Evaluation result:', result);
@@ -662,7 +683,7 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
         } catch (error) {
             console.error('[ManualTree] Failed to evaluate tree:', error);
         }
-    }, [currentModelData, treeMode, setCurrentModelData]);
+    }, [currentModelData, treeMode, setCurrentModelData, activeDataset]);
 
     const resetModelData = useCallback(() => {
         console.log('[Context] Resetting model data');

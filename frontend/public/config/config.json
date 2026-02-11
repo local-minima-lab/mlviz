@@ -1,0 +1,350 @@
+{
+    "datasets": {
+        "rescue_team": {
+            "type": "custom",
+            "X": [
+                [4.0, 8.0, 0.0, 0.0, 1.0, 6.2],
+                [1.0, 12.0, 1.0, 0.0, 0.0, 3.5],
+                [2.0, 55.0, 0.0, 1.0, 5.0, 11.0],
+                [3.0, 30.0, 1.0, 0.0, 2.0, 14.8],
+                [0.0, 70.0, 1.0, 1.0, 6.0, 18.3],
+                [2.0, 5.0, 1.0, 1.0, 1.0, 9.1],
+                [5.0, 40.0, 0.0, 1.0, 0.0, 7.4],
+                [1.0, 25.0, 0.0, 0.0, 4.0, 4.6],
+                [3.0, 15.0, 1.0, 1.0, 3.0, 20.0],
+                [2.0, 10.0, 0.0, 0.0, 0.0, 16.5]
+            ],
+            "y": [0, 1, 2, 0, 2, 1, 0, 2, 2, 1],
+            "feature_names": [
+                "InjurySeverity",
+                "WaterDepthCm",
+                "PowerOutage",
+                "RoadBlocked",
+                "PeopleStranded",
+                "DistanceKm"
+            ],
+            "target_names": [
+                "Team A (Medical)",
+                "Team B (Utility)",
+                "Team C (Supply/Rescue)"
+            ],
+            "test_size": 0.0,
+            "random_state": 2025
+        }
+    },
+    "stories": {
+        "decision_tree": {
+            "name": "decision_tree",
+            "description": "An introduction to decision_trees!",
+            "start_page": 0,
+            "nodes": [
+                {
+                    "index": "3363168022"
+                },
+                {
+                    "index": "833070531"
+                },
+                {
+                    "index": "2534030846"
+                },
+                {
+                    "index": "1859081650"
+                },
+                {
+                    "index": "604725305"
+                },
+                {
+                    "index": "3558640099"
+                },
+                {
+                    "index": "2374066883"
+                },
+                {
+                    "index": "3425858178"
+                },
+                {
+                    "index": "833078587"
+                },
+                {
+                    "index": "3623605709"
+                }
+            ],
+            "edges": [
+                {
+                    "start": {
+                        "local_index": 0,
+                        "story_name": null
+                    },
+                    "end": {
+                        "local_index": 1,
+                        "story_name": null
+                    },
+                    "condition": {
+                        "condition_type": "Bypass",
+                        "name": "Terminologies",
+                        "description": "Continue reading about the basic terminology we use for decision tree."
+                    }
+                },
+                {
+                    "start": {
+                        "local_index": 1,
+                        "story_name": null
+                    },
+                    "end": {
+                        "local_index": 2,
+                        "story_name": null
+                    },
+                    "condition": {
+                        "condition_type": "Bypass",
+                        "name": "Iris",
+                        "description": "Learn about our first dataset, and how we will use decision trees"
+                    }
+                },
+                {
+                    "start": {
+                        "local_index": 2,
+                        "story_name": null
+                    },
+                    "end": {
+                        "local_index": 3,
+                        "story_name": null
+                    },
+                    "condition": {
+                        "condition_type": "Bypass",
+                        "name": "Training (with sklearn!)",
+                        "description": "Train a decision tree model using sklearn on the iris dataset!"
+                    }
+                },
+                {
+                    "start": {
+                        "local_index": 3,
+                        "story_name": null
+                    },
+                    "end": {
+                        "local_index": 4,
+                        "story_name": null
+                    },
+                    "condition": {
+                        "condition_type": "Bypass",
+                        "name": "Predict!",
+                        "description": "Predict any point using the decision tree"
+                    }
+                },
+                {
+                    "start": {
+                        "local_index": 4,
+                        "story_name": null
+                    },
+                    "end": {
+                        "local_index": 5,
+                        "story_name": null
+                    },
+                    "condition": {
+                        "condition_type": "Bypass",
+                        "name": "Rescue team",
+                        "description": "Time to try out making a decision tree yourself!"
+                    }
+                },
+                {
+                    "start": {
+                        "local_index": 5,
+                        "story_name": null
+                    },
+                    "end": {
+                        "local_index": 0,
+                        "story_name": "rescue_team"
+                    },
+                    "condition": {
+                        "condition_type": "Bypass",
+                        "name": "Rescue data",
+                        "description": "Look at the rescue data for more insights!"
+                    }
+                }
+            ]
+        },
+        "rescue_team": {
+            "name": "rescue_team",
+            "description": "An introduction to decision_trees!",
+            "start_page": 0,
+            "nodes": [
+                {
+                    "index": "2374066883"
+                },
+                {
+                    "index": "3425858178"
+                },
+                {
+                    "index": "833078587"
+                },
+                {
+                    "index": "3623605709"
+                }
+            ],
+            "edges": [
+                {
+                    "start": {
+                        "local_index": 0,
+                        "story_name": null
+                    },
+                    "end": {
+                        "local_index": 1,
+                        "story_name": null
+                    },
+                    "condition": {
+                        "condition_type": "Bypass",
+                        "name": "Rescue data",
+                        "description": "Look at the rescue data for more insights!"
+                    }
+                },
+                {
+                    "start": {
+                        "local_index": 1,
+                        "story_name": null
+                    },
+                    "end": {
+                        "local_index": 2,
+                        "story_name": null
+                    },
+                    "condition": {
+                        "condition_type": "Bypass",
+                        "name": "Design tree",
+                        "description": "Time to design the tree!"
+                    }
+                },
+                {
+                    "start": {
+                        "local_index": 2,
+                        "story_name": null
+                    },
+                    "end": {
+                        "local_index": 3,
+                        "story_name": null
+                    },
+                    "condition": {
+                        "condition_type": "Bypass",
+                        "name": "Call is in!",
+                        "description": "A call has arrived. Send out the right team when you are ready!"
+                    }
+                },
+                {
+                    "start": {
+                        "local_index": 3,
+                        "story_name": null
+                    },
+                    "end": {
+                        "local_index": 4,
+                        "story_name": null
+                    },
+                    "condition": {
+                        "condition_type": "Bypass",
+                        "name": "Predict",
+                        "description": "Time to use your tree to predict!"
+                    }
+                }
+            ]
+        }
+    },
+    "pages": {
+        "3363168022": {
+            "name": "decision_tree/intro",
+            "page_type": "static",
+            "parameters": {
+                "text": "",
+                "link": "md/decision_tree/intro.md"
+            }
+        },
+        "833070531": {
+            "name": "decision_tree/split",
+            "page_type": "static",
+            "parameters": {
+                "text": "",
+                "link": "md/decision_tree/split.md"
+            }
+        },
+        "2534030846": {
+            "name": "decision_tree/iris",
+            "page_type": "static",
+            "parameters": {
+                "text": "",
+                "link": "public/md/decision_tree/iris.md"
+            }
+        },
+        "1859081650": {
+            "name": "decision_tree/iris/train",
+            "page_type": "dynamic",
+            "dynamic_type": "model",
+            "model_name": "decision_tree",
+            "component_type": "train",
+            "problem_type": "classifier",
+            "dataset": {
+                "type": "predefined",
+                "name": "iris"
+            },
+            "parameters": {
+                "max_depth": 5,
+                "min_samples_split": 2,
+                "min_samples_leaf": 1
+            }
+        },
+        "604725305": {
+            "name": "decision_tree/iris/predict",
+            "page_type": "dynamic",
+            "dynamic_type": "model",
+            "model_name": "decision_tree",
+            "component_type": "predict",
+            "problem_type": "classifier",
+            "dataset": null,
+            "parameters": {}
+        },
+        "3425858178": {
+            "name": "decision_tree/rescue/manual",
+            "page_type": "dynamic",
+            "dynamic_type": "model",
+            "model_name": "decision_tree",
+            "component_type": "manual",
+            "problem_type": "classifier",
+            "dataset": {
+                "type": "reference",
+                "name": "rescue_team"
+            },
+            "parameters": {}
+        },
+        "3623605709": {
+            "name": "decision_tree/rescue/predict",
+            "page_type": "dynamic",
+            "dynamic_type": "model",
+            "model_name": "decision_tree",
+            "component_type": "predict",
+            "problem_type": "classifier",
+            "dataset": {
+                "type": "reference",
+                "name": "rescue_team"
+            },
+            "parameters": {}
+        },
+        "3558640099": {
+            "name": "decision_tree/rescue_team",
+            "page_type": "static",
+            "parameters": {
+                "text": "",
+                "link": "md/decision_tree/rescue_team.md"
+            }
+        },
+        "2374066883": {
+            "name": "decision_tree/rescue_data",
+            "page_type": "static",
+            "parameters": {
+                "text": "",
+                "link": "md/decision_tree/rescue_data.md"
+            }
+        },
+        "833078587": {
+            "name": "decision_tree/rescue_predict",
+            "page_type": "static",
+            "parameters": {
+                "text": "",
+                "link": "md/decision_tree/rescue_predict.md"
+            }
+        }
+    }
+}

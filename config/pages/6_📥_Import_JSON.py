@@ -15,7 +15,7 @@ st.header("Import Config from JSON")
 
 # Initialize session state if not exists
 if 'config' not in st.session_state:
-    st.session_state.config = {"stories": {}, "pages": {}}
+    st.session_state.config = {"datasets": {}, "stories": {}, "pages": {}}
 
 st.markdown("Paste your JSON config below:")
 

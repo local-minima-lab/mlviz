@@ -15,12 +15,14 @@ const ModelPage: React.FC<ModelPageProps> = ({
     component_type,
     parameters,
     problem_type,
+    dataset,
 }) => {
     if (component_type == "predict") {
         return (
             <PredictPage
                 model_name={model_name}
                 parameters={parameters}
+                dataset={dataset}
             />
         );
     } else if (component_type == "train") {
@@ -29,6 +31,7 @@ const ModelPage: React.FC<ModelPageProps> = ({
                 model_name={model_name}
                 parameters={parameters}
                 problem_type={problem_type}
+                dataset={dataset}
             />
         );
     } else if (component_type == "manual") {
@@ -36,6 +39,7 @@ const ModelPage: React.FC<ModelPageProps> = ({
             <ManualPage
                 model_name={model_name}
                 parameters={parameters}
+                dataset={dataset}
             />
         );
     } else if (component_type == "viz_only") {
@@ -43,6 +47,7 @@ const ModelPage: React.FC<ModelPageProps> = ({
             <VizOnlyPage
                 model_name={model_name}
                 parameters={parameters}
+                dataset={dataset}
             />
         );
     } else if (component_type == "step") {
@@ -51,6 +56,7 @@ const ModelPage: React.FC<ModelPageProps> = ({
                 model_name={model_name}
                 parameters={parameters}
                 problem_type={problem_type}
+                dataset={dataset}
             />
         );
     }

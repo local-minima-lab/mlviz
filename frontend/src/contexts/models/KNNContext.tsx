@@ -15,6 +15,7 @@ import {
     type KNNVisualisationRequest,
     type KNNVisualisationResponse,
 } from "@/api/knn";
+import { useDataset } from "@/contexts/DatasetContext";
 import React, {
     createContext,
     useCallback,
@@ -105,6 +106,9 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
         getParameters,
     } = baseContext;
 
+    // Access the active dataset from DatasetContext
+    const { activeDataset } = useDataset();
+
     // Extract values from currentModelData or use defaults
     const [isVisualizationLoading, setIsVisualizationLoading] =
         React.useState<boolean>(false);
@@ -145,7 +149,11 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
             setVisualizationError(null);
 
             try {
-                const data = await getVisualisation(request);
+                const requestWithDataset = {
+                    ...request,
+                    dataset: request.dataset || activeDataset || undefined,
+                };
+                const data = await getVisualisation(requestWithDataset);
                 if (data.success) {
                     setCurrentModelData({
                         ...data,
@@ -169,7 +177,7 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
                 );
             }
         },
-        [currentModelData, setCurrentModelData, setLastParams],
+        [currentModelData, setCurrentModelData, setLastParams, activeDataset],
     );
 
     // ========================================================================
@@ -187,7 +195,11 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
             setVisualizationError(null);
 
             try {
-                const data = await trainKNN(request);
+                const requestWithDataset = {
+                    ...request,
+                    dataset: request.dataset || activeDataset || undefined,
+                };
+                const data = await trainKNN(requestWithDataset);
 
                 if (data.success) {
                     console.log("Training successful:", data);
@@ -210,7 +222,7 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
                 );
             }
         },
-        [setCurrentModelData, setLastParams],
+        [setCurrentModelData, setLastParams, activeDataset],
     );
 
     // ========================================================================
@@ -264,7 +276,11 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
             setPredictionError(null);
 
             try {
-                const data = await predictAPI(request);
+                const requestWithDataset = {
+                    ...request,
+                    dataset: request.dataset || activeDataset || undefined,
+                };
+                const data = await predictAPI(requestWithDataset);
 
                 if (data.success) {
                     setPredictionData(data);
@@ -295,7 +311,7 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
                 );
             }
         },
-        [currentModelData, setCurrentModelData],
+        [currentModelData, setCurrentModelData, activeDataset],
     );
 
     const predict = useCallback(

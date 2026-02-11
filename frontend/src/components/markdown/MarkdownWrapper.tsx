@@ -13,7 +13,7 @@ type ParagraphProps = React.ComponentProps<"p"> & ExtraProps;
 const Paragraph: React.FC<ParagraphProps> = ({ children, node, ...props }) => {
     return (
         <p
-            className="text-gray-800 !text-xl tracking-tight font-light mb-4"
+            className="text-gray-800 !text-base tracking-tight font-light"
             {...props}
         >
             {children}
@@ -26,7 +26,7 @@ type Heading1Props = React.ComponentProps<"h1"> & ExtraProps;
 const Heading1: React.FC<Heading1Props> = ({ children, node, ...props }) => {
     return (
         <h1
-            className="font-bold !text-8xl mb-2 tracking-tight bg-gradient-to-br from-blue-600 to-purple-700 bg-clip-text text-transparent font-width-expanded mb-6"
+            className="font-bold !text-4xl my-4 tracking-tight bg-gradient-to-br from-blue-600 to-purple-700 bg-clip-text text-transparent font-width-expanded"
             {...props}
         >
             {children}
@@ -39,7 +39,7 @@ type Heading2Props = React.ComponentProps<"h2"> & ExtraProps;
 const Heading2: React.FC<Heading2Props> = ({ children, node, ...props }) => {
     return (
         <h2
-            className="font-bold !text-5xl mb-2 tracking-tight bg-gradient-to-br from-purple-600 to-indigo-500 bg-clip-text text-transparent font-width-expanded mb-5"
+            className="font-bold !text-2xl tracking-tight bg-gradient-to-br from-purple-600 to-indigo-500 bg-clip-text text-transparent font-width-expanded my-4"
             {...props}
         >
             {children}
@@ -52,7 +52,7 @@ type Heading3Props = React.ComponentProps<"h3"> & ExtraProps;
 const Heading3: React.FC<Heading3Props> = ({ children, node, ...props }) => {
     return (
         <h3
-            className="font-bold text-3xl mb-2 tracking-tight bg-gradient-to-br from-gray-500 to-slate-400 bg-clip-text text-transparent font-width-expanded mb-4"
+            className="font-bold text-xl my-4 tracking-tight bg-gradient-to-br from-gray-500 to-slate-400 bg-clip-text text-transparent font-width-expanded"
             {...props}
         >
             {children}
@@ -65,7 +65,7 @@ type Heading4Props = React.ComponentProps<"h4"> & ExtraProps;
 const Heading4: React.FC<Heading4Props> = ({ children, node, ...props }) => {
     return (
         <h4
-            className="font-bold text-2xl mb-2 tracking-tight bg-gradient-to-br from-gray-400 to-slate-300 bg-clip-text text-transparent font-width-expanded mb-4"
+            className="font-bold text-2xl my-4 tracking-tight bg-gradient-to-br from-gray-400 to-slate-300 bg-clip-text text-transparent font-width-expanded"
             {...props}
         >
             {children}
@@ -112,7 +112,7 @@ type ListItemProps = React.ComponentProps<"li"> & ExtraProps;
 const ListItem: React.FC<ListItemProps> = ({ children, node, ...props }) => {
     return (
         <li
-            className="text-xl tracking-tight font-light"
+            className="text-base tracking-tight font-light mx-1"
             {...props}
         >
             {children}

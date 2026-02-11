@@ -1,16 +1,17 @@
 import PredictionInputForm from "@/components/input/PredictionInputForm";
 import { PredictComponent } from "@/components/PredictComponent";
+import { SuccessAlert } from "@/components/ui/CustomAlerts";
 import { useModel } from "@/contexts/ModelContext";
 import { CurrentStoryContext } from "@/contexts/StoryContext";
 import type { ModelPage as ModelPageProps } from "@/types/story";
-import { SuccessAlert } from "@/components/ui/CustomAlerts";
 import React, { useContext, useEffect, useRef, useState } from "react";
 
-type PredictPageProps = Pick<ModelPageProps, "model_name" | "parameters">;
+type PredictPageProps = Pick<ModelPageProps, "model_name" | "parameters" | "dataset">;
 
 const PredictPage: React.FC<PredictPageProps> = ({
     model_name,
     parameters,
+    dataset,
 }) => {
     const context = useContext(CurrentStoryContext);
     if (!context) throw new Error("No context found.");
@@ -102,7 +103,7 @@ const PredictPage: React.FC<PredictPageProps> = ({
             predict(predictionInputPoints);
             lastPredictedPointsRef.current = pointsStr;
         }
-    }, [predictionInputPoints, predict, currentModelData, isPredicting, currentFeatures]);
+    }, [predictionInputPoints, predict, currentModelData, isPredicting, currentFeatures, dataset]);
 
     if (!currentModelData) {
         return (

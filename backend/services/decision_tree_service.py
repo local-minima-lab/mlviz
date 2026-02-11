@@ -1,15 +1,31 @@
 import json
-import numpy as np
 from datetime import datetime
-from typing import Dict, List, Optional, Any, Union
 from pathlib import Path
+from typing import Any, Dict, List, Optional, Union
 
+import numpy as np
+from models import (
+    ClassificationMetadata,
+    ClassificationMetrics,
+    Dataset,
+    DecisionTreeParameters,
+    HistogramData,
+    LeafNode,
+    PredefinedDataset,
+    SplitNode,
+    TreeNode,
+)
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+)
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score
 
-from models import TreeNode, ClassificationMetrics, ClassificationMetadata, HistogramData, Dataset, PredefinedDataset, DecisionTreeParameters
-from .model_cache import cache_service
 from .dataset_service import dataset_service
+from .model_cache import cache_service
 
 
 class DecisionTreeService:
@@ -21,15 +37,18 @@ class DecisionTreeService:
         self._load_parameter_config()
 
     def _load_parameter_config(self):
-        config_path = Path(__file__).parent.parent / \
-            "config" / "decision_tree_params.json"
+        config_path = (
+            Path(__file__).parent.parent / "config" / "decision_tree_params.json"
+        )
         with open(config_path) as f:
             self.param_config = json.load(f)
 
     async def get_parameters(self) -> List[Dict[str, Any]]:
         return self.param_config["parameters"]
 
-    async def _resolve_dataset(self, dataset_param: Optional[Union[Dict[str, Any], PredefinedDataset, Dataset]]) -> Dataset:
+    async def _resolve_dataset(
+        self, dataset_param: Optional[Union[Dict[str, Any], PredefinedDataset, Dataset]]
+    ) -> Dataset:
         if dataset_param is None:
             return await self.dataset_service.load_predefined_dataset(
                 PredefinedDataset(name="iris")
@@ -46,9 +65,14 @@ class DecisionTreeService:
         else:
             return dataset_param
 
-    def _create_histogram_data(self, sample_indices: np.ndarray, feature_idx: int,
-                               X_data: np.ndarray, y_data: np.ndarray,
-                               threshold: Optional[float] = None) -> Optional[HistogramData]:
+    def _create_histogram_data(
+        self,
+        sample_indices: np.ndarray,
+        feature_idx: int,
+        X_data: np.ndarray,
+        y_data: np.ndarray,
+        threshold: Optional[float] = None,
+    ) -> Optional[HistogramData]:
         """Generate histogram data for visualization."""
         if len(sample_indices) == 0:
             return None
@@ -61,8 +85,7 @@ class DecisionTreeService:
         if min_val == max_val:
             bins = [min_val - 0.1, min_val + 0.1]
         else:
-            bins = np.linspace(min_val, max_val, min(
-                10, len(sample_indices)) + 1)
+            bins = np.linspace(min_val, max_val, min(10, len(sample_indices)) + 1)
 
         # Count samples per bin per class
         unique_classes = np.unique(y_data)
@@ -80,12 +103,18 @@ class DecisionTreeService:
             bins=bins.tolist(),
             counts_by_class=counts_by_class,
             threshold=threshold,
-            total_samples=len(sample_indices)
+            total_samples=len(sample_indices),
         )
 
-    def _convert_tree_to_node(self, tree, node_id: int, feature_names: List[str],
-                              X_data: np.ndarray, y_data: np.ndarray,
-                              sample_indices: Optional[np.ndarray] = None) -> TreeNode:
+    def _convert_tree_to_node(
+        self,
+        tree,
+        node_id: int,
+        feature_names: List[str],
+        X_data: np.ndarray,
+        y_data: np.ndarray,
+        sample_indices: Optional[np.ndarray] = None,
+    ) -> TreeNode:
         if sample_indices is None:
             sample_indices = np.arange(len(X_data))
 
@@ -93,16 +122,17 @@ class DecisionTreeService:
         right_child = tree.children_right[node_id]
 
         if left_child == right_child:
-            return TreeNode(
+            return LeafNode(
                 type="leaf",
                 samples=int(tree.n_node_samples[node_id]),
                 impurity=float(tree.impurity[node_id]),
-                value=tree.value[node_id].tolist()
+                value=tree.value[node_id].tolist(),
             )
 
         feature_idx = tree.feature[node_id]
-        feature_name = feature_names[
-            feature_idx] if feature_names else f"feature_{feature_idx}"
+        feature_name = (
+            feature_names[feature_idx] if feature_names else f"feature_{feature_idx}"
+        )
         threshold = float(tree.threshold[node_id])
 
         histogram_data = self._create_histogram_data(
@@ -121,7 +151,7 @@ class DecisionTreeService:
             tree, right_child, feature_names, X_data, y_data, right_indices
         )
 
-        return TreeNode(
+        return SplitNode(
             type="split",
             feature=feature_name,
             feature_index=feature_idx,
@@ -131,11 +161,12 @@ class DecisionTreeService:
             value=tree.value[node_id].tolist(),
             histogram_data=histogram_data,
             left=left_node,
-            right=right_node
+            right=right_node,
         )
 
-    def _calculate_metrics(self, model: DecisionTreeClassifier,
-                           X_test: np.ndarray, y_test: np.ndarray) -> ClassificationMetrics:
+    def _calculate_metrics(
+        self, model: DecisionTreeClassifier, X_test: np.ndarray, y_test: np.ndarray
+    ) -> ClassificationMetrics:
         """Calculates the accuracy, precision, recall, f1-score, and confusion matrix of a model.
 
         Args:
@@ -153,54 +184,59 @@ class DecisionTreeService:
             confusion_matrix=conf_matrix,
             accuracy=accuracy_score(y_test, predictions),
             precision=precision_score(
-                y_test, predictions, average="weighted", zero_division=0),
-            recall=recall_score(y_test, predictions,
-                                average="weighted", zero_division=0),
-            f1=f1_score(y_test, predictions,
-                        average="weighted", zero_division=0)
+                y_test, predictions, average="weighted", zero_division=0
+            ),
+            recall=recall_score(
+                y_test, predictions, average="weighted", zero_division=0
+            ),
+            f1=f1_score(y_test, predictions, average="weighted", zero_division=0),
         )
 
-    def _predict_with_tree(self, tree_node: TreeNode, X: np.ndarray,
-                           feature_names: List[str]) -> np.ndarray:
+    def _predict_with_tree(
+        self, tree_node: TreeNode, X: np.ndarray, feature_names: List[str]
+    ) -> np.ndarray:
         """Make predictions using a TreeNode structure.
-        
+
         Args:
             tree_node: Root node of the tree
             X: Feature matrix to predict on
             feature_names: List of feature names
-            
+
         Returns:
             Array of predicted class indices
         """
         predictions = []
-        
+
         for sample in X:
             node = tree_node
             # Traverse tree until we reach a leaf
-            while node.type == 'split':
+            while node.type == "split":
                 feature_idx = feature_names.index(node.feature)
                 if sample[feature_idx] <= node.threshold:
                     node = node.left
                 else:
                     node = node.right
-            
+
             # At leaf node, predict class with highest probability
             class_probs = node.value[0]
             predicted_class = np.argmax(class_probs)
             predictions.append(predicted_class)
-        
+
         return np.array(predictions)
 
-
-    async def train_model(self,
-                          training_params: DecisionTreeParameters, dataset_param: Dataset) -> Dict[str, Any]:
+    async def train_model(
+        self,
+        training_params: DecisionTreeParameters,
+        dataset_param: Optional[
+            Union[Dict[str, Any], PredefinedDataset, Dataset]
+        ] = None,
+    ) -> Dict[str, Any]:
         """Train a decision tree model with caching."""
 
         dataset = await self._resolve_dataset(dataset_param)
 
         model_key = self.cache.generate_model_key(
-            params=training_params.model_dump(),
-            dataset=dataset.model_dump()
+            params=training_params.model_dump(), dataset=dataset.model_dump()
         )
 
         if cached_result := await self.cache.get(model_key):
@@ -218,7 +254,7 @@ class DecisionTreeService:
             0,
             dataset_info["feature_names"],
             dataset_info["X_train"],
-            dataset_info["y_train"]
+            dataset_info["y_train"],
         )
 
         metrics = self._calculate_metrics(
@@ -234,36 +270,43 @@ class DecisionTreeService:
                 "dataset_info": dataset_info["info"].model_dump(),
                 "feature_names": dataset_info["feature_names"],
                 "class_names": dataset_info["target_names"],
-                **sklearn_params
+                "n_features": dataset_info["info"].n_features,
+                "n_classes": dataset_info["info"].n_classes,
+                "dataset_name": dataset_info["info"].name,
+                **sklearn_params,
             },
             "tree": tree_node.model_dump(),
-            "metrics": metrics.model_dump()
+            "metrics": metrics.model_dump(),
         }
 
         await self.cache.set(model_key, response_data)
 
         return response_data
 
-    async def get_predict_params(self, dataset_param: Optional[Union[PredefinedDataset, Dataset]] = None) -> List[str]:
+    async def get_predict_params(
+        self, dataset_param: Optional[Union[PredefinedDataset, Dataset]] = None
+    ) -> List[str]:
         dataset = await self._resolve_dataset(dataset_param)
         return dataset.get_feature_names()
 
-    async def predict(self, training_params: Dict[str, Any], input_data: List[List[float]]) -> Dict[str, Any]:
+    async def predict(
+        self, training_params: Dict[str, Any], input_data: List[List[float]]
+    ) -> Dict[str, Any]:
 
         # Extract parameters using the domain model (same pattern as train_model)
-        if 'parameters' in training_params:
-            dt_params = DecisionTreeParameters(**training_params['parameters'])
+        if "parameters" in training_params:
+            dt_params = DecisionTreeParameters(**training_params["parameters"])
         else:
             dt_params = DecisionTreeParameters(
-                **{k: v for k, v in training_params.items() if k != 'dataset'})
+                **{k: v for k, v in training_params.items() if k != "dataset"}
+            )
 
         dataset_param = training_params.get("dataset")
         dataset = await self._resolve_dataset(dataset_param)
 
         # Use the cache service's expected signature: params and dataset separately
         model_key = self.cache.generate_model_key(
-            params=dt_params.model_dump(),
-            dataset=dataset.model_dump()
+            params=dt_params.model_dump(), dataset=dataset.model_dump()
         )
 
         cached_result = await self.cache.get(model_key)
@@ -285,14 +328,14 @@ class DecisionTreeService:
 
         return {
             "predictions": prediction_names,
-            "prediction_indices": predictions.tolist()
+            "prediction_indices": predictions.tolist(),
         }
 
     async def predict_with_instructions(
         self,
         tree: TreeNode,
         points: Dict[str, float],
-        class_names: Optional[List[str]] = None
+        class_names: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Predict using a tree and return traversal instructions.
 
@@ -308,7 +351,7 @@ class DecisionTreeService:
         node = tree
 
         # Traverse tree until we reach a leaf
-        while node.type == 'split':
+        while node.type == "split":
             feature_value = points.get(node.feature)
             if feature_value is None:
                 raise ValueError(f"Missing feature value for: {node.feature}")
@@ -346,7 +389,13 @@ class DecisionTreeService:
             "instructions": instructions,
         }
 
-    async def evaluate_manual_tree(self, tree: TreeNode, dataset_param: Optional[Union[Dict[str, Any], PredefinedDataset, Dataset]] = None) -> Dict[str, Any]:
+    async def evaluate_manual_tree(
+        self,
+        tree: TreeNode,
+        dataset_param: Optional[
+            Union[Dict[str, Any], PredefinedDataset, Dataset]
+        ] = None,
+    ) -> Dict[str, Any]:
         """Evaluate a manually built tree against test data.
 
         Args:
@@ -358,39 +407,40 @@ class DecisionTreeService:
         """
         dataset = await self._resolve_dataset(dataset_param)
         dataset_info = await self.dataset_service.prepare_dataset_for_training(dataset)
-        
+
         # Make predictions using the manual tree on TEST set
         predictions = self._predict_with_tree(
             tree,
             dataset_info["X_test"],  # Use test set for evaluation
-            dataset_info["feature_names"]
+            dataset_info["feature_names"],
         )
-        
+
         # Calculate metrics using TEST set (includes confusion matrix)
         y_test = dataset_info["y_test"]  # Use test set labels
         conf_matrix = confusion_matrix(y_test, predictions).tolist()
-        
+
         metrics = ClassificationMetrics(
             confusion_matrix=conf_matrix,
             accuracy=accuracy_score(y_test, predictions),
-            precision=precision_score(y_test, predictions, average="weighted", zero_division=0),
-            recall=recall_score(y_test, predictions, average="weighted", zero_division=0),
-            f1=f1_score(y_test, predictions, average="weighted", zero_division=0)
+            precision=precision_score(
+                y_test, predictions, average="weighted", zero_division=0
+            ),
+            recall=recall_score(
+                y_test, predictions, average="weighted", zero_division=0
+            ),
+            f1=f1_score(y_test, predictions, average="weighted", zero_division=0),
         )
-        
+
         # Create metadata
         metadata = ClassificationMetadata(
             feature_names=dataset_info["feature_names"],
             class_names=dataset_info["target_names"],
             n_features=len(dataset_info["feature_names"]),
             n_classes=len(dataset_info["target_names"]),
-            dataset_name=dataset.name if hasattr(dataset, 'name') else None
+            dataset_name=dataset.name if hasattr(dataset, "name") else None,
         )
-        
-        return {
-            "metrics": metrics.model_dump(),
-            "metadata": metadata.model_dump()
-        }
+
+        return {"metrics": metrics.model_dump(), "metadata": metadata.model_dump()}
 
 
 # Global service instance

@@ -16,6 +16,7 @@ import {
     type KMeansTrainRequest,
     type KMeansTrainResponse,
 } from "@/api/kmeans";
+import { useDataset } from "@/contexts/DatasetContext";
 import React, {
     createContext,
     useCallback,
@@ -139,6 +140,9 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
         getParameters,
     } = baseContext;
 
+    // Access the active dataset from DatasetContext
+    const { activeDataset } = useDataset();
+
     // Extract values from currentModelData or use defaults
     const [isVisualizationLoading, setIsVisualizationLoading] =
         React.useState<boolean>(false);
@@ -240,6 +244,8 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
                     include_boundary,
                     boundary_resolution,
                     max_iterations,
+                    // Use dataset from params if provided, otherwise use activeDataset from context
+                    dataset: params?.dataset || activeDataset || undefined,
                 };
 
                 const data = await trainAPI(requestParams);
@@ -271,7 +277,7 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
                 );
             }
         },
-        [setCurrentModelData, setLastParams],
+        [setCurrentModelData, setLastParams, activeDataset],
     );
 
     const loadVisualization = useCallback(
@@ -323,6 +329,8 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
                     visualisation_features: vizFeatures,
                     include_boundary,
                     boundary_resolution,
+                    // Use dataset from request if provided, otherwise use activeDataset from context
+                    dataset: request?.dataset || activeDataset || undefined,
                 };
 
                 const data = await stepAPI(requestParams);

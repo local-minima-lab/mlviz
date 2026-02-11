@@ -3,6 +3,8 @@ from pydantic import BaseModel, Field
 
 class BaseCondition(BaseModel):
     condition_type: str
+    name: Optional[str] = None
+    description: Optional[str] = None
 
 class BypassCheck(BaseCondition):
     condition_type: Literal["Bypass"] = "Bypass"

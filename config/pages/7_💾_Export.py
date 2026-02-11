@@ -15,7 +15,7 @@ st.header("Export Config")
 
 # Initialize session state if not exists
 if 'config' not in st.session_state:
-    st.session_state.config = {"stories": {}, "pages": {}}
+    st.session_state.config = {"datasets": {}, "stories": {}, "pages": {}}
 
 filename = st.text_input("Filename", value="config.json")
 

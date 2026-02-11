@@ -15,6 +15,15 @@ from .base import (
     StaticParameters,
 )
 
+# Dataset
+from .dataset import (
+    CustomDataset,
+    DatasetEntry,
+    DatasetReference,
+    PageDataset,
+    PredefinedDataset,
+)
+
 # Conditions
 from .conditions import (
     AndCondition,
@@ -105,7 +114,13 @@ __all__ = [
     "ModelNames",
     "ModelComponentType",
     "ModelPage",
-    "ProblemType"
+    "ProblemType",
+    # Dataset
+    "CustomDataset",
+    "DatasetEntry",
+    "DatasetReference",
+    "PageDataset",
+    "PredefinedDataset",
     # Conditions
     "BaseCondition",
     "BypassCheck",
