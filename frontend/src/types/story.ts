@@ -1,3 +1,5 @@
+import { type components } from "./api";
+
 export type Index = number;
 
 interface BaseCondition {
@@ -70,10 +72,16 @@ export interface Edge {
 
 export type Parameters = Record<string, any>;
 
+export type DatasetReference = { type: "reference"; name: string };
+
 interface BasePage {
     page_type: "static" | "dynamic";
     name?: string;
     parameters?: Parameters;
+    dataset?: 
+        | components["schemas"]["PredefinedDataset"] 
+        | components["schemas"]["Dataset"]
+        | DatasetReference;
 }
 
 export interface StaticPageParameters {
@@ -121,6 +129,7 @@ export interface Story {
 export interface Config {
     stories: Record<string, Story>;
     pages: Record<Index, PageUnion>;
+    datasets?: Record<string, components["schemas"]["PredefinedDataset"] | components["schemas"]["Dataset"]>;
 }
 
 export type TrainingParameters = Record<string, any>;

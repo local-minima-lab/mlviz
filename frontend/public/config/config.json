@@ -1,4 +1,33 @@
 {
+    "datasets": {
+        "credit_data": {
+            "type": "custom",
+            "X": [
+                [22, 25, 610, 1, 0.42, 2],
+                [35, 60, 680, 6, 0.28, 5],
+                [29, 45, 640, 3, 0.35, 4],
+                [41, 85, 720, 10, 0.22, 7],
+                [50, 40, 590, 2, 0.5, 3],
+                [27, 70, 705, 4, 0.25, 6],
+                [33, 30, 615, 2, 0.45, 3],
+                [46, 95, 740, 15, 0.18, 9],
+                [38, 55, 660, 7, 0.3, 5],
+                [24, 35, 600, 1, 0.48, 2]
+            ],
+            "y": [0, 1, 0, 1, 0, 1, 0, 1, 1, 0],
+            "feature_names": [
+                "age",
+                "annual_income_k",
+                "credit_score",
+                "years_employed",
+                "debt_to_income",
+                "num_credit_lines"
+            ],
+            "target_names": ["reject", "approve"],
+            "test_size": 0,
+            "random_state": 2025
+        }
+    },
     "stories": {
         "decision_tree": {
             "name": "decision_tree",
@@ -40,6 +69,47 @@
                     }
                 }
             ]
+        },
+        "decision_tree_2": {
+            "name": "decision_tree_2",
+            "description": "Decision tree classifier",
+            "start_page": 0,
+            "nodes": [
+                {
+                    "index": 459510024
+                },
+                {
+                    "index": 1767090483
+                }
+            ],
+            "edges": [
+                {
+                    "start": {
+                        "local_index": 0,
+                        "story_name": null
+                    },
+                    "end": {
+                        "local_index": 1,
+                        "story_name": null
+                    },
+                    "condition": {
+                        "condition_type": "Bypass"
+                    }
+                },
+                {
+                    "start": {
+                        "local_index": 1,
+                        "story_name": null
+                    },
+                    "end": {
+                        "local_index": 0,
+                        "story_name": null
+                    },
+                    "condition": {
+                        "condition_type": "Bypass"
+                    }
+                }
+            ]
         }
     },
     "pages": {
@@ -48,8 +118,12 @@
             "page_type": "dynamic",
             "dynamic_type": "model",
             "model_name": "decision_tree",
-            "component_type": "manual",
+            "component_type": "train",
             "problem_type": "classifier",
+            "dataset": {
+                "type": "reference",
+                "name": "credit_data"
+            },
             "parameters": {}
         },
         "1767090483": {
@@ -65,12 +139,13 @@
             "name": "",
             "page_type": "dynamic",
             "dynamic_type": "model",
-            "model_name": "knn",
-            "component_type": "viz_only",
+            "model_name": "decision_tree",
+            "component_type": "manual",
             "problem_type": "classifier",
-            "parameters": {
-                "visualisation_features": [0, 1],
-                "include_boundary": true
+            "parameters": {},
+            "dataset": {
+                "type": "predefined",
+                "name": "wine"
             }
         },
         "2584106709": {

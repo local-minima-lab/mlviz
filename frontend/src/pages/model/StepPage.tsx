@@ -11,12 +11,13 @@ import React, { useContext, useEffect, useMemo, useState } from "react";
 
 type StepPageProps = Pick<
     ModelPageProps,
-    "model_name" | "parameters" | "problem_type"
+    "model_name" | "parameters" | "problem_type" | "dataset"
 >;
 
 const StepPage: React.FC<StepPageProps> = ({
     model_name,
     parameters,
+    dataset,
 }) => {
     const model = useModel();
     const { 
@@ -72,7 +73,11 @@ const StepPage: React.FC<StepPageProps> = ({
         resetModelData();
         // We wait a tick to ensure context state updates have propagated if needed, 
         // though our context now handles it via manual ref clearing.
-        await train(stepParams);
+        const trainParams = {
+            ...stepParams,
+            dataset: (stepParams as any)?.dataset || dataset,
+        };
+        await train(trainParams);
         updateParams({ trainParams: stepParams });
     };
 
