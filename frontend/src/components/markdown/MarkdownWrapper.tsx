@@ -13,7 +13,7 @@ type ParagraphProps = React.ComponentProps<"p"> & ExtraProps;
 const Paragraph: React.FC<ParagraphProps> = ({ children, node, ...props }) => {
     return (
         <p
-            className="text-gray-800 !text-base tracking-tight font-light"
+            className="text-gray-800 !text-base tracking-tight font-light mb-2"
             {...props}
         >
             {children}
