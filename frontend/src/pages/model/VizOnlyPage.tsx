@@ -4,11 +4,12 @@ import { CurrentStoryContext } from "@/contexts/StoryContext";
 import type { ModelPage as ModelPageProps } from "@/types/story";
 import { useContext, useEffect } from "react";
 
-type VizOnlyPageProps = Pick<ModelPageProps, "model_name" | "parameters">;
+type VizOnlyPageProps = Pick<ModelPageProps, "model_name" | "parameters" | "dataset">;
 
 const VizOnlyPage: React.FC<VizOnlyPageProps> = ({
     model_name,
     parameters,
+    dataset,
 }) => {
     const model = useModel();
     
@@ -21,9 +22,13 @@ const VizOnlyPage: React.FC<VizOnlyPageProps> = ({
 
     useEffect(() => {
         if (loadVisualization) {
-            loadVisualization(parameters || {});
+            const loadParams = {
+                ...(parameters || {}),
+                dataset: (parameters as any)?.dataset || dataset,
+            };
+            loadVisualization(loadParams);
         }
-    }, [parameters, loadVisualization]);
+    }, [parameters, dataset, loadVisualization]);
 
     return (
         <div className="mx-auto w-full h-full">

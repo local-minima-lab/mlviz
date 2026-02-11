@@ -105,11 +105,15 @@ class DatasetService:
         """Prepare dataset for ML training with train/test split."""
         X, y = dataset.to_numpy()
 
-        X_train, X_test, y_train, y_test = train_test_split(
-            X, y,
-            test_size=dataset.test_size,
-            random_state=dataset.random_state
-        )
+        if dataset.test_size == 0:
+            # "Representation Mode": Use the full set for both training and testing
+            X_train, X_test, y_train, y_test = X, X, y, y
+        else:
+            X_train, X_test, y_train, y_test = train_test_split(
+                X, y,
+                test_size=dataset.test_size,
+                random_state=dataset.random_state
+            )
 
         return {
             "X": X,

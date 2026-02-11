@@ -4,14 +4,18 @@ import { useModel } from "@/contexts/ModelContext";
 import type { ModelPage as ModelPageProps } from "@/types/story";
 import React, { useEffect } from "react";
 
-type ManualPageProps = Pick<ModelPageProps, "model_name" | "parameters">;
+type ManualPageProps = Pick<ModelPageProps, "model_name" | "parameters" | "dataset">;
 
-const ManualPage: React.FC<ManualPageProps> = ({ model_name }) => {
+const ManualPage: React.FC<ManualPageProps> = ({ 
+    model_name,
+    parameters,
+    dataset,
+}) => {
 
     const {
         currentModelData,
         resetModelData
-        } = useModel();
+    } = useModel();
 
 
     useEffect(() => {

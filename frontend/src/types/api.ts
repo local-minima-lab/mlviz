@@ -681,6 +681,11 @@ export interface components {
          */
         Dataset: {
             /**
+             * @description Discriminator for Union type (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "custom";
+            /**
              * X
              * @description Feature matrix
              */
@@ -844,7 +849,7 @@ export interface components {
              * Dataset
              * @description Dataset to use for training
              */
-            dataset?: components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"] | null;
+            dataset?: (components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"]) | null;
         };
         /**
          * DecisionTreeTrainingResponse
@@ -1057,18 +1062,19 @@ export interface components {
          */
         KMeansParameters: {
             /**
-             * N Clusters
-             * @description Number of clusters to form
-             * @default 3
-             */
-            n_clusters: number;
-            /**
              * Metric
              * @description Distance metric for assigning points to clusters
              * @default euclidean
              * @enum {string}
              */
             metric: "euclidean" | "manhattan";
+            /**
+             * Centroid Type
+             * @description Type of cluster representative (centroid = mean, medoid = nearest data point)
+             * @default medoid
+             * @enum {string}
+             */
+            centroid_type: "centroid" | "medoid";
             /**
              * Feature 1
              * @description First feature index for visualization
@@ -1081,18 +1087,6 @@ export interface components {
              * @default 1
              */
             feature_2: number | null;
-            /**
-             * Include Boundary
-             * @description Whether to show the decision boundary territory
-             * @default true
-             */
-            include_boundary?: boolean;
-            /**
-             * Centroid Type
-             * @description Type of centroid calculation (centroid or medoid)
-             * @default medoid
-             */
-            centroid_type?: "centroid" | "medoid";
         };
         /**
          * KMeansPredictRequest
@@ -1154,14 +1148,14 @@ export interface components {
             parameters?: components["schemas"]["KMeansParameters"];
             /**
              * Centroids
-             * @description Current centroid positions [[x, y], ...]
+             * @description Current centroid positions [[x, y], ...]. If not provided or empty, will initialize with one random centroid.
              */
-            centroids: number[][];
+            centroids?: number[][] | null;
             /**
              * Dataset
              * @description Dataset to use. Defaults to Iris dataset.
              */
-            dataset?: components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"] | null;
+            dataset?: (components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"]) | null;
             /**
              * Visualisation Features
              * @description Feature indices for visualization (defaults to [feature_1, feature_2])
@@ -1244,14 +1238,14 @@ export interface components {
             parameters?: components["schemas"]["KMeansParameters"];
             /**
              * Centroids
-             * @description Initial centroid positions [[x, y], ...]
+             * @description Initial centroid positions [[x, y], ...]. If not provided or empty, will initialize with one random centroid.
              */
-            centroids: number[][];
+            centroids?: number[][] | null;
             /**
              * Dataset
              * @description Dataset to use. Defaults to Iris dataset.
              */
-            dataset?: components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"] | null;
+            dataset?: (components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"]) | null;
             /**
              * Visualisation Features
              * @description Feature indices for visualization (defaults to [feature_1, feature_2])
@@ -1389,7 +1383,7 @@ export interface components {
              * Dataset
              * @description Training dataset with X, y, feature_names, class_names. Defaults to Iris dataset.
              */
-            dataset?: components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"] | null;
+            dataset?: (components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"]) | null;
             /**
              * Query Points
              * @description Test points to classify
@@ -1480,7 +1474,7 @@ export interface components {
              * Dataset
              * @description Training dataset. Defaults to Iris dataset.
              */
-            dataset?: components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"] | null;
+            dataset?: (components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"]) | null;
             /**
              * Visualisation Features
              * @description Feature indices to visualise (1-3 features)
@@ -1535,7 +1529,7 @@ export interface components {
              * Dataset
              * @description Training dataset. Defaults to Iris dataset.
              */
-            dataset?: components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"] | null;
+            dataset?: (components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"]) | null;
             /**
              * Visualisation Features
              * @description Feature indices to visualise (1-3 features)
@@ -1618,9 +1612,8 @@ export interface components {
              */
             terminal?: boolean | null;
             /**
-             * Type
-             * @default leaf
-             * @constant
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
              */
             type: "leaf";
         };
@@ -1655,7 +1648,7 @@ export interface components {
              * Dataset
              * @description Dataset to use for training
              */
-            dataset?: components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"] | null;
+            dataset?: (components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"]) | null;
         };
         /**
          * ManualFeatureStatsResponse
@@ -1739,7 +1732,7 @@ export interface components {
              * Dataset
              * @description Dataset to use for training
              */
-            dataset?: components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"] | null;
+            dataset?: (components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"]) | null;
         };
         /**
          * ManualNodeStatsResponse
@@ -1789,7 +1782,7 @@ export interface components {
              * Dataset
              * @description Dataset to use for evaluation (defaults to Iris)
              */
-            dataset?: components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"] | null;
+            dataset?: (components["schemas"]["Dataset"] | components["schemas"]["PredefinedDataset"]) | null;
         };
         /**
          * ManualTreeEvaluateResponse
@@ -1874,6 +1867,11 @@ export interface components {
          */
         PredefinedDataset: {
             /**
+             * @description Discriminator for Union type (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "predefined";
+            /**
              * Name
              * @enum {string}
              */
@@ -1930,9 +1928,8 @@ export interface components {
              */
             terminal?: boolean | null;
             /**
-             * Type
-             * @default split
-             * @constant
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
              */
             type: "split";
             /** Feature */
@@ -1972,9 +1969,8 @@ export interface components {
              */
             terminal?: boolean | null;
             /**
-             * Type
-             * @default split
-             * @constant
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
              */
             type: "split";
             /** Feature */

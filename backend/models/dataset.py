@@ -15,6 +15,7 @@ class DatasetInfo(BaseModel):
 
 class Dataset(BaseModel):
     """Complete dataset with features and targets."""
+    type: Literal["custom"] = Field("custom", description="Discriminator for Union type")
     X: List[List[float]] = Field(..., description="Feature matrix")
     y: List[int] = Field(..., description="Target vector")
     feature_names: Optional[List[str]] = None
@@ -22,7 +23,7 @@ class Dataset(BaseModel):
     info: Optional[DatasetInfo] = None
 
     # Training configuration
-    test_size: float = Field(0.25, ge=0.1, le=0.5)
+    test_size: float = Field(0.25, ge=0, le=0.9)
     random_state: int = Field(2025, ge=0)
 
     @field_validator('X')
@@ -99,6 +100,7 @@ class Dataset(BaseModel):
 
 class PredefinedDataset(BaseModel):
     """Reference to a predefined dataset."""
+    type: Literal["predefined"] = Field("predefined", description="Discriminator for Union type")
     name: Literal["iris", "wine", "breast_cancer", "digits"]
-    test_size: float = Field(0.25, ge=0.1, le=0.5)
+    test_size: float = Field(0.25, ge=0, le=0.9)
     random_state: int = Field(2025, ge=0)

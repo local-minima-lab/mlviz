@@ -73,7 +73,7 @@
           "Decision Tree"
         ],
         "summary": "Train Model",
-        "description": "Train a decision tree model with the specified parameters.\n\nSupports both predefined datasets (iris, wine, breast_cancer, digits) \nand custom datasets. Models are automatically cached for efficiency.\n\nArgs:\n    request (DecisionTreeTrainingRequest): The request parameters\n\nRaises:\n    HTTPException: Exception if unable to train model\n\nReturns:\n    DecisionTreeTrainingResponse: Model details",
+        "description": "Train a decision tree model with the specified parameters.\n\nSupports both predefined datasets (iris, wine, breast_cancer, digits)\nand custom datasets. Models are automatically cached for efficiency.\n\nArgs:\n    request (DecisionTreeTrainingRequest): The request parameters\n\nRaises:\n    HTTPException: Exception if unable to train model\n\nReturns:\n    DecisionTreeTrainingResponse: Model details",
         "operationId": "train_model_api_dt_train_post",
         "requestBody": {
           "content": {
@@ -1012,6 +1012,13 @@
       },
       "Dataset": {
         "properties": {
+          "type": {
+            "type": "string",
+            "const": "custom",
+            "title": "Type",
+            "description": "Discriminator for Union type",
+            "default": "custom"
+          },
           "X": {
             "items": {
               "items": {
@@ -1350,10 +1357,21 @@
           "dataset": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Dataset"
-              },
-              {
-                "$ref": "#/components/schemas/PredefinedDataset"
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Dataset"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PredefinedDataset"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "custom": "#/components/schemas/Dataset",
+                    "predefined": "#/components/schemas/PredefinedDataset"
+                  }
+                }
               },
               {
                 "type": "null"
@@ -1385,7 +1403,7 @@
             "$ref": "#/components/schemas/ClassificationMetadata"
           },
           "tree": {
-            "anyOf": [
+            "oneOf": [
               {
                 "$ref": "#/components/schemas/SplitNode-Output"
               },
@@ -1393,7 +1411,14 @@
                 "$ref": "#/components/schemas/LeafNode"
               }
             ],
-            "title": "Tree"
+            "title": "Tree",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "leaf": "#/components/schemas/LeafNode",
+                "split": "#/components/schemas/SplitNode-Output"
+              }
+            }
           },
           "metrics": {
             "$ref": "#/components/schemas/ClassificationMetrics"
@@ -1414,7 +1439,7 @@
       "DecisionTreeTraversalPredictRequest": {
         "properties": {
           "tree": {
-            "anyOf": [
+            "oneOf": [
               {
                 "$ref": "#/components/schemas/SplitNode-Input"
               },
@@ -1423,7 +1448,14 @@
               }
             ],
             "title": "Tree",
-            "description": "Root node of the decision tree"
+            "description": "Root node of the decision tree",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "leaf": "#/components/schemas/LeafNode",
+                "split": "#/components/schemas/SplitNode-Input"
+              }
+            }
           },
           "points": {
             "additionalProperties": {
@@ -1837,14 +1869,6 @@
       },
       "KMeansParameters": {
         "properties": {
-          "n_clusters": {
-            "type": "integer",
-            "maximum": 10.0,
-            "minimum": 1.0,
-            "title": "N Clusters",
-            "description": "Number of clusters to form",
-            "default": 3
-          },
           "metric": {
             "type": "string",
             "enum": [
@@ -1854,6 +1878,16 @@
             "title": "Metric",
             "description": "Distance metric for assigning points to clusters",
             "default": "euclidean"
+          },
+          "centroid_type": {
+            "type": "string",
+            "enum": [
+              "centroid",
+              "medoid"
+            ],
+            "title": "Centroid Type",
+            "description": "Type of cluster representative (centroid = mean, medoid = nearest data point)",
+            "default": "medoid"
           },
           "feature_1": {
             "type": "integer",
@@ -1995,23 +2029,41 @@
             "description": "K-Means algorithm parameters"
           },
           "centroids": {
-            "items": {
-              "items": {
-                "type": "number"
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
               },
-              "type": "array"
-            },
-            "type": "array",
+              {
+                "type": "null"
+              }
+            ],
             "title": "Centroids",
-            "description": "Current centroid positions [[x, y], ...]"
+            "description": "Current centroid positions [[x, y], ...]. If not provided or empty, will initialize with one random centroid."
           },
           "dataset": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Dataset"
-              },
-              {
-                "$ref": "#/components/schemas/PredefinedDataset"
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Dataset"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PredefinedDataset"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "custom": "#/components/schemas/Dataset",
+                    "predefined": "#/components/schemas/PredefinedDataset"
+                  }
+                }
               },
               {
                 "type": "null"
@@ -2051,9 +2103,6 @@
           }
         },
         "type": "object",
-        "required": [
-          "centroids"
-        ],
         "title": "KMeansStepRequest",
         "description": "Request model for a single K-Means iteration."
       },
@@ -2190,23 +2239,41 @@
             "description": "K-Means algorithm parameters"
           },
           "centroids": {
-            "items": {
-              "items": {
-                "type": "number"
+            "anyOf": [
+              {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "type": "array"
               },
-              "type": "array"
-            },
-            "type": "array",
+              {
+                "type": "null"
+              }
+            ],
             "title": "Centroids",
-            "description": "Initial centroid positions [[x, y], ...]"
+            "description": "Initial centroid positions [[x, y], ...]. If not provided or empty, will initialize with one random centroid."
           },
           "dataset": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Dataset"
-              },
-              {
-                "$ref": "#/components/schemas/PredefinedDataset"
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Dataset"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PredefinedDataset"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "custom": "#/components/schemas/Dataset",
+                    "predefined": "#/components/schemas/PredefinedDataset"
+                  }
+                }
               },
               {
                 "type": "null"
@@ -2254,9 +2321,6 @@
           }
         },
         "type": "object",
-        "required": [
-          "centroids"
-        ],
         "title": "KMeansTrainRequest",
         "description": "Request model for K-Means training (all iterations)."
       },
@@ -2455,10 +2519,21 @@
           "dataset": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Dataset"
-              },
-              {
-                "$ref": "#/components/schemas/PredefinedDataset"
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Dataset"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PredefinedDataset"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "custom": "#/components/schemas/Dataset",
+                    "predefined": "#/components/schemas/PredefinedDataset"
+                  }
+                }
               },
               {
                 "type": "null"
@@ -2657,10 +2732,21 @@
           "dataset": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Dataset"
-              },
-              {
-                "$ref": "#/components/schemas/PredefinedDataset"
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Dataset"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PredefinedDataset"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "custom": "#/components/schemas/Dataset",
+                    "predefined": "#/components/schemas/PredefinedDataset"
+                  }
+                }
               },
               {
                 "type": "null"
@@ -2818,10 +2904,21 @@
           "dataset": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Dataset"
-              },
-              {
-                "$ref": "#/components/schemas/PredefinedDataset"
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Dataset"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PredefinedDataset"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "custom": "#/components/schemas/Dataset",
+                    "predefined": "#/components/schemas/PredefinedDataset"
+                  }
+                }
               },
               {
                 "type": "null"
@@ -3071,10 +3168,21 @@
           "dataset": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Dataset"
-              },
-              {
-                "$ref": "#/components/schemas/PredefinedDataset"
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Dataset"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PredefinedDataset"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "custom": "#/components/schemas/Dataset",
+                    "predefined": "#/components/schemas/PredefinedDataset"
+                  }
+                }
               },
               {
                 "type": "null"
@@ -3211,10 +3319,21 @@
           "dataset": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Dataset"
-              },
-              {
-                "$ref": "#/components/schemas/PredefinedDataset"
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Dataset"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PredefinedDataset"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "custom": "#/components/schemas/Dataset",
+                    "predefined": "#/components/schemas/PredefinedDataset"
+                  }
+                }
               },
               {
                 "type": "null"
@@ -3303,7 +3422,7 @@
       "ManualTreeEvaluateRequest": {
         "properties": {
           "tree": {
-            "anyOf": [
+            "oneOf": [
               {
                 "$ref": "#/components/schemas/SplitNode-Input"
               },
@@ -3312,15 +3431,33 @@
               }
             ],
             "title": "Tree",
-            "description": "Root node of the manual tree"
+            "description": "Root node of the manual tree",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "leaf": "#/components/schemas/LeafNode",
+                "split": "#/components/schemas/SplitNode-Input"
+              }
+            }
           },
           "dataset": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Dataset"
-              },
-              {
-                "$ref": "#/components/schemas/PredefinedDataset"
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/Dataset"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PredefinedDataset"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "custom": "#/components/schemas/Dataset",
+                    "predefined": "#/components/schemas/PredefinedDataset"
+                  }
+                }
               },
               {
                 "type": "null"
@@ -3491,6 +3628,13 @@
       },
       "PredefinedDataset": {
         "properties": {
+          "type": {
+            "type": "string",
+            "const": "predefined",
+            "title": "Type",
+            "description": "Discriminator for Union type",
+            "default": "predefined"
+          },
           "name": {
             "type": "string",
             "enum": [
@@ -3648,7 +3792,7 @@
             ]
           },
           "left": {
-            "anyOf": [
+            "oneOf": [
               {
                 "$ref": "#/components/schemas/SplitNode-Input"
               },
@@ -3656,10 +3800,17 @@
                 "$ref": "#/components/schemas/LeafNode"
               }
             ],
-            "title": "Left"
+            "title": "Left",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "leaf": "#/components/schemas/LeafNode",
+                "split": "#/components/schemas/SplitNode-Input"
+              }
+            }
           },
           "right": {
-            "anyOf": [
+            "oneOf": [
               {
                 "$ref": "#/components/schemas/SplitNode-Input"
               },
@@ -3667,7 +3818,14 @@
                 "$ref": "#/components/schemas/LeafNode"
               }
             ],
-            "title": "Right"
+            "title": "Right",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "leaf": "#/components/schemas/LeafNode",
+                "split": "#/components/schemas/SplitNode-Input"
+              }
+            }
           }
         },
         "type": "object",
@@ -3767,7 +3925,7 @@
             ]
           },
           "left": {
-            "anyOf": [
+            "oneOf": [
               {
                 "$ref": "#/components/schemas/SplitNode-Output"
               },
@@ -3775,10 +3933,17 @@
                 "$ref": "#/components/schemas/LeafNode"
               }
             ],
-            "title": "Left"
+            "title": "Left",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "leaf": "#/components/schemas/LeafNode",
+                "split": "#/components/schemas/SplitNode-Output"
+              }
+            }
           },
           "right": {
-            "anyOf": [
+            "oneOf": [
               {
                 "$ref": "#/components/schemas/SplitNode-Output"
               },
@@ -3786,7 +3951,14 @@
                 "$ref": "#/components/schemas/LeafNode"
               }
             ],
-            "title": "Right"
+            "title": "Right",
+            "discriminator": {
+              "propertyName": "type",
+              "mapping": {
+                "leaf": "#/components/schemas/LeafNode",
+                "split": "#/components/schemas/SplitNode-Output"
+              }
+            }
           }
         },
         "type": "object",

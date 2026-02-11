@@ -11,13 +11,14 @@ import { useContext, useEffect, useMemo, useState } from "react";
 
 type TrainPageProps = Pick<
     ModelPageProps,
-    "model_name" | "parameters" | "problem_type"
+    "model_name" | "parameters" | "problem_type" | "dataset"
 >;
 
 const TrainPage: React.FC<TrainPageProps> = ({
     model_name,
     parameters,
     problem_type,
+    dataset,
 }) => {
     const model = useModel();
     const { isLoading, data, train, getParameters } = model;
@@ -64,8 +65,12 @@ const TrainPage: React.FC<TrainPageProps> = ({
     }, [lastParams, parameters]);
 
     useEffect(() => {
-        train(parameters || {});
-    }, [parameters, train]);
+        const trainParams = {
+            ...(parameters || {}),
+            dataset: (parameters as any)?.dataset || dataset,
+        };
+        train(trainParams);
+    }, [parameters, dataset, train]);
 
     const [showAlert, setShowAlert] = useState(false);
 

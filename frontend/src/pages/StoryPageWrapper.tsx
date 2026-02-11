@@ -1,17 +1,41 @@
-import config from "@/assets/config.json";
+import { Button } from "@/components/ui/button";
+import { useConfig } from "@/contexts/ConfigContext";
 import { CurrentStoryProvider, StoryContext } from "@/contexts/StoryContext";
 import { StoryPage } from "@/pages/StoryPage";
-import type { Config, PageUnion, Story } from "@/types/story";
+import type { PageUnion, Story } from "@/types/story";
 import { useContext } from "react";
 import { useLocation, useParams } from "react-router-dom";
 
 const StoryPageWrapper: React.FC = () => {
+    const { config: storyConfig, loading, error } = useConfig();
     const { storyName } = useParams<{ storyName: string }>();
     if (!storyName) throw new Error("No story name");
 
     const location = useLocation();
 
-    const storyConfig = config as unknown as Config;
+    if (loading) {
+        return (
+            <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-fuchsia-50">
+                <div className="animate-pulse text-2xl font-mono text-fuchsia-600">Loading story...</div>
+            </div>
+        );
+    }
+
+    if (error || !storyConfig) {
+        return (
+            <div className="h-screen w-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-fuchsia-50">
+                <div className="text-2xl font-mono text-red-600 mb-4">Error loading config</div>
+                <div className="text-sm font-mono text-gray-600 mb-8">{error || "Config not found"}</div>
+                <Button 
+                    onClick={() => { window.location.href = "/"; }}
+                    className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-200 rounded-full px-6"
+                >
+                    Return to Home (Default Config)
+                </Button>
+            </div>
+        );
+    }
+
     const stories: Record<string, Story> = storyConfig.stories;
     const pages: Record<string, PageUnion> = storyConfig.pages;
 

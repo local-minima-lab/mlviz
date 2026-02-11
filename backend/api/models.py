@@ -19,13 +19,16 @@ from models import (
     ThresholdStatistics,
     TreeNode,
 )
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, Discriminator
+
+# Create a discriminated union type for Dataset
+DatasetUnion = Annotated[Union[Dataset, PredefinedDataset], Field(discriminator="type")]
 
 
 class DecisionTreeTrainingRequest(DecisionTreeParameters):
     """Request model for Decision Tree."""
 
-    dataset: Optional[Union[Dataset, PredefinedDataset]] = Field(
+    dataset: Optional[DatasetUnion] = Field(
         None, description="Dataset to use for training"
     )
 
@@ -61,7 +64,7 @@ class DecisionTreePredictionResponse(BaseModel):
 class ManualNodeStatsRequest(NodeStatParameters):
     """Request to calculate statistics for a potential node split."""
 
-    dataset: Optional[Union[Dataset, PredefinedDataset]] = Field(
+    dataset: Optional[DatasetUnion] = Field(
         None, description="Dataset to use for training"
     )
 
@@ -87,7 +90,7 @@ class ManualNodeStatsResponse(BaseModel):
 class ManualFeatureStatsRequest(ManualFeatureStatsParameters):
     """Request to calculate statistics for all thresholds of a feature."""
 
-    dataset: Optional[Union[Dataset, PredefinedDataset]] = Field(
+    dataset: Optional[DatasetUnion] = Field(
         None, description="Dataset to use for training"
     )
 
@@ -122,7 +125,7 @@ class ManualTreeEvaluateRequest(BaseModel):
     """Request to evaluate a manually built tree."""
 
     tree: TreeNode = Field(description="Root node of the manual tree")
-    dataset: Optional[Union[Dataset, PredefinedDataset]] = Field(
+    dataset: Optional[DatasetUnion] = Field(
         None, description="Dataset to use for evaluation (defaults to Iris)"
     )
 
@@ -266,7 +269,7 @@ class KNNVisualisationRequest(BaseModel):
     parameters: KNNParameters = Field(
         default_factory=KNNParameters, description="KNN algorithm parameters"
     )
-    dataset: Optional[Union[Dataset, PredefinedDataset]] = Field(
+    dataset: Optional[DatasetUnion] = Field(
         None, description="Training dataset. Defaults to Iris dataset."
     )
     visualisation_features: Optional[List[int]] = Field(
@@ -322,7 +325,7 @@ class KNNTrainingRequest(BaseModel):
     parameters: KNNParameters = Field(
         default_factory=KNNParameters, description="KNN algorithm parameters"
     )
-    dataset: Optional[Union[Dataset, PredefinedDataset]] = Field(
+    dataset: Optional[DatasetUnion] = Field(
         None, description="Training dataset. Defaults to Iris dataset."
     )
     visualisation_features: Optional[List[int]] = Field(
@@ -368,7 +371,7 @@ class KNNPredictionRequest(BaseModel):
         default_factory=KNNParameters,
         description="KNN algorithm parameters (defaults to n_neighbors=5, uniform weights, etc.)",
     )
-    dataset: Optional[Union[Dataset, PredefinedDataset]] = Field(
+    dataset: Optional[DatasetUnion] = Field(
         None,
         description="Training dataset with X, y, feature_names, class_names. Defaults to Iris dataset.",
     )
@@ -530,7 +533,7 @@ class KMeansTrainRequest(BaseModel):
         None,
         description="Initial centroid positions [[x, y], ...]. If not provided or empty, will initialize with one random centroid."
     )
-    dataset: Optional[Union[Dataset, PredefinedDataset]] = Field(
+    dataset: Optional[DatasetUnion] = Field(
         None, description="Dataset to use. Defaults to Iris dataset."
     )
     visualisation_features: Optional[List[int]] = Field(
@@ -592,7 +595,7 @@ class KMeansStepRequest(BaseModel):
         None,
         description="Current centroid positions [[x, y], ...]. If not provided or empty, will initialize with one random centroid."
     )
-    dataset: Optional[Union[Dataset, PredefinedDataset]] = Field(
+    dataset: Optional[DatasetUnion] = Field(
         None, description="Dataset to use. Defaults to Iris dataset."
     )
     visualisation_features: Optional[List[int]] = Field(

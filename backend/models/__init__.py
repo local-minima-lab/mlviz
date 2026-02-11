@@ -1,24 +1,26 @@
-from .base import ClassificationMetrics, ClassificationMetadata
-from .util import HistogramData
-from .dataset import Dataset, PredefinedDataset, DatasetInfo
+from .base import ClassificationMetadata, ClassificationMetrics
+from .dataset import Dataset, DatasetInfo, PredefinedDataset
 from .decision_tree import (
-    TreeNode,
     DecisionTreeParameters,
-    NodeStatParameters,
+    LeafNode,
+    ManualFeatureStatsParameters,
     NodeStatistics,
+    NodeStatParameters,
+    SplitNode,
     SplitStatistics,
     ThresholdStatistics,
-    ManualFeatureStatsParameters,
-)
-from .knn import (
-    KNNParameters,
-    NeighborInfo,
-    DecisionBoundaryData,
+    TreeNode,
 )
 from .kmeans import (
-    KMeansParameters,
     ClusterInfo,
+    KMeansParameters,
 )
+from .knn import (
+    DecisionBoundaryData,
+    KNNParameters,
+    NeighborInfo,
+)
+from .util import HistogramData
 
 __all__ = [
     "ClassificationMetrics",
@@ -28,6 +30,8 @@ __all__ = [
     "PredefinedDataset",
     "DatasetInfo",
     "TreeNode",
+    "SplitNode",
+    "LeafNode",
     "DecisionTreeParameters",
     "NodeStatParameters",
     "NodeStatistics",
