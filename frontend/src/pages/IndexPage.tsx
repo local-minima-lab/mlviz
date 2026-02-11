@@ -1,14 +1,36 @@
-import config from "@/assets/config.json";
 import { Button } from "@/components/ui/button";
-import type { Config } from "@/types/story";
-import { Link } from "react-router-dom"; // Import Link
+import { useConfig } from "@/contexts/ConfigContext";
+import { Link } from "react-router-dom";
 
 const IndexPage = () => {
-    const storyConfig = config as unknown as Config;
+    const { config: storyConfig, loading, error } = useConfig();
+
+    if (loading) {
+        return (
+            <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-fuchsia-50">
+                <div className="animate-pulse text-2xl font-mono text-fuchsia-600">Loading configurations...</div>
+            </div>
+        );
+    }
+
+    if (error || !storyConfig) {
+        return (
+            <div className="h-screen w-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-fuchsia-50">
+                <div className="text-4xl font-bold font-mono text-red-600 mb-4">Error loading config</div>
+                <div className="text-sm font-mono text-gray-600 mb-8">{error || "Config not found"}</div>
+                <Button 
+                    onClick={() => { window.location.href = window.location.pathname; }}
+                    className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-200 rounded-full px-6"
+                >
+                    Reset to Default Config
+                </Button>
+            </div>
+        );
+    }
 
     return (
         <div className="h-screen w-screen overflow-hidden flex flex-col bg-gradient-to-br from-blue-50 to-fuchsia-50">
-            <div className="h-[15dvh] flex flex-col justify-self-center text-center">
+            <div className="flex flex-col justify-self-center text-center mb-4">
                 <h1 className="w-fit mx-auto font-extrabold tracking-tighter font-width-expanded pt-8 px-3 rounded-md bg-gradient-to-r from-fuchsia-600 to-blue-400 bg-clip-text text-transparent font-bold !text-7xl hover:opacity-80 transition-opacity">
                     mlviz
                 </h1>
