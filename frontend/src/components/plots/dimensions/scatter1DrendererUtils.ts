@@ -46,6 +46,7 @@ export function renderScatter1D(
         showGrid = true,
         showLegend = true,
         showAxes = true,
+        legendPosition,
         onPointClick,
         onPointHover,
     } = options;
@@ -124,7 +125,7 @@ export function renderScatter1D(
 
     // Render legend
     if (showLegend) {
-        const legend = renderLegend(container, config, innerWidth, innerHeight);
+        const legend = renderLegend(container, config, innerWidth, innerHeight, { position: legendPosition });
         if (legend) {
             legend.onFilterChange((focusedNames) => {
                 // Update data points
@@ -161,7 +162,12 @@ export function renderScatter1D(
         }
     }
 
-    return { xScale, colorScale };
+    return { 
+        xScale, 
+        colorScale, 
+        contentGroup: container, 
+        bounds: { innerWidth, innerHeight } 
+    };
 }
 
 // ============================================================================

@@ -99,6 +99,7 @@ jobs:
               working-directory: ./frontend
               env:
                   VITE_API_BASE_URL: ${{ needs.deploy-backend.outputs.backend-url }}
+                  VITE_FAVICON: /mlviz.png
               run: |
                   echo "Building with backend URL: $VITE_API_BASE_URL"
                   npm run build

@@ -7,7 +7,7 @@ const IndexPage = () => {
     const storyConfig = config as unknown as Config;
 
     return (
-        <div className="h-screen w-screen overflow-hidden flex flex-col bg-gradient-to-br from-neutral-100 to-stone-50">
+        <div className="h-screen w-screen overflow-hidden flex flex-col bg-gradient-to-br from-blue-50 to-fuchsia-50">
             <div className="h-[15dvh] flex flex-col justify-self-center text-center">
                 <h1 className="w-fit mx-auto font-extrabold tracking-tighter font-width-expanded pt-8 px-3 rounded-md bg-gradient-to-r from-fuchsia-600 to-blue-400 bg-clip-text text-transparent font-bold !text-7xl hover:opacity-80 transition-opacity">
                     mlviz
@@ -23,8 +23,8 @@ const IndexPage = () => {
                         key={s.name}
                         to={`/story/${name}`}
                     >
-                        <Button className="w-full flex flex-col items-start justify-center text-wrap bg-gradient-to-r from-gray-50 to-white text-gray-800 hover:from-blue-50 hover:to-purple-50 hover:text-black transition-all duration-100 hover:shadow-lg font-light hover:font-medium rounded-3xl py-16 px-8 scroll-auto">
-                            <span className="font-mono text-left tracking-tighter text-2xl text-wrap bg-gradient-to-r from-fuchsia-500 to-cyan-500 bg-clip-text text-transparent">
+                        <Button className="group w-full flex flex-col items-start justify-center text-wrap bg-gradient-to-r from-gray-50 to-white text-gray-800 hover:from-red-500 hover:to-fuchsia-600 hover:text-white transition-all duration-100 hover:shadow-lg font-light hover:font-medium rounded-3xl py-16 px-8 scroll-auto">
+                            <span className="font-mono text-left tracking-tighter text-2xl text-wrap bg-gradient-to-r from-fuchsia-500 to-blue-600 bg-clip-text text-transparent group-hover:from-fuchsia-50 group-hover:to-blue-50 group-hover:text-4xl font-bold">
                                 {s.name}
                             </span>
                             <span className="text-sm tracking-tight text-left text-wrap mt-2">

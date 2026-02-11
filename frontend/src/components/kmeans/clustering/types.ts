@@ -55,7 +55,7 @@ export interface KMeansVisualizationData {
     // Decision boundary (optional)
     decisionBoundary?: {
         meshPoints: number[][];
-        predictions: number[];
+        predictions: number[] | string[];
         dimensions: number;
     };
     
@@ -93,6 +93,7 @@ export interface RenderKMeansProps {
         onCentroidClick?: (centroid: number[], clusterId: number) => void;
         isPlacementMode?: boolean;
         activeClusterCount?: number;
+        legendPosition?: "top-right" | "top-left" | "bottom-right" | "bottom-left";
     };
 }
 

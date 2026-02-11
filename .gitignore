@@ -85,3 +85,4 @@ quartz/replit.nix
 
 
 config/old_configs
+frontend/.env.development

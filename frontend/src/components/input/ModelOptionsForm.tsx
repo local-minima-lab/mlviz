@@ -7,6 +7,7 @@ interface ModelOptionsFormProps {
     onTrainModel: () => void;
     isModelLoading: boolean;
     featureNames?: string[] | null;
+    buttonLabel?: string;
 }
 
 const ModelOptionsForm = ({
@@ -16,6 +17,7 @@ const ModelOptionsForm = ({
     onTrainModel,
     isModelLoading,
     featureNames,
+    buttonLabel = "Train Model",
 }: ModelOptionsFormProps) => {
     return (
         <div className="flex flex-col gap-4 h-full">
@@ -33,9 +35,9 @@ const ModelOptionsForm = ({
                 <button
                     onClick={onTrainModel}
                     disabled={isModelLoading}
-                    className="w-full px-4 py-2 bg-gradient-to-r from-blue-100 to-purple-100 text-gray-700 font-medium rounded-md shadow-sm transition duration-100 hover:shadow-xl my-2"
+                    className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-violet-500 text-white font-semibold rounded-md shadow-sm transition duration-100 hover:from-violet-500 hover:to-fuchsia-500 hover:shadow-xl my-2"
                 >
-                    {isModelLoading ? "Training..." : "Train Model"}
+                    {isModelLoading ? "Processing..." : buttonLabel}
                 </button>
             </div>
         </div>

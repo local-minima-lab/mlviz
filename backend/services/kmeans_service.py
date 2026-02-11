@@ -108,14 +108,21 @@ class KMeansService:
         return assignments, distance_matrix
 
     def _update_centroids(
-        self, points: np.ndarray, assignments: np.ndarray, n_clusters: int
+        self,
+        points: np.ndarray,
+        assignments: np.ndarray,
+        n_clusters: int,
+        centroid_type: str = "medoid",
+        metric: str = "euclidean",
     ) -> np.ndarray:
-        """Recalculate centroids as the mean of assigned points.
+        """Recalculate centroids as the mean of assigned points, or medoids as the nearest data point.
 
         Args:
             points: Array of shape (n_points, n_features)
             assignments: Array of shape (n_points,) with cluster assignment for each point
             n_clusters: Number of clusters
+            centroid_type: 'centroid' (mean) or 'medoid' (nearest data point to mean)
+            metric: Distance metric for medoid calculation
 
         Returns:
             New centroids array of shape (n_clusters, n_features)
@@ -126,7 +133,20 @@ class KMeansService:
         for k in range(n_clusters):
             mask = assignments == k
             if np.any(mask):
-                new_centroids[k] = points[mask].mean(axis=0)
+                cluster_points = points[mask]
+                mean_pos = cluster_points.mean(axis=0)
+
+                if centroid_type == "medoid":
+                    # Find point in cluster closest to the mean
+                    if metric == "euclidean":
+                        dists = np.sum((cluster_points - mean_pos) ** 2, axis=1)
+                    else:  # manhattan
+                        dists = np.sum(np.abs(cluster_points - mean_pos), axis=1)
+
+                    best_idx = np.argmin(dists)
+                    new_centroids[k] = cluster_points[best_idx]
+                else:
+                    new_centroids[k] = mean_pos
             else:
                 # Empty cluster: keep centroid unchanged (or could reinitialize)
                 new_centroids[k] = np.nan
@@ -183,9 +203,6 @@ class KMeansService:
             X_data = X_data[:, :n_features]
             centroids = centroids[:, :n_features]
         
-        if centroids.shape[0] == 0:
-            return None
-
         if n_features == 1:
             # 1D: Create a line of points
             x_min, x_max = X_data[:, 0].min(), X_data[:, 0].max()
@@ -222,6 +239,13 @@ class KMeansService:
                 np.linspace(z_min - z_margin, z_max + z_margin, res_3d),
             )
             mesh_points = np.c_[xx.ravel(), yy.ravel(), zz.ravel()]
+        
+        if centroids.shape[0] == 0:
+            return DecisionBoundaryData(
+                mesh_points=mesh_points.tolist(),
+                predictions=["Unassigned"] * mesh_points.shape[0],
+                dimensions=int(n_features),
+            )
         
         # Assign each mesh point to nearest centroid
         assignments, _ = self._assign_centroids(mesh_points, centroids, metric)
@@ -305,7 +329,7 @@ class KMeansService:
 
             # Update centroids
             new_centroids = self._update_centroids(
-                X_viz, assignments, n_clusters
+                X_viz, assignments, n_clusters, parameters.centroid_type, parameters.metric
             )
 
             # Check convergence
@@ -442,7 +466,7 @@ class KMeansService:
 
                 # Update centroids
                 new_centroids = self._update_centroids(
-                    X_viz, assignments, n_clusters
+                    X_viz, assignments, n_clusters, parameters.centroid_type, parameters.metric
                 )
 
                 # Check convergence

@@ -6,7 +6,7 @@
 
 import type {
     KMeansVisualizationData,
-    RenderKMeansProps,
+    RenderKMeansProps
 } from "@/components/kmeans/clustering/types";
 import type { ClusteringConfig, PlotPoint } from "@/components/plots/types";
 import {
@@ -106,8 +106,37 @@ export function renderKMeansTraining({
     });
 
     // Map assignments to cluster names
-    // If nClusters is 0, all points should be considered "Unassigned"
-    const labels = iterationData.assignments.map((clusterId) => {
+    // In placement mode with selected centroids, dynamically assign points to nearest centroid
+    // Otherwise use the iteration's assignments
+    const labels = iterationData.assignments.map((clusterId, pointIndex) => {
+        // In placement mode, dynamically assign to nearest centroid
+        if (props.isPlacementMode && iterationData.centroids.length > 0) {
+            const point = plotData[pointIndex];
+            let minDistance = Infinity;
+            let closestIndex = -1;
+
+            iterationData.centroids.forEach((centroid, index) => {
+                // Calculate Euclidean distance
+                let distSq = 0;
+                for (let d = 0; d < Math.min(point.length, centroid.length); d++) {
+                    const diff = point[d] - centroid[d];
+                    distSq += diff * diff;
+                }
+
+                if (distSq < minDistance) {
+                    minDistance = distSq;
+                    closestIndex = index;
+                }
+            });
+
+            // Safety check: ensure clusterNames has this index
+            if (closestIndex >= 0 && closestIndex < clusterNames.length) {
+                return clusterNames[closestIndex];
+            }
+            return "Unassigned";
+        }
+
+        // Normal mode: use iteration assignments
         if (nClusters === 0 || clusterId === -1) return "Unassigned";
         return clusterNames[clusterId] || "Unassigned";
     });
@@ -186,6 +215,7 @@ export function renderKMeansTraining({
         pointOpacity: 0.7,
         showGrid: true,
         showLegend: true,
+        legendPosition: props.legendPosition,
         showAxes: true,
         useNiceScales: !decisionBoundary,
     };
@@ -202,6 +232,7 @@ export function renderKMeansTraining({
                   null,
                   undefined
               >;
+              bounds?: { innerWidth: number; innerHeight: number };
           }
         | undefined;
     const dimensions_to_render = data.nDimensions;

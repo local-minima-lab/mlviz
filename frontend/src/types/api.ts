@@ -1081,6 +1081,18 @@ export interface components {
              * @default 1
              */
             feature_2: number | null;
+            /**
+             * Include Boundary
+             * @description Whether to show the decision boundary territory
+             * @default true
+             */
+            include_boundary?: boolean;
+            /**
+             * Centroid Type
+             * @description Type of centroid calculation (centroid or medoid)
+             * @default medoid
+             */
+            centroid_type?: "centroid" | "medoid";
         };
         /**
          * KMeansPredictRequest

@@ -176,10 +176,9 @@
             "page_type": "dynamic",
             "dynamic_type": "model",
             "model_name": "kmeans",
-            "component_type": "train",
+            "component_type": "step",
             "problem_type": "clustering",
             "parameters": {
-                "visualisation_features": [0, 1],
                 "include_boundary": true,
                 "max_iterations": 100
             }

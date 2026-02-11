@@ -9,6 +9,10 @@ class KMeansParameters(BaseModel):
         "euclidean",
         description="Distance metric for assigning points to clusters"
     )
+    centroid_type: Literal["centroid", "medoid"] = Field(
+        "medoid",
+        description="Type of cluster representative (centroid = mean, medoid = nearest data point)"
+    )
 
     # Feature selection parameters
     feature_1: int = Field(
