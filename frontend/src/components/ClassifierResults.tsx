@@ -1,9 +1,13 @@
 import ConfusionMatrix from "@/components/ConfusionMatrix";
-import type { ClassificationMetadata, ClassificationMetrics } from "@/types/model";
+import type {
+    ClassificationMetadata,
+    ClassificationMetrics,
+} from "@/types/model";
+import { ChartColumnIncreasing } from "lucide-react";
 
 interface DecisionTreeProps {
-    metrics: ClassificationMetrics
-    metadata: ClassificationMetadata
+    metrics: ClassificationMetrics;
+    metadata: ClassificationMetadata;
 }
 
 const roundNumber = (x: number) => String(x.toFixed(5));
@@ -14,9 +18,12 @@ const Results = ({ metrics, metadata }: DecisionTreeProps) => {
     }
 
     return (
-        <div className="h-full flex flex-col justify-between overflow-auto">
-            <div className="pb-4 border-black">
-                <p className="text-2xl pb-2 text-center">Confusion Matrix</p>
+        <div className="h-full flex flex-col justify-start overflow-auto">
+            <div className="justify-items-center w-full">
+                <p className="text-xl text-slate-800 flex items-center gap-2">
+                    <ChartColumnIncreasing className="h-4 w-4" /> Metrics
+                </p>
+
                 {metrics == null ? (
                     <></>
                 ) : (
@@ -27,10 +34,7 @@ const Results = ({ metrics, metadata }: DecisionTreeProps) => {
                         />
                     </div>
                 )}
-            </div>
-            <div className="pt-4">
-                <p className="text-2xl pb-2 text-center">Results</p>
-                <div>
+                <div className="w-full">
                     <div className="flex flex-wrap justify-between tracking-tight">
                         <p className="font-lg font-semibold">Accuracy</p>
                         <p className="font-mono">
@@ -51,9 +55,7 @@ const Results = ({ metrics, metadata }: DecisionTreeProps) => {
                     </div>
                     <div className="flex flex-wrap justify-between tracking-tight">
                         <p className="font-lg font-semibold">F1</p>
-                        <p className="font-mono">
-                            {roundNumber(metrics.f1)}
-                        </p>
+                        <p className="font-mono">{roundNumber(metrics.f1)}</p>
                     </div>
                 </div>
             </div>

@@ -336,14 +336,43 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
                     }
 
                     // PERSISTENCE: Update the common model data so it survives refresh
+                    const baseData = {
+                        success: data.success,
+                        data_points: data.data_points,
+                        final_centroids: data.new_centroids,
+                        final_assignments: data.assignments,
+                        metadata: data.metadata,
+                        visualisation_feature_indices: data.visualisation_feature_indices,
+                        visualisation_feature_names: data.visualisation_feature_names,
+                        decision_boundary: data.decision_boundary,
+                        // For step-by-step, we may not have full iteration history, 
+                        // but we can provide the latest one to keep the UI consistent.
+                        iterations: [
+                            {
+                                iteration: (currentModelData?.total_iterations || 0),
+                                assignments: data.assignments,
+                                distance_matrix: data.distance_matrix,
+                                centroids: data.centroids,
+                                new_centroids: data.new_centroids,
+                                centroid_shifts: data.centroid_shifts,
+                                converged: data.converged,
+                                cluster_info: data.cluster_info,
+                            },
+                        ],
+                        total_iterations: (currentModelData?.total_iterations || 0) + 1,
+                        converged: data.converged,
+                        queryPoints: currentModelData?.queryPoints || null,
+                    };
+
                     if (currentModelData) {
                         setCurrentModelData({
                             ...currentModelData,
-                            final_centroids: data.new_centroids,
-                            final_assignments: data.assignments,
-                            // Ensure iterations or other state is updated if needed
-                            // For step-by-step, we mostly care about the latest centroids
+                            ...baseData,
+                            // Accumulate iterations if we want to support playback after steps
+                            iterations: [...(currentModelData.iterations || []), ...baseData.iterations],
                         });
+                    } else {
+                        setCurrentModelData(baseData as KMeansModelData);
                     }
 
                     setIsPlacingCentroids(false);
@@ -365,7 +394,7 @@ const KMeansProviderInner: React.FC<{ children: ReactNode }> = ({
                 );
             }
         },
-        [],
+        [currentModelData, setCurrentModelData],
     );
 
     // ========================================================================

@@ -3,6 +3,7 @@ import { Separator } from "@/components/ui/separator";
 import { CurrentStoryContext } from "@/contexts/StoryContext";
 import type { Edge } from "@/types/story";
 import { displayCondition, isConditionMet } from "@/utils/conditions";
+import { Route } from "lucide-react";
 import { useContext } from "react";
 
 interface NavigationBarProps {
@@ -16,16 +17,18 @@ const NavigationBar: React.FC<NavigationBarProps> = ({ edges, handler }) => {
     const { storyState } = context;
 
     const completeEdges = edges.filter((a) =>
-        isConditionMet(a.condition, storyState.params)
+        isConditionMet(a.condition, storyState.params),
     );
     const incompleteEdges = edges.filter(
-        (a) => !isConditionMet(a.condition, storyState.params)
+        (a) => !isConditionMet(a.condition, storyState.params),
     );
 
     return (
-        <div className="p-2 w-full">
-            <p className="text-2xl pt-2 pb-4 text-center">Pathways</p>
-            <div className="h-full overflow-hidden flex flex-col gap-2">
+        <div className="p-4 w-full flex flex-col items-center">
+            <p className="text-xl text-slate-500 flex items-center gap-2 mb-4">
+                <Route className="h-4 w-4" /> Pathways
+            </p>
+            <div className="h-full w-full overflow-hidden flex flex-col gap-2">
                 {completeEdges.map((edge) => (
                     <NavigationButton
                         key={displayCondition(edge.condition)}

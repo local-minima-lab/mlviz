@@ -23,8 +23,8 @@ const IndexPage = () => {
                         key={s.name}
                         to={`/story/${name}`}
                     >
-                        <Button className="group w-full flex flex-col items-start justify-center text-wrap bg-gradient-to-r from-gray-50 to-white text-gray-800 hover:from-fuchsia-500 hover:to-blue-400 hover:text-white transition-all duration-100 hover:shadow-lg font-light hover:font-medium rounded-3xl py-16 px-8 scroll-auto">
-                            <span className="font-mono text-left tracking-tighter text-2xl text-wrap bg-gradient-to-r from-fuchsia-500 to-cyan-500 bg-clip-text text-transparent group-hover:from-fuchsia-100 group-hover:to-cyan-100 group-hover:text-4xl group-hover:font-bold">
+                        <Button className="group w-full flex flex-col items-start justify-center text-wrap bg-gradient-to-r from-gray-50 to-white text-gray-800 hover:from-red-500 hover:to-fuchsia-600 hover:text-white transition-all duration-100 hover:shadow-lg font-light hover:font-medium rounded-3xl py-16 px-8 scroll-auto">
+                            <span className="font-mono text-left tracking-tighter text-2xl text-wrap bg-gradient-to-r from-fuchsia-500 to-blue-600 bg-clip-text text-transparent group-hover:from-fuchsia-50 group-hover:to-blue-50 group-hover:text-4xl font-bold">
                                 {s.name}
                             </span>
                             <span className="text-sm tracking-tight text-left text-wrap mt-2">

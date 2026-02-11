@@ -465,7 +465,7 @@ const Visualisation: React.FC<VisualisationProps> = () => {
 
                         {mode === "preview" && (
                             <div className="space-y-3">
-                                <div className="p-3 bg-primary/5 rounded-xl border border-primary/10">
+                                <div className="p-3 rounded-xl border border-primary/10">
                                     <p className="text-xs font-medium text-primary flex items-center gap-1.5">
                                         <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                                         Step Complete
@@ -475,20 +475,22 @@ const Visualisation: React.FC<VisualisationProps> = () => {
                                         based on the current assignments.
                                     </p>
                                 </div>
-                                <div className="flex flex-col gap-2 w-full">
+                                <div className="text-xs text-slate-500">
+                                    Would you like to keep the centroids
+                                    suggested?
+                                </div>
+                                <div className="flex flex-row gap-2 w-full">
                                     <Button
-                                        className="w-full gap-2 bg-gradient-to-r from-red-100 to-fuchsia-100 text-xs text-black border-none hover:from-red-200 hover:to-fuchsia-200"
-                                        onClick={handleTrainNext}
-                                    >
-                                        <Move className="w-4 h-4" /> Update &
-                                        Adjust
-                                    </Button>
-                                    <Button
-                                        className="w-full gap-2 bg-gradient-to-r from-green-100 to-blue-100 text-xs text-black border-none hover:from-green-200 hover:to-blue-200"
+                                        className="w-1/2 h-full gap-2 bg-gradient-to-r from-green-100 to-blue-100 text-xs text-black border-none hover:from-green-200 hover:to-blue-200"
                                         onClick={() => setMode("selecting")}
                                     >
                                         <Check className="w-4 h-4" /> Keep
-                                        Suggested Centroids
+                                    </Button>
+                                    <Button
+                                        className="w-1/2 h-full gap-2 bg-gradient-to-r from-red-100 to-fuchsia-100 text-xs text-black border-none hover:from-red-200 hover:to-fuchsia-200"
+                                        onClick={handleTrainNext}
+                                    >
+                                        <Move className="w-4 h-4" /> Adjust
                                     </Button>
                                 </div>
                             </div>
