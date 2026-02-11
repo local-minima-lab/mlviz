@@ -14,6 +14,7 @@ import type {
     DecisionBoundary,
     PlotPoint,
 } from "@/components/plots/types";
+import { renderLegend } from "@/components/plots/utils/legendHelper";
 import * as d3 from "d3";
 
 // ============================================================================
@@ -45,6 +46,7 @@ export function renderScatter1D(
         showGrid = true,
         showLegend = true,
         showAxes = true,
+        legendPosition,
         onPointClick,
         onPointHover,
     } = options;
@@ -123,10 +125,49 @@ export function renderScatter1D(
 
     // Render legend
     if (showLegend) {
-        renderLegend1D(container, config, innerWidth);
+        const legend = renderLegend(container, config, innerWidth, innerHeight, { position: legendPosition });
+        if (legend) {
+            legend.onFilterChange((focusedNames) => {
+                // Update data points
+                const points = container.select(".data-points").selectAll<SVGCircleElement, PlotPoint>("circle");
+                points
+                    .transition()
+                    .duration(200)
+                    .attr("fill", (d) => {
+                        if (focusedNames === null) return colorScale(d);
+                        const label = d.type === "classification" ? d.label : "";
+                        return focusedNames.has(label) ? colorScale(d) : "#d1d5db";
+                    })
+                    .attr("opacity", (d) => {
+                        if (focusedNames === null) return pointOpacity;
+                        const label = d.type === "classification" ? d.label : "";
+                        return focusedNames.has(label) ? pointOpacity : 0.3;
+                    });
+
+                // Update decision boundary regions
+                const boundaryRects = container.select(".decision-boundary").selectAll<SVGRectElement, unknown>("rect");
+                if (!boundaryRects.empty()) {
+                    const getColor = createBoundaryColorScale(config);
+
+                    boundaryRects
+                        .transition()
+                        .duration(200)
+                        .attr("fill", function () {
+                            const prediction = d3.select(this).attr("data-prediction");
+                            if (focusedNames === null) return getColor(prediction);
+                            return focusedNames.has(prediction) ? getColor(prediction) : "#e5e7eb";
+                        });
+                }
+            });
+        }
     }
 
-    return { xScale, colorScale };
+    return { 
+        xScale, 
+        colorScale, 
+        contentGroup: container, 
+        bounds: { innerWidth, innerHeight } 
+    };
 }
 
 // ============================================================================
@@ -173,7 +214,8 @@ function renderDecisionBoundary1D(
             .attr("y", stripCenter - stripHeight / 2)
             .attr("width", x2 - x1)
             .attr("height", stripHeight)
-            .attr("fill", getColor(current.prediction));
+            .attr("fill", getColor(current.prediction))
+            .attr("data-prediction", String(current.prediction));
     }
 }
 
@@ -378,38 +420,3 @@ function renderDataPoints1D(
     });
 }
 
-function renderLegend1D(
-    g: d3.Selection<SVGGElement, unknown, null, undefined>,
-    config: Config,
-    width: number
-) {
-    const legendGroup = g
-        .append("g")
-        .attr("class", "legend")
-        .attr("transform", `translate(${width - 120}, -30)`);
-
-    if (config.type === "classification") {
-        const categoricalScale = createBoundaryColorScale(config);
-
-        config.classNames.forEach((className: string, i: number) => {
-            const legendRow = legendGroup
-                .append("g")
-                .attr("transform", `translate(0, ${i * 18})`);
-
-            legendRow
-                .append("circle")
-                .attr("cx", 0)
-                .attr("cy", 0)
-                .attr("r", 5)
-                .attr("fill", categoricalScale(className));
-
-            legendRow
-                .append("text")
-                .attr("x", 10)
-                .attr("y", 4)
-                .attr("font-size", "11px")
-                .attr("fill", "#374151")
-                .text(className);
-        });
-    }
-}

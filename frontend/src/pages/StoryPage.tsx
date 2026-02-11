@@ -24,7 +24,7 @@ export const StoryPage: React.FC<StoryPageProps> = ({
 
     const getAvailableEdges = (): Edge[] => {
         return story.edges.filter(
-            (edge) => edge.start.local_index === currentPageId
+            (edge) => edge.start.local_index === currentPageId,
         );
     };
 
@@ -46,12 +46,12 @@ export const StoryPage: React.FC<StoryPageProps> = ({
     };
 
     return (
-        <div className="w-dvw mx-auto flex flex-col overflow-hidden">
-            <div className="h-[95dvh] flex flex-row justify-between items-center bg-gray-200">
+        <div className="w-screen h-screen flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-row justify-between items-center bg-gray-200 overflow-hidden">
                 <div className="h-full w-[85dvw] flex flex-col">
                     {renderPage()}
                 </div>
-                <div className="h-full w-[15dvw] flex flex-col gap-2 items-center overflow-scroll bg-gradient-to-br from-gray-50 to-slate-50">
+                <div className="h-full w-[15dvw] flex flex-col gap-2 items-center overflow-hidden bg-gradient-to-br from-gray-50 to-slate-50">
                     <NavigationBar
                         edges={getAvailableEdges()}
                         handler={setCurrentPageId}
@@ -59,8 +59,8 @@ export const StoryPage: React.FC<StoryPageProps> = ({
                 </div>
             </div>
 
-            <div className="h-[5dvh] flex flex-row justify-between items-center bg-gray-100">
-                <p className="bg-gradient-to-r from-fuchsia-800 to-cyan-800 bg-clip-text text-transparent px-4 font-bold font-mono text-xs">
+            <footer className="shrink-0 border-t border-gray-200 px-4 py-2 flex items-center justify-between text-sm tracking-tight">
+                <p className="bg-gradient-to-r from-fuchsia-500 to-cyan-500 bg-clip-text text-transparent font-semibold font-mono">
                     story/{story.name}
                 </p>
                 <Link to={"/"}>
@@ -71,7 +71,7 @@ export const StoryPage: React.FC<StoryPageProps> = ({
                         <House />
                     </Button>
                 </Link>
-            </div>
+            </footer>
         </div>
     );
 };

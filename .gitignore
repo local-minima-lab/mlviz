@@ -71,5 +71,18 @@ Thumbs.db
 # backend/openapi.json
 # frontend/src/types/api.ts
 
+# Quartz documentation
+quartz/public/
+quartz/.quartz-cache/
+quartz/tsconfig.tsbuildinfo
+quartz/.obsidian/
+quartz/private/
+quartz/.replit
+quartz/replit.nix
+
 # Temporary
 .github/SERVICE_NAMES.md
+
+
+config/old_configs
+frontend/.env.development

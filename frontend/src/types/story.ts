@@ -72,6 +72,7 @@ export type Parameters = Record<string, any>;
 
 interface BasePage {
     page_type: "static" | "dynamic";
+    name?: string;
     parameters?: Parameters;
 }
 
@@ -97,7 +98,8 @@ export interface DynamicPage extends DynamicPageParameters {
 export interface ModelPage extends DynamicPageParameters {
     dynamic_type: "model";
     model_name: string;
-    component_type: "train" | "predict" | "manual" | "viz_only";
+    component_type: "train" | "predict" | "manual" | "viz_only" | "step";
+    problem_type: "classifier" | "clustering" | "prediction";
 }
 
 export type DynamicPageUnion = DynamicPage | ModelPage;

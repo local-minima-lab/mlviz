@@ -5,6 +5,7 @@
 
 import type {
     ClassificationConfig,
+    ClusteringConfig,
     Config,
     PlotPoint,
     RegressionConfig,
@@ -12,6 +13,7 @@ import type {
 import {
     createColorScale,
     createContinuousColorScale,
+    UNASSIGNED_COLOR,
 } from "@/utils/colorUtils";
 
 // ============================================================================
@@ -26,15 +28,11 @@ export interface ScatterRenderOptions {
     pointOpacity?: number;
     showGrid?: boolean;
     showLegend?: boolean;
+    legendPosition?: "top-right" | "top-left" | "bottom-right" | "bottom-left";
     showAxes?: boolean;
     useNiceScales?: boolean;  // Whether to round scale domains to nice values (default: true)
     onPointClick?: (index: number, point: number[]) => void;
     onPointHover?: (index: number | null) => void;
-}
-
-export interface Scatter3DRotation {
-    alpha: number;
-    beta: number;
 }
 
 // ============================================================================
@@ -55,20 +53,25 @@ export const JITTER_AMOUNT = 0.8;
 
 /**
  * Creates a color scale function for scatter plot points based on config type
- * Handles both classification (categorical) and regression (continuous) tasks
+ * Handles classification, clustering (categorical) and regression (continuous) tasks
  */
 export function createScatterColorScale(
     config: Config
 ): (point: PlotPoint) => string {
-    if (config.type === "classification") {
+    if (config.type === "classification" || config.type === "clustering") {
+        const names = config.type === "classification" ? config.classNames : config.clusterNames;
         const categoricalScale = createColorScale(
-            config.classNames,
+            names,
             config.colorScheme || "default"
         );
-        return (point: PlotPoint) =>
-            point.type === "classification"
+        return (point: PlotPoint) => {
+            if (point.type === "classification" && point.label === "Unassigned") {
+                return UNASSIGNED_COLOR;
+            }
+            return point.type === "classification"
                 ? categoricalScale(point.label)
-                : "#000";
+                : UNASSIGNED_COLOR;
+        };
     } else {
         const valueRange = config.valueRange || [
             Math.min(...config.values),
@@ -90,9 +93,10 @@ export function createScatterColorScale(
 export function createBoundaryColorScale(
     config: Config
 ): (prediction: any) => string {
-    if (config.type === "classification") {
+    if (config.type === "classification" || config.type === "clustering") {
+        const names = config.type === "classification" ? config.classNames : config.clusterNames;
         const categoricalScale = createColorScale(
-            config.classNames,
+            names,
             config.colorScheme || "default"
         );
         return (prediction) => categoricalScale(prediction);
@@ -112,11 +116,13 @@ export function createBoundaryColorScale(
 export function makeGetColor(
     config: ClassificationConfig
 ): (p: string) => string;
+export function makeGetColor(config: ClusteringConfig): (p: string) => string;
 export function makeGetColor(config: RegressionConfig): (p: number) => string;
 export function makeGetColor(config: Config) {
-    if (config.type === "classification") {
+    if (config.type === "classification" || config.type === "clustering") {
+        const names = config.type === "classification" ? config.classNames : config.clusterNames;
         const scale = createColorScale(
-            config.classNames,
+            names,
             config.colorScheme ?? "default"
         );
         return (p: string) => scale(p);

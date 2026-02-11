@@ -29,7 +29,7 @@ import {
     type PredictableModelContext,
     type PredictionResult,
     type TrainableModelContext,
-    type VisualizableModelContext
+    type VisualizableModelContext,
 } from "./BaseModelContext";
 
 // Define comprehensive KNN model data type
@@ -50,12 +50,13 @@ const { Provider: BaseProvider, useBaseModel } =
 // Types
 // ============================================================================
 
-interface KNNContextType extends
-    TrainableModelContext<KNNModelData>,
-    PredictableModelContext<KNNModelData, KNNPredictionResponse>,
-    VisualizableModelContext<KNNModelData> {
+interface KNNContextType
+    extends
+        TrainableModelContext<KNNModelData>,
+        PredictableModelContext<KNNModelData, KNNPredictionResponse>,
+        VisualizableModelContext<KNNModelData> {
     // KNN-specific properties (backward compatibility or specialized)
-    
+
     // Prediction state (Original names)
     isPredictionLoading: boolean;
     predictionError: string | null;
@@ -105,17 +106,26 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
     } = baseContext;
 
     // Extract values from currentModelData or use defaults
-    const [isVisualizationLoading, setIsVisualizationLoading] = React.useState<boolean>(false);
-    const [visualizationError, setVisualizationError] = React.useState<string | null>(null);
+    const [isVisualizationLoading, setIsVisualizationLoading] =
+        React.useState<boolean>(false);
+    const [visualizationError, setVisualizationError] = React.useState<
+        string | null
+    >(null);
 
     // For backward compatibility and specialized use
     const visualizationData = currentModelData || null;
 
     // Prediction state (Local to avoid infinite loops with persisted state)
-    const [isPredictionLoading, setIsPredictionLoading] = React.useState<boolean>(false);
-    const [predictionError, setPredictionError] = React.useState<string | null>(null);
-    const [predictionData, setPredictionData] = React.useState<KNNPredictionResponse | null>(null);
-    const [queryPoints, setQueryPoints] = React.useState<number[][] | null>(currentModelData?.queryPoints || null);
+    const [isPredictionLoading, setIsPredictionLoading] =
+        React.useState<boolean>(false);
+    const [predictionError, setPredictionError] = React.useState<string | null>(
+        null,
+    );
+    const [predictionData, setPredictionData] =
+        React.useState<KNNPredictionResponse | null>(null);
+    const [queryPoints, setQueryPoints] = React.useState<number[][] | null>(
+        currentModelData?.queryPoints || null,
+    );
 
     // Sync queryPoints from currentModelData if needed
     useEffect(() => {
@@ -161,13 +171,6 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
         },
         [currentModelData, setCurrentModelData, setLastParams],
     );
-
-    const clearVisualization = useCallback(() => {
-        setCurrentModelData(null);
-        setIsVisualizationLoading(false);
-        setVisualizationError(null);
-        setLastParams({});
-    }, [setCurrentModelData, setLastParams]);
 
     // ========================================================================
     // Training (with metrics)
@@ -224,8 +227,7 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
 
     const getPredictiveFeatureNames = useCallback((): string[] | null => {
         return (
-            visualizationData?.visualisation_feature_names ||
-            getFeatureNames()
+            visualizationData?.visualisation_feature_names || getFeatureNames()
         );
     }, [visualizationData, getFeatureNames]);
 
@@ -269,7 +271,7 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
                     setIsPredictionLoading(false);
                     setPredictionError(null);
                     setQueryPoints(request.query_points || null);
-                    
+
                     // Opt-in: persist query points if desired
                     if (currentModelData) {
                         setCurrentModelData({
@@ -306,7 +308,9 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
 
             await makePrediction({
                 query_points: [queryPoint],
-                visualisation_features: visualizationData?.visualisation_feature_indices || undefined,
+                visualisation_features:
+                    visualizationData?.visualisation_feature_indices ||
+                    undefined,
             });
         },
         [getFeatureNames, makePrediction, visualizationData],
@@ -317,7 +321,7 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
         setPredictionError(null);
         setIsPredictionLoading(false);
         setQueryPoints(null);
-        
+
         // Also clear persisted query points
         if (currentModelData) {
             setCurrentModelData({
@@ -355,16 +359,19 @@ const KNNProviderInner: React.FC<{ children: ReactNode }> = ({ children }) => {
     // Context Value
     // ========================================================================
 
-    const predictionResult: PredictionResult<KNNPredictionResponse> | null = React.useMemo(() => {
-        if (!predictionData || !predictionData.predictions?.[0]) return null;
+    const predictionResult: PredictionResult<KNNPredictionResponse> | null =
+        React.useMemo(() => {
+            if (!predictionData || !predictionData.predictions?.[0])
+                return null;
 
-        return {
-            predictedClass: predictionData.predictions[0],
-            predictedClassIndex: predictionData.prediction_indices?.[0] ?? -1,
-            // confidence is optional but KNN doesn't naturally provide it without extra work
-            additionalData: predictionData,
-        };
-    }, [predictionData]);
+            return {
+                predictedClass: predictionData.predictions[0],
+                predictedClassIndex:
+                    predictionData.prediction_indices?.[0] ?? -1,
+                // confidence is optional but KNN doesn't naturally provide it without extra work
+                additionalData: predictionData,
+            };
+        }, [predictionData]);
 
     const contextValue: KNNContextType = {
         // BaseModelContextType

@@ -1,24 +1,15 @@
 {
     "stories": {
-        "decision_tree_classifier": {
-            "name": "decision_tree_classifier",
-            "description": "An introduction to DecisionTreeClassifiers.",
-            "start_page": 1,
+        "decision_tree": {
+            "name": "decision_tree",
+            "description": "Decision tree classifier",
+            "start_page": 0,
             "nodes": [
                 {
-                    "index": 339858608
+                    "index": 1601097160
                 },
                 {
-                    "index": 3408163045
-                },
-                {
-                    "index": 3170219703
-                },
-                {
-                    "index": 413280384
-                },
-                {
-                    "index": 1452535
+                    "index": 1767090483
                 }
             ],
             "edges": [
@@ -41,20 +32,35 @@
                         "story_name": null
                     },
                     "end": {
-                        "local_index": 3,
+                        "local_index": 0,
                         "story_name": null
                     },
                     "condition": {
                         "condition_type": "Bypass"
                     }
+                }
+            ]
+        },
+        "knn": {
+            "name": "knn",
+            "description": "KNN Classifier",
+            "start_page": 0,
+            "nodes": [
+                {
+                    "index": 3214981933
                 },
                 {
+                    "index": 2584106709
+                }
+            ],
+            "edges": [
+                {
                     "start": {
-                        "local_index": 2,
+                        "local_index": 0,
                         "story_name": null
                     },
                     "end": {
-                        "local_index": 3,
+                        "local_index": 1,
                         "story_name": null
                     },
                     "condition": {
@@ -63,20 +69,7 @@
                 },
                 {
                     "start": {
-                        "local_index": 3,
-                        "story_name": null
-                    },
-                    "end": {
-                        "local_index": 4,
-                        "story_name": null
-                    },
-                    "condition": {
-                        "condition_type": "Bypass"
-                    }
-                },
-                {
-                    "start": {
-                        "local_index": 4,
+                        "local_index": 1,
                         "story_name": null
                     },
                     "end": {
@@ -89,16 +82,16 @@
                 }
             ]
         },
-        "knn": {
-            "name": "knn",
-            "description": "",
+        "kmeans": {
+            "name": "kmeans",
+            "description": "Kmeans clustering",
             "start_page": 0,
             "nodes": [
                 {
-                    "index": 2772640959
+                    "index": 961090416
                 },
                 {
-                    "index": 4216325597
+                    "index": 3734163842
                 }
             ],
             "edges": [
@@ -132,81 +125,71 @@
         }
     },
     "pages": {
-        "339858608": {
-            "name": "static: dtree/introduction",
-            "page_type": "static",
-            "parameters": {
-                "text": null,
-                "link": "/dtree/introduction.md"
-            }
-        },
-        "3408163045": {
-            "name": "dtree: manual",
+        "1601097160": {
+            "name": "",
             "page_type": "dynamic",
             "dynamic_type": "model",
             "model_name": "decision_tree",
             "component_type": "manual",
+            "problem_type": "classifier",
             "parameters": {}
         },
-        "3170219703": {
-            "name": "static: dtree/prediction",
-            "page_type": "static",
-            "parameters": {
-                "text": null,
-                "link": "/dtree/prediction.md"
-            }
-        },
-        "413280384": {
-            "name": "dtree: predict",
+        "1767090483": {
+            "name": "",
             "page_type": "dynamic",
             "dynamic_type": "model",
             "model_name": "decision_tree",
             "component_type": "predict",
+            "problem_type": "classifier",
             "parameters": {}
         },
-        "1452535": {
-            "name": "static: dtree/end",
-            "page_type": "static",
-            "parameters": {
-                "text": null,
-                "link": "dtree/end.md"
-            }
-        },
-        "2026121186": {
+        "459510024": {
             "name": "",
             "page_type": "dynamic",
             "dynamic_type": "model",
             "model_name": "knn",
             "component_type": "viz_only",
-            "parameters": {
-                "visualisation_features": [0, 1],
-                "include_boundary": false
-            }
-        },
-        "2772640959": {
-            "name": "",
-            "page_type": "dynamic",
-            "dynamic_type": "model",
-            "model_name": "knn",
-            "component_type": "train"
-        },
-        "4216325597": {
-            "name": "",
-            "page_type": "dynamic",
-            "dynamic_type": "model",
-            "model_name": "knn",
-            "component_type": "predict"
-        },
-        "3514680251": {
-            "name": "",
-            "page_type": "dynamic",
-            "dynamic_type": "model",
-            "model_name": "knn",
-            "component_type": "viz_only",
+            "problem_type": "classifier",
             "parameters": {
                 "visualisation_features": [0, 1],
                 "include_boundary": true
             }
+        },
+        "2584106709": {
+            "name": "",
+            "page_type": "dynamic",
+            "dynamic_type": "model",
+            "model_name": "knn",
+            "component_type": "predict",
+            "problem_type": "classifier"
+        },
+        "3214981933": {
+            "name": "",
+            "page_type": "dynamic",
+            "dynamic_type": "model",
+            "model_name": "knn",
+            "component_type": "train",
+            "problem_type": "classifier"
+        },
+        "961090416": {
+            "name": "",
+            "page_type": "dynamic",
+            "dynamic_type": "model",
+            "model_name": "kmeans",
+            "component_type": "step",
+            "problem_type": "clustering",
+            "parameters": {
+                "include_boundary": true,
+                "max_iterations": 100
+            }
+        },
+        "3734163842": {
+            "name": "",
+            "page_type": "dynamic",
+            "dynamic_type": "model",
+            "model_name": "kmeans",
+            "component_type": "predict",
+            "problem_type": "clustering"
         }
     }
 }

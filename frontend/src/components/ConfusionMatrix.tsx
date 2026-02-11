@@ -109,7 +109,7 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
         // Create scales
         const cellSize = Math.max(
             minCellSize,
-            Math.min(innerWidth, innerHeight) / numClasses
+            Math.min(innerWidth, innerHeight) / numClasses,
         );
         const xScale = d3
             .scaleBand()
@@ -145,8 +145,8 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
                         value,
                         row: i,
                         col: j,
-                    }))
-                )
+                    })),
+                ),
             )
             .enter()
             .append("g")
@@ -191,7 +191,7 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
             .append("text")
             .attr(
                 "x",
-                (d) => (xScale(d.predicted) || 0) + xScale.bandwidth() / 2
+                (d) => (xScale(d.predicted) || 0) + xScale.bandwidth() / 2,
             )
             .attr("y", (d) => (yScale(d.actual) || 0) + yScale.bandwidth() / 2)
             .attr("text-anchor", "middle")
@@ -256,7 +256,7 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
             .call(applyFont.weight.bold)
             .attr(
                 "transform",
-                `rotate(-90, -45, ${(numClasses * cellSize) / 2})`
+                `rotate(-90, -45, ${(numClasses * cellSize) / 2})`,
             )
             .text("Actual");
 
@@ -289,7 +289,7 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
                     className="w-full h-full overflow-auto"
                 >
                     <div
-                        className="relative"
+                        className="relative flex justify-center items-center"
                         style={{
                             width: Math.max(width, dimensions.width || 0),
                             height: Math.max(height, dimensions.height || 0),

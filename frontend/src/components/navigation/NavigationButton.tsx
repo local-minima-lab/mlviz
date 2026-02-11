@@ -47,12 +47,12 @@ const NavigationButton: React.FC<NavigationButtonProps> = ({
             disabled={!isNavigable}
             onClick={goToNextPage}
             className={`
-             w-full min-h-[10dvh] h-auto py-3 transition-all duration-100 shadow-lg hover:shadow-2xl text-sm tracking-tight
+            w-full min-h-[10dvh] h-auto py-3 transition-all duration-100 shadow-lg hover:shadow-md text-sm tracking-tight
             ${
                 isNavigable
                     ? `
-                        border-0 bg-gradient-to-br from-emerald-200 to-teal-100 text-stone-800
-                        hover:bg-gradient-to-br hover:from-teal-500 hover:to-emerald-500 hover:text-white hover:shadow-2xl
+                        border-2 border-emerald-50 bg-gradient-to-br from-emerald-100 to-blue-100 text-stone-800
+                        hover:bg-gradient-to-br hover:from-green-500 hover:to-blue-500 hover:text-white hover:shadow-2xl
                     `
                     : `
                         border-0 bg-gradient-to-br from-grey-100 to-stone-200 text-stone-800

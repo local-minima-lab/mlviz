@@ -1,0 +1,36 @@
+{
+    "stories": {
+        "ml_workflow": {
+            "name": "ml_workflow",
+            "description": "ML training and prediction workflow",
+            "start_page": 0,
+            "nodes": [
+                {
+                    "index": 3566255714
+                },
+                {
+                    "index": 1087848738
+                }
+            ],
+            "edges": []
+        }
+    },
+    "pages": {
+        "3566255714": {
+            "name": null,
+            "page_type": "dynamic",
+            "dynamic_type": "model",
+            "model_name": "decision_tree",
+            "component_type": "train",
+            "problem_type": "classifier"
+        },
+        "1087848738": {
+            "name": null,
+            "page_type": "dynamic",
+            "dynamic_type": "model",
+            "model_name": "decision_tree",
+            "component_type": "predict",
+            "problem_type": "classifier"
+        }
+    }
+}

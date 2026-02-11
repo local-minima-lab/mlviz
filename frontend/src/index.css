@@ -64,8 +64,11 @@
     font-variation-settings: "wdth" 115;
 }
 
-body {
+body,
+html {
     margin: 0;
+    overflow: hidden;
+    height: 100dvh;
 }
 
 h1 {

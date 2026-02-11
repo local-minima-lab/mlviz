@@ -24,7 +24,7 @@ import type {
 export function createClassificationPoints(
     data: number[][],
     labels: string[],
-    classNames: string[]
+    classNames: string[],
 ): ClassificationPoint[] {
     if (data.length !== labels.length) {
         throw new Error("Data and labels must have the same length");
@@ -37,8 +37,8 @@ export function createClassificationPoints(
         if (classIndex === -1) {
             throw new Error(
                 `Label "${label}" not found in classNames: ${classNames.join(
-                    ", "
-                )}`
+                    ", ",
+                )}`,
             );
         }
 
@@ -57,7 +57,7 @@ export function createClassificationPoints(
  */
 export function createRegressionPoints(
     data: number[][],
-    values: number[]
+    values: number[],
 ): RegressionPoint[] {
     if (data.length !== values.length) {
         throw new Error("Data and values must have the same length");
@@ -72,17 +72,19 @@ export function createRegressionPoints(
 }
 
 /**
- * Universal plot point creator that handles both classification and regression
+ * Universal plot point creator that handles classification, clustering, and regression
  */
 export function createPlotPoints(
     data: number[][],
-    config: Config
+    config: Config,
 ): PlotPoint[] {
-    if (config.type === "classification") {
+    if (config.type === "classification" || config.type === "clustering") {
         return createClassificationPoints(
             data,
             config.labels,
-            config.classNames
+            config.type === "classification"
+                ? config.classNames
+                : config.clusterNames,
         );
     } else {
         return createRegressionPoints(data, config.values);
@@ -98,11 +100,11 @@ export function createPlotPoints(
  */
 export function createClassificationBoundary(
     meshPoints: number[][],
-    predictions: string[]
+    predictions: string[],
 ): ClassificationBoundary {
     if (meshPoints.length !== predictions.length) {
         throw new Error(
-            "Mesh points and predictions must have the same length"
+            "Mesh points and predictions must have the same length",
         );
     }
 
@@ -121,11 +123,11 @@ export function createClassificationBoundary(
  */
 export function createRegressionBoundary(
     meshPoints: number[][],
-    predictions: number[]
+    predictions: number[],
 ): RegressionBoundary {
     if (meshPoints.length !== predictions.length) {
         throw new Error(
-            "Mesh points and predictions must have the same length"
+            "Mesh points and predictions must have the same length",
         );
     }
 
@@ -145,12 +147,12 @@ export function createRegressionBoundary(
 export function createDecisionBoundary(
     meshPoints: number[][],
     predictions: string[] | number[],
-    type: "classification" | "regression"
+    type: "classification" | "regression",
 ): DecisionBoundary {
     if (type === "classification") {
         return createClassificationBoundary(
             meshPoints,
-            predictions as string[]
+            predictions as string[],
         );
     } else {
         return createRegressionBoundary(meshPoints, predictions as number[]);
@@ -166,7 +168,7 @@ export function createDecisionBoundary(
  */
 export function calculatePlotBounds(
     data: number[][],
-    padding: number = 0.1
+    padding: number = 0.1,
 ): PlotBounds {
     if (data.length === 0) {
         return { min: [], max: [], range: [] };
@@ -199,7 +201,7 @@ export function calculatePlotBounds(
 export function calculateCombinedBounds(
     data: number[][],
     decisionBoundary?: DecisionBoundary,
-    padding: number = 0.1
+    padding: number = 0.1,
 ): PlotBounds {
     const allPoints = [...data];
 
@@ -217,7 +219,7 @@ export function calculateCombinedBounds(
 /**
  * Detects the number of dimensions in the data
  */
-export function detectDimensions(data: number[][]): 1 | 2 | 3 {
+export function detectDimensions(data: number[][]): 1 | 2 {
     if (data.length === 0) {
         throw new Error("Cannot detect dimensions from empty data");
     }
@@ -226,11 +228,11 @@ export function detectDimensions(data: number[][]): 1 | 2 | 3 {
 
     if (dims < 1 || dims > 3) {
         throw new Error(
-            `Unsupported number of dimensions: ${dims}. Expected 1, 2, or 3.`
+            `Unsupported number of dimensions: ${dims}. Expected 1, 2, or 3.`,
         );
     }
 
-    return dims as 1 | 2 | 3;
+    return dims as 1 | 2;
 }
 
 /**
@@ -244,7 +246,7 @@ export function validateDimensions(data: number[][]): void {
     for (let i = 1; i < data.length; i++) {
         if (data[i].length !== expectedDims) {
             throw new Error(
-                `Inconsistent dimensions: point ${i} has ${data[i].length} dimensions, expected ${expectedDims}`
+                `Inconsistent dimensions: point ${i} has ${data[i].length} dimensions, expected ${expectedDims}`,
             );
         }
     }
@@ -259,7 +261,7 @@ export function validateDimensions(data: number[][]): void {
  */
 export function validatePlotData(
     data: number[][],
-    config: Config
+    config: Config,
 ): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
 
@@ -279,16 +281,25 @@ export function validatePlotData(
     if (config.type === "classification") {
         if (config.labels.length !== data.length) {
             errors.push(
-                `Labels length (${config.labels.length}) does not match data length (${data.length})`
+                `Labels length (${config.labels.length}) does not match data length (${data.length})`,
             );
         }
         if (config.classNames.length === 0) {
             errors.push("classNames array is empty");
         }
+    } else if (config.type === "clustering") {
+        if (config.labels.length !== data.length) {
+            errors.push(
+                `Labels length (${config.labels.length}) does not match data length (${data.length})`,
+            );
+        }
+        if (config.clusterNames.length === 0) {
+            errors.push("clusterNames array is empty");
+        }
     } else {
         if (config.values.length !== data.length) {
             errors.push(
-                `Values length (${config.values.length}) does not match data length (${data.length})`
+                `Values length (${config.values.length}) does not match data length (${data.length})`,
             );
         }
     }

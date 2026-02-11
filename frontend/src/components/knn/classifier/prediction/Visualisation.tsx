@@ -6,6 +6,7 @@
 
 import { renderKNNPrediction } from "@/components/knn/classifier/KNNRenderer";
 import type { KNNVisualizationData } from "@/components/knn/classifier/types";
+import { DEFAULT_2D_ZOOM_CONFIG } from "@/components/plots/utils/zoomConfig";
 import BaseVisualisation from "@/components/visualisation/BaseVisualisation";
 import type { VisualisationRenderContext } from "@/components/visualisation/types";
 import { useKNN } from "@/contexts/models/KNNContext";
@@ -156,27 +157,7 @@ const Visualisation: React.FC<VisualisationProps> = ({ points }) => {
         [visualizationData_transformed.classNames]
     );
 
-    // Calculate content bounds for zoom restrictions
-    const contentBounds = useMemo(() => {
-        if (!visualizationData_transformed.decisionBoundary) return undefined;
 
-        const meshPoints =
-            visualizationData_transformed.decisionBoundary.meshPoints;
-        if (meshPoints.length === 0) return undefined;
-
-        const xValues = meshPoints.map(p => p[0]);
-        const yValues = meshPoints.map(p => p[1]);
-
-        const xMin = Math.min(...xValues);
-        const xMax = Math.max(...xValues);
-        const yMin = Math.min(...yValues);
-        const yMax = Math.max(...yValues);
-
-        return {
-            width: xMax - xMin,
-            height: yMax - yMin,
-        };
-    }, [visualizationData_transformed.decisionBoundary]);
 
     const renderCallback = useCallback(
         (
@@ -249,13 +230,7 @@ const Visualisation: React.FC<VisualisationProps> = ({ points }) => {
                 renderContent: renderCallback,
             }}
             capabilities={{
-                zoomable: {
-                    scaleExtent: [1.0, 5],
-                    enableReset: true,
-                    enablePan: true,
-                    panMargin: 50,
-                    contentBounds: contentBounds,
-                },
+                zoomable: DEFAULT_2D_ZOOM_CONFIG,
             }}
             controlsConfig={{
                 controlsPosition: "top-left",

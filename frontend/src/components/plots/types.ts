@@ -43,7 +43,7 @@ export type PlotPoint = ClassificationPoint | RegressionPoint;
 // ============================================================================
 
 export interface BaseBoundary {
-    type: "regression" | "classification";
+    type: "regression" | "classification" | "clustering";
     meshPoints: number[][]; // Grid of coordinates
     predictions: number[] | string[]; // Numeric prediction at each mesh point
     dimensions: number; // 1, 2, or 3
@@ -58,6 +58,14 @@ export interface ClassificationBoundary extends BaseBoundary {
 }
 
 /**
+ * Clustering decision boundary with discrete cluster predictions
+ */
+export interface ClusteringBoundary extends BaseBoundary {
+    type: "clustering";
+    predictions: number[] | string[]; // Cluster ID or Cluster Name at each mesh point
+}
+
+/**
  * Regression decision boundary with continuous predictions
  */
 export interface RegressionBoundary extends BaseBoundary {
@@ -65,7 +73,10 @@ export interface RegressionBoundary extends BaseBoundary {
     predictions: number[]; // Numeric prediction at each mesh point
 }
 
-export type DecisionBoundary = ClassificationBoundary | RegressionBoundary;
+export type DecisionBoundary =
+    | ClassificationBoundary
+    | ClusteringBoundary
+    | RegressionBoundary;
 
 // ============================================================================
 // Plot Configuration Types
@@ -80,7 +91,7 @@ export interface PlotBounds {
     range: number[]; // Range per dimension (max - min)
 }
 
-type TaskType = "classification" | "regression";
+type TaskType = "classification" | "clustering" | "regression";
 
 interface BaseConfig {
     type: TaskType;
@@ -97,6 +108,16 @@ export interface ClassificationConfig extends BaseConfig {
 }
 
 /**
+ * Configuration for clustering tasks (e.g., KMeans)
+ */
+export interface ClusteringConfig extends BaseConfig {
+    type: "clustering";
+    labels: string[]; // Cluster label for each data point
+    clusterNames: string[]; // Unique cluster names
+    colorScheme?: PaletteName; // Categorical color scheme (default: "default")
+}
+
+/**
  * Configuration for regression tasks
  */
 export interface RegressionConfig extends BaseConfig {
@@ -106,7 +127,7 @@ export interface RegressionConfig extends BaseConfig {
     valueRange?: [number, number]; // Optional explicit value range for color scale
 }
 
-export type Config = ClassificationConfig | RegressionConfig;
+export type Config = ClassificationConfig | ClusteringConfig | RegressionConfig;
 
 export type Prediction = string | number;
 // ============================================================================
@@ -158,4 +179,4 @@ export interface BasePlotRendererProps extends BaseScatterPlotProps {
 /**
  * Supported dimensions for visualization
  */
-export type SupportedDimensions = 1 | 2 | 3;
+export type SupportedDimensions = 1 | 2;
