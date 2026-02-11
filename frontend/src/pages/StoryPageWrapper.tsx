@@ -17,7 +17,9 @@ const StoryPageWrapper: React.FC = () => {
     if (loading) {
         return (
             <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-fuchsia-50">
-                <div className="animate-pulse text-2xl font-mono text-fuchsia-600">Loading story...</div>
+                <div className="animate-pulse text-2xl font-mono text-fuchsia-600">
+                    Loading story...
+                </div>
             </div>
         );
     }
@@ -25,10 +27,16 @@ const StoryPageWrapper: React.FC = () => {
     if (error || !storyConfig) {
         return (
             <div className="h-screen w-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-fuchsia-50">
-                <div className="text-2xl font-mono text-red-600 mb-4">Error loading config</div>
-                <div className="text-sm font-mono text-gray-600 mb-8">{error || "Config not found"}</div>
-                <Button 
-                    onClick={() => { window.location.href = "/"; }}
+                <div className="text-2xl font-mono text-red-600 mb-4">
+                    Error loading config
+                </div>
+                <div className="text-sm font-mono text-gray-600 mb-8">
+                    {error || "Config not found"}
+                </div>
+                <Button
+                    onClick={() => {
+                        window.location.href = "/";
+                    }}
                     className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-200 rounded-full px-6"
                 >
                     Return to Home (Default Config)

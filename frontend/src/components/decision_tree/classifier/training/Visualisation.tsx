@@ -15,6 +15,23 @@ interface VisualisationProps {
 const Visualisation: React.FC<VisualisationProps> = ({ data: treeData }) => {
     const [maxDepth, setMaxDepth] = useState(0);
 
+    useEffect(() => {
+        if (!treeData) return;
+        const calculateMaxDepth = (
+            node: TreeNode,
+            depth: number = 0
+        ): number => {
+            if (node.type === "leaf") return depth;
+            const splitNode = node as any;
+            const leftDepth = splitNode.left ? calculateMaxDepth(splitNode.left, depth + 1) : depth;
+            const rightDepth = splitNode.right ? calculateMaxDepth(splitNode.right, depth + 1) : depth;
+            return Math.max(leftDepth, rightDepth);
+        };
+
+        const calculatedMaxDepth = calculateMaxDepth(treeData.tree);
+        setMaxDepth(calculatedMaxDepth);
+    }, [treeData]);
+
     if (!treeData) return <></>;
 
     const transformTreeData = (
@@ -51,22 +68,6 @@ const Visualisation: React.FC<VisualisationProps> = ({ data: treeData }) => {
 
         return transformed;
     };
-
-    useEffect(() => {
-        const calculateMaxDepth = (
-            node: TreeNode,
-            depth: number = 0
-        ): number => {
-            if (node.type === "leaf") return depth;
-            const splitNode = node as any;
-            const leftDepth = splitNode.left ? calculateMaxDepth(splitNode.left, depth + 1) : depth;
-            const rightDepth = splitNode.right ? calculateMaxDepth(splitNode.right, depth + 1) : depth;
-            return Math.max(leftDepth, rightDepth);
-        };
-
-        const calculatedMaxDepth = calculateMaxDepth(treeData.tree);
-        setMaxDepth(calculatedMaxDepth);
-    }, [treeData]);
 
     console.log('[Training Visualisation] treeData:', treeData);
     console.log('[Training Visualisation] treeData.metadata:', treeData.metadata);
