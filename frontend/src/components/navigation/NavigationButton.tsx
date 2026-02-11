@@ -47,16 +47,16 @@ const NavigationButton: React.FC<NavigationButtonProps> = ({
             disabled={!isNavigable}
             onClick={goToNextPage}
             className={`
-            w-full min-h-[10dvh] h-auto py-3 transition-all duration-100 shadow-lg hover:shadow-md text-sm tracking-tight
+            w-full min-h-[10dvh] h-auto py-3 transition-all duration-100 shadow-lg hover:shadow-md text-base tracking-tight
             ${
                 isNavigable
                     ? `
-                        border-2 border-emerald-50 bg-gradient-to-br from-emerald-100 to-blue-100 text-stone-800
+                        border-0 bg-gradient-to-br from-emerald-100 to-blue-100 text-black
                         hover:bg-gradient-to-br hover:from-green-500 hover:to-blue-500 hover:text-white hover:shadow-2xl
                     `
                     : `
-                        border-0 bg-gradient-to-br from-grey-100 to-stone-200 text-stone-800
-                        hover:bg-gradient-to-br hover:from-grey-100 hover:to-stone-200
+                        border-0 bg-gradient-to-br from-grey-100 to-stone-100 text-black
+                        hover:bg-gradient-to-br hover:from-grey-100 hover:to-stone-100
                         cursor-not-allowed
                         `
             }
@@ -66,9 +66,11 @@ const NavigationButton: React.FC<NavigationButtonProps> = ({
                 key={`${edge.end.story_name}_${edge.end.local_index}`}
                 className="flex flex-col justify-start items-start shadow-none w-full"
             >
-                <CardTitle className="flex items-center font-normal text-wrap gap-2 px-2">
+                <CardTitle className="flex items-center text-wrap gap-2 px-2 font-medium">
                     {isNavigable ? (
-                        edge.condition.condition_type === "Slide" ? (
+                        edge.condition.name ? (
+                            edge.condition.name
+                        ) : edge.condition.condition_type === "Slide" ? (
                             edge.condition.slide_name
                         ) : (
                             <>
@@ -79,13 +81,14 @@ const NavigationButton: React.FC<NavigationButtonProps> = ({
                     ) : (
                         <>
                             <XCircle className="w-5 h-5" />
-                            Incomplete
+                            {edge.condition.name ?? "Incomplete"}
                         </>
                     )}
                 </CardTitle>
 
                 <CardFooter className="text-sm text-left px-2 py-2 font-light leading-tight whitespace-normal break-words">
-                    {displayCondition(edge.condition)}
+                    {edge.condition.description ??
+                        displayCondition(edge.condition)}
                 </CardFooter>
             </Card>
         </Button>

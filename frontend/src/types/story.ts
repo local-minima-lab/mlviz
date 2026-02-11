@@ -4,6 +4,8 @@ export type Index = number;
 
 interface BaseCondition {
     condition_type: string;
+    name?: string;
+    description?: string;
 }
 
 export interface ParameterCheck extends BaseCondition {

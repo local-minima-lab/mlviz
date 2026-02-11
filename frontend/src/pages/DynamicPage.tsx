@@ -10,21 +10,28 @@ interface DynamicPageProps {
 }
 
 const DynamicPage: React.FC<DynamicPageProps> = ({ page }) => {
-    const { setDataset } = useDataset();
+    const { activeDataset, setDataset } = useDataset();
     const { config } = useConfig();
 
     // Resolve dataset if it's a reference
-    const resolvedDataset = page.dataset?.type === "reference" 
-        ? config?.datasets?.[page.dataset.name] 
-        : page.dataset;
+    const resolvedDataset =
+        page.dataset?.type === "reference"
+            ? config?.datasets?.[page.dataset.name]
+            : page.dataset;
 
-    // Set the dataset from page parameters when the page loads
     useEffect(() => {
         if (resolvedDataset) {
             console.log("[DynamicPage] Setting dataset:", resolvedDataset);
             setDataset(resolvedDataset);
         }
     }, [resolvedDataset, setDataset]);
+
+    // Wait until the dataset context has been updated before rendering children.
+    // Without this gate, children mount and read the old/null activeDataset
+    // before the useEffect above has propagated the new value.
+    if (resolvedDataset && activeDataset !== resolvedDataset) {
+        return null;
+    }
 
     if (page.dynamic_type == "none") {
         return <></>;
@@ -46,4 +53,3 @@ const DynamicPage: React.FC<DynamicPageProps> = ({ page }) => {
 };
 
 export default DynamicPage;
-

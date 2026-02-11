@@ -99,7 +99,7 @@ if selected_story_name:
             # Pre-select existing node if available
             default_page = None
             if i < len(existing_nodes):
-                default_page = str(existing_nodes[i].get("index"))
+                default_page = existing_nodes[i].get("index")
                 if default_page not in available_pages:
                     st.warning(
                         f"⚠️ Original page {default_page} no longer exists in config"
@@ -119,7 +119,7 @@ if selected_story_name:
             # Show page preview
             if selected_page:
                 st.json(st.session_state.config["pages"][selected_page])
-                nodes_data.append({"index": int(selected_page)})
+                nodes_data.append({"index": selected_page})
 
     # Edges section
     st.divider()
@@ -247,6 +247,19 @@ if selected_story_name:
                         existing_edge.get("condition", {}) if existing_edge else {}
                     )
 
+                    cond_name = st.text_input(
+                        "Display Name (optional)",
+                        value=existing_condition.get("name", "") or "",
+                        key=f"cond_name_{i}",
+                        placeholder="Override navigation button title",
+                    )
+                    cond_description = st.text_area(
+                        "Display Description (optional)",
+                        value=existing_condition.get("description", "") or "",
+                        key=f"cond_desc_{i}",
+                        placeholder="Override navigation button description",
+                    )
+
                     if condition_type == "Bypass":
                         condition = {"condition_type": "Bypass"}
 
@@ -331,6 +344,13 @@ if selected_story_name:
                             "slide_name": slide_name,
                             "slide_description": slide_desc if slide_desc else None,
                         }
+
+                    # Add optional display overrides
+                    if condition is not None:
+                        if cond_name:
+                            condition["name"] = cond_name
+                        if cond_description:
+                            condition["description"] = cond_description
 
                     # Build edge
                     edge = {

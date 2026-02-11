@@ -25,7 +25,7 @@ PageUnion = Annotated[
 
 # Config
 class Config(BaseModel):
-    datasets: Optional[Dict[str, DatasetEntry]] = None
+    datasets: Dict[str, DatasetEntry] = Field(default_factory=dict)
     stories: Dict[str, Story]
     pages: Dict[Index, PageUnion]
 

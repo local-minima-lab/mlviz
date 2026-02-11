@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from .dataset import PageDataset
 
 # Type definitions
-Index = int
+Index = str
 ModelNames = Literal["decision_tree", "knn", "kmeans"]
 ModelComponentType = Literal["manual", "train", "predict", "viz_only"]
 ProblemType = Literal["classifier", "clustering", "regression"]
@@ -39,6 +39,12 @@ class ModelPage(DynamicPageAbstract):
     dataset: Optional[PageDataset] = Field(
         None, description="Dataset for this page (reference or predefined)"
     )
+
+    def model_dump(self, **kwargs):
+        d = super().model_dump(**kwargs)
+        if "dataset" in d and d["dataset"] is None:
+            del d["dataset"]
+        return d
 
 
 class StaticParameters(BaseModel):

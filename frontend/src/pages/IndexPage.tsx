@@ -8,7 +8,9 @@ const IndexPage = () => {
     if (loading) {
         return (
             <div className="h-screen w-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-fuchsia-50">
-                <div className="animate-pulse text-2xl font-mono text-fuchsia-600">Loading configurations...</div>
+                <div className="animate-pulse text-2xl font-mono text-fuchsia-600">
+                    Loading configurations...
+                </div>
             </div>
         );
     }
@@ -16,10 +18,16 @@ const IndexPage = () => {
     if (error || !storyConfig) {
         return (
             <div className="h-screen w-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-fuchsia-50">
-                <div className="text-4xl font-bold font-mono text-red-600 mb-4">Error loading config</div>
-                <div className="text-sm font-mono text-gray-600 mb-8">{error || "Config not found"}</div>
-                <Button 
-                    onClick={() => { window.location.href = window.location.pathname; }}
+                <div className="text-4xl font-bold font-mono text-red-600 mb-4">
+                    Error loading config
+                </div>
+                <div className="text-sm font-mono text-gray-600 mb-8">
+                    {error || "Config not found"}
+                </div>
+                <Button
+                    onClick={() => {
+                        window.location.href = window.location.pathname;
+                    }}
                     className="bg-white text-gray-800 hover:bg-gray-100 border border-gray-200 rounded-full px-6"
                 >
                     Reset to Default Config
@@ -46,7 +54,7 @@ const IndexPage = () => {
                         to={`/story/${name}`}
                     >
                         <Button className="group w-full flex flex-col items-start justify-center text-wrap bg-gradient-to-r from-gray-50 to-white text-gray-800 hover:from-red-500 hover:to-fuchsia-600 hover:text-white transition-all duration-100 hover:shadow-lg font-light hover:font-medium rounded-3xl py-16 px-8 scroll-auto">
-                            <span className="font-mono text-left tracking-tighter text-2xl text-wrap bg-gradient-to-r from-fuchsia-500 to-blue-600 bg-clip-text text-transparent group-hover:from-fuchsia-50 group-hover:to-blue-50 group-hover:text-4xl font-bold">
+                            <span className="font-mono text-left tracking-tighter text-2xl text-wrap bg-gradient-to-r from-fuchsia-500 to-blue-600 bg-clip-text text-transparent group-hover:from-fuchsia-50 group-hover:to-blue-50 group-hover:font-bold">
                                 {s.name}
                             </span>
                             <span className="text-sm tracking-tight text-left text-wrap mt-2">
