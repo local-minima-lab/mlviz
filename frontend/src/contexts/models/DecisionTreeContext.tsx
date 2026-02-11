@@ -351,11 +351,17 @@ const DecisionTreeProviderInner: React.FC<{ children: ReactNode }> = ({ children
         if (!currentModelData || treeMode !== 'manual') {
             console.log('[ManualTree] Loading dataset for manual tree...');
             try {
-                // Use activeDataset name if it's a predefined dataset, otherwise default to iris
-                const datasetToLoad = (activeDataset && typeof activeDataset === 'object' && 'name' in activeDataset) 
-                    ? (activeDataset as any).name 
-                    : 'iris';
-                const datasetResponse = await loadDataset(datasetToLoad); 
+                let datasetResponse;
+                if (activeDataset && 'type' in activeDataset && activeDataset.type === 'custom') {
+                    // Custom dataset already has the data inline
+                    datasetResponse = activeDataset as { X: number[][]; y: number[]; feature_names: string[]; target_names: string[] };
+                } else {
+                    // Predefined dataset — load from backend
+                    const datasetName = (activeDataset && typeof activeDataset === 'object' && 'name' in activeDataset)
+                        ? (activeDataset as any).name
+                        : 'iris';
+                    datasetResponse = await loadDataset(datasetName);
+                }
                 console.log('[ManualTree] Dataset loaded:', datasetResponse);
                 
                 // Calculate class distribution from dataset

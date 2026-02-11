@@ -16,7 +16,7 @@ st.header("✏️ Edit Story")
 
 # Initialize session state if not exists
 if "config" not in st.session_state:
-    st.session_state.config = {"stories": {}, "pages": {}}
+    st.session_state.config = {"datasets": {}, "stories": {}, "pages": {}}
 
 # Check if there are any stories
 if not st.session_state.config["stories"]:

@@ -14,7 +14,7 @@ st.header("Add Story")
 
 # Initialize session state if not exists
 if 'config' not in st.session_state:
-    st.session_state.config = {"stories": {}, "pages": {}}
+    st.session_state.config = {"datasets": {}, "stories": {}, "pages": {}}
 
 story_name = st.text_input("Story Name", placeholder="e.g., intro")
 

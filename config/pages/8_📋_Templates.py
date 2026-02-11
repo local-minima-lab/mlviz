@@ -11,7 +11,7 @@ st.header("Templates")
 
 # Initialize session state if not exists
 if "config" not in st.session_state:
-    st.session_state.config = {"stories": {}, "pages": {}}
+    st.session_state.config = {"datasets": {}, "stories": {}, "pages": {}}
 
 # Discover templates from the templates folder
 templates_dir = Path(__file__).parent.parent / "templates"

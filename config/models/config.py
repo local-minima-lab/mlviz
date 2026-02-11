@@ -1,6 +1,7 @@
-from typing import Dict, Union, Annotated
+from typing import Dict, Optional, Union, Annotated
 from pydantic import BaseModel, Field
 from .base import Index, DynamicPage, ModelPage, StaticPage
+from .dataset import DatasetEntry
 from .decision_tree_page import DTreePageUnion
 from .knn_page import KNNPageUnion
 from .kmeans_page import KMeansPageUnion
@@ -24,6 +25,7 @@ PageUnion = Annotated[
 
 # Config
 class Config(BaseModel):
+    datasets: Optional[Dict[str, DatasetEntry]] = None
     stories: Dict[str, Story]
     pages: Dict[Index, PageUnion]
 

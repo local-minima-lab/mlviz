@@ -320,7 +320,7 @@ const Visualisation: React.FC<VisualisationProps> = () => {
         ) {
             // Check if boundary should be included based on params
             const includeBoundary =
-                lastVisualizationParams?.parameters?.include_boundary !== false;
+                lastVisualizationParams?.include_boundary !== false;
 
             loadVisualization({
                 ...lastVisualizationParams,
@@ -340,7 +340,10 @@ const Visualisation: React.FC<VisualisationProps> = () => {
         <div className="relative h-full w-full">
             {/* Control HUD */}
             <div className="absolute top-6 right-6 z-20 flex flex-col gap-4">
-                <KMeansStepHUD mode={mode} setMode={setMode} />
+                <KMeansStepHUD
+                    mode={mode}
+                    setMode={setMode}
+                />
             </div>
 
             <BaseVisualisation

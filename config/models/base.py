@@ -2,6 +2,8 @@ from typing import Literal, Optional, TypedDict
 
 from pydantic import BaseModel, Field
 
+from .dataset import PageDataset
+
 # Type definitions
 Index = int
 ModelNames = Literal["decision_tree", "knn", "kmeans"]
@@ -34,6 +36,9 @@ class ModelPage(DynamicPageAbstract):
     model_name: ModelNames
     component_type: ModelComponentType
     problem_type: ProblemType
+    dataset: Optional[PageDataset] = Field(
+        None, description="Dataset for this page (reference or predefined)"
+    )
 
 
 class StaticParameters(BaseModel):
