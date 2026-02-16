@@ -6,6 +6,7 @@ import remarkMath from "remark-math";
 
 interface MarkdownWrapperProps {
     children: string;
+    variant?: "default" | "small";
 }
 
 type ParagraphProps = React.ComponentProps<"p"> & ExtraProps;
@@ -221,7 +222,7 @@ const TableDataCell: React.FC<TableDataCellProps> = ({
     );
 };
 
-const ComponentMap: Components = {
+const DefaultComponentMap: Components = {
     p: Paragraph,
     h1: Heading1,
     h2: Heading2,
@@ -239,16 +240,29 @@ const ComponentMap: Components = {
     td: TableDataCell,
 };
 
-const MarkdownWrapper: React.FC<MarkdownWrapperProps> = ({ children }) => {
-    return (
+const MarkdownWrapper: React.FC<MarkdownWrapperProps> = ({
+    children,
+    variant = "default",
+}) => {
+    const content = (
         <Markdown
             remarkPlugins={[remarkGfm, remarkMath]}
             rehypePlugins={[rehypeRaw, rehypeMathjax]}
-            components={ComponentMap}
+            components={DefaultComponentMap}
         >
             {children}
         </Markdown>
     );
+
+    if (variant === "small") {
+        return (
+            <div className="text-xs leading-tight [&_h1]:text-sm [&_h2]:text-xs [&_h3]:text-xs [&_h4]:text-xs [&_p]:mb-0.5 [&_ul]:my-1 [&_ol]:my-1 [&_li]:mx-0 [&_h1]:my-1 [&_h2]:my-1 [&_h3]:my-1 [&_h4]:my-1 [&_img]:my-2">
+                {content}
+            </div>
+        );
+    }
+
+    return content;
 };
 
 export default MarkdownWrapper;
