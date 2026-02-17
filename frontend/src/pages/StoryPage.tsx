@@ -32,11 +32,11 @@ export const StoryPage: React.FC<StoryPageProps> = ({
     };
 
     const handleNavigate = (pageId: number) => {
-        console.log('[Navigation] Forward navigation:', {
+        console.log("[Navigation] Forward navigation:", {
             from: currentPageId,
             to: pageId,
             currentPath: storyState.path,
-            recordingPage: currentPageId
+            recordingPage: currentPageId,
         });
         // Record the CURRENT page in history before navigating away
         addEdge({ local_index: currentPageId, story_name: null });
@@ -44,27 +44,30 @@ export const StoryPage: React.FC<StoryPageProps> = ({
     };
 
     const handleBack = () => {
-        console.log('[Navigation] Back button clicked:', {
+        console.log("[Navigation] Back button clicked:", {
             currentPageId,
             pathBeforePop: storyState.path,
-            pathLength: storyState.path.length
+            pathLength: storyState.path.length,
         });
         const previousEdge = popPath();
-        console.log('[Navigation] Popped edge:', previousEdge);
+        console.log("[Navigation] Popped edge:", previousEdge);
         if (previousEdge) {
-            console.log('[Navigation] Navigating back to:', previousEdge.local_index);
+            console.log(
+                "[Navigation] Navigating back to:",
+                previousEdge.local_index,
+            );
             setCurrentPageId(previousEdge.local_index);
         } else {
-            console.log('[Navigation] No previous edge to navigate to');
+            console.log("[Navigation] No previous edge to navigate to");
         }
     };
 
     const canGoBack = storyState.path.length > 0;
-    console.log('[Navigation] Render - Current state:', {
+    console.log("[Navigation] Render - Current state:", {
         currentPageId,
         pathLength: storyState.path.length,
         path: storyState.path,
-        canGoBack
+        canGoBack,
     });
 
     const renderPage = () => {
@@ -90,7 +93,7 @@ export const StoryPage: React.FC<StoryPageProps> = ({
                 <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
                     {renderPage()}
                 </div>
-                <div className="shrink-0 w-80 flex flex-col gap-2 items-center justify-between overflow-hidden bg-gradient-to-br from-gray-50 to-slate-50 border-l border-gray-300">
+                <div className="shrink-0 w-60 flex flex-col gap-2 items-center justify-between overflow-hidden bg-gradient-to-br from-gray-50 to-slate-50 border-l border-gray-300">
                     <NavigationBar
                         edges={getAvailableEdges()}
                         handler={handleNavigate}
