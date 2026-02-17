@@ -113,7 +113,7 @@ type ListItemProps = React.ComponentProps<"li"> & ExtraProps;
 const ListItem: React.FC<ListItemProps> = ({ children, node, ...props }) => {
     return (
         <li
-            className="text-base tracking-tight font-light mx-1"
+            className="text-gray-800 tracking-tight font-light mx-1 leading-none"
             {...props}
         >
             {children}
