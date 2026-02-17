@@ -83,11 +83,25 @@ const BaseVisualisation: React.FC<BaseVisualisationProps> = ({
             const extendedZoomControls = zoomControls as any;
 
             // Update content bounds with actual inner dimensions
+            // If initial bounds were provided, scale proportionally to preserve aspect ratio
             if (extendedZoomControls.updateContentBounds) {
-                extendedZoomControls.updateContentBounds({
+                const initialBounds = capabilities.zoomable?.contentBounds;
+                let boundsToSet = {
                     width: innerWidth,
                     height: innerHeight,
-                });
+                };
+                
+                // If initial bounds were configured, scale them proportionally
+                if (initialBounds) {
+                    const heightScale = innerHeight / (initialBounds.height || 600);
+                    // Use the initial bounds' aspect ratio, scaled to fit actual dimensions
+                    boundsToSet = {
+                        width: innerWidth,
+                        height: initialBounds.height * heightScale,
+                    };
+                }
+                
+                extendedZoomControls.updateContentBounds(boundsToSet);
             }
 
             extendedZoomControls.createZoomBehavior(
@@ -135,6 +149,33 @@ const BaseVisualisation: React.FC<BaseVisualisationProps> = ({
         };
 
         renderContent(contentGroup, data, renderContext);
+        
+        // Apply fit-to-view transform if calculated by renderer
+        if (capabilities.zoomable && zoomControls && (renderContext as any).fitToViewTransform) {
+            const extendedZoomControls = zoomControls as any;
+            const fitTransform = (renderContext as any).fitToViewTransform;
+            
+            // Update content bounds with actual tree dimensions if provided
+            if (fitTransform.contentWidth && fitTransform.contentHeight && extendedZoomControls.updateContentBounds) {
+                extendedZoomControls.updateContentBounds({
+                    width: fitTransform.contentWidth,
+                    height: fitTransform.contentHeight,
+                });
+            }
+            
+            // Only apply on first render (when there's no existing zoom transform)
+            const currentTransform = extendedZoomControls.getCurrentTransform?.();
+            if (!currentTransform || currentTransform === d3.zoomIdentity) {
+                setTimeout(() => {
+                    extendedZoomControls.setZoom(
+                        d3.zoomIdentity
+                            .translate(fitTransform.x, fitTransform.y)
+                            .scale(fitTransform.k),
+                        false // No animation on initial load
+                    );
+                }, 0);
+            }
+        }
     // Note: zoomControls is intentionally excluded — useZoomControls returns a new
     // object reference every render, which would cause an infinite re-render loop.
     // Its functions are stable (useCallback with refs) so this is safe.

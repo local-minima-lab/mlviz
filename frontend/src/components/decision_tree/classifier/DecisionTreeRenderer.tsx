@@ -284,6 +284,47 @@ export const renderDecisionTree = ({
         d.y = d.depth * depthSpacing + nodeHeight / 2;
     });
 
+    // Calculate actual tree bounds for fit-to-view zoom
+    const nodes = root.descendants();
+    let treeBounds = { minX: 0, maxX: contentWidth, minY: 0, maxY: contentHeight };
+    
+    if (nodes.length > 0) {
+        const xValues = nodes.map(d => d.x as number);
+        const yValues = nodes.map(d => d.y as number);
+        treeBounds = {
+            minX: Math.min(...xValues),
+            maxX: Math.max(...xValues),
+            minY: Math.min(...yValues),
+            maxY: Math.max(...yValues),
+        };
+    }
+    
+    // Add padding for node sizes
+    const nodePadding = 100 * scaleFactor;
+    const treeWidth = treeBounds.maxX - treeBounds.minX + nodePadding * 2;
+    const treeHeight = treeBounds.maxY - treeBounds.minY + nodePadding * 2;
+    
+    // Calculate scale to fit tree in viewport
+    const scaleX = contentWidth / treeWidth;
+    const scaleY = contentHeight / treeHeight;
+    const fitScale = Math.min(scaleX, scaleY, 1.0); // Don't zoom in by default, max 1.0
+    
+    // Calculate centering offset
+    const scaledTreeWidth = treeWidth * fitScale;
+    const scaledTreeHeight = treeHeight * fitScale;
+    const offsetX = (contentWidth - scaledTreeWidth) / 2 - (treeBounds.minX - nodePadding) * fitScale;
+    const offsetY = (contentHeight - scaledTreeHeight) / 2 - (treeBounds.minY - nodePadding) * fitScale;
+    
+    // Store fit-to-view transform and actual tree dimensions in context
+    (context as any).fitToViewTransform = {
+        x: offsetX,
+        y: offsetY,
+        k: fitScale,
+        // Actual tree dimensions for zoom bounds
+        contentWidth: treeWidth,
+        contentHeight: treeHeight,
+    };
+
     const renderMode =
         mode === "training"
             ? TRAINING_MODE
