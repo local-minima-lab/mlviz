@@ -201,8 +201,18 @@ def get_streamlit_widget(field_name: str, field_info: FieldInfo, annotation: Any
                 return default_val if default_val else []
     
     else:
-        # Default to string input
+        # Check for widget override via json_schema_extra
+        extra = field_info.json_schema_extra or {}
+        widget = extra.get("widget", "text_input")
+
         default_val = default if default is not None else ""
+        if widget == "textarea":
+            return st.text_area(
+                label,
+                value=str(default_val) if default_val is not None else "",
+                help=description,
+                key=key
+            )
         return st.text_input(
             label,
             value=str(default_val) if default_val is not None else "",

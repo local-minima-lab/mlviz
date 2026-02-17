@@ -18,6 +18,7 @@ st.markdown("Quick tool for creating Config objects")
 # Initialize session state (shared across all pages)
 if 'config' not in st.session_state:
     st.session_state.config = {
+        "datasets": {},
         "stories": {},
         "pages": {}
     }
