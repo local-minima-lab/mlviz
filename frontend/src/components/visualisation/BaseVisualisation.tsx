@@ -163,18 +163,8 @@ const BaseVisualisation: React.FC<BaseVisualisationProps> = ({
                 });
             }
             
-            // Only apply on first render (when there's no existing zoom transform)
-            const currentTransform = extendedZoomControls.getCurrentTransform?.();
-            if (!currentTransform || currentTransform === d3.zoomIdentity) {
-                setTimeout(() => {
-                    extendedZoomControls.setZoom(
-                        d3.zoomIdentity
-                            .translate(fitTransform.x, fitTransform.y)
-                            .scale(fitTransform.k),
-                        false // No animation on initial load
-                    );
-                }, 0);
-            }
+            // Don't apply fit-to-view transform - let tree start at identity position (0,0,1)
+            // This matches the position when reset zoom is clicked
         }
     // Note: zoomControls is intentionally excluded — useZoomControls returns a new
     // object reference every render, which would cause an infinite re-render loop.
