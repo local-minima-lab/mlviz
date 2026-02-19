@@ -143,7 +143,7 @@ const KMeansStepHUD: React.FC<KMeansStepHUDProps> = ({ mode, setMode }) => {
                             </div>
                         ) : (
                             <Button
-                                className="w-full bg-slate-900 border-none hover:bg-slate-700 text-white shadow-md transition-all active:scale-[0.98]"
+                                className="w-full bg-gradient-to-r from-blue-100 to-purple-100 text-black border-none hover:from-blue-200 hover:to-purple-200 shadow-md transition-all active:scale-[0.98]"
                                 style={{
                                     gap: `${8 * scaleFactor}px`,
                                     height: `${40 * scaleFactor}px`,

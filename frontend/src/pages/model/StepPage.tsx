@@ -7,7 +7,7 @@ import type { ModelOption } from "@/types/parameters";
 import type { ModelPage as ModelPageProps, Parameters } from "@/types/story";
 import { filterParameters } from "@/utils/conditions";
 import { RotateCcw } from "lucide-react";
-import React, { useContext, useEffect, useMemo, useState } from "react";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 
 type StepPageProps = Pick<
     ModelPageProps,
@@ -66,6 +66,22 @@ const StepPage: React.FC<StepPageProps> = ({
             setStepParams(lastParams);
         }
     }, [lastParams, parameters]);
+
+    // Auto-load dataset on mount when there is no existing model data.
+    // This populates the scatter plot immediately so the user can start
+    // placing centroids without having to click "Apply Parameters" first.
+    const autoLoadDone = useRef(false);
+    useEffect(() => {
+        if (!autoLoadDone.current) {
+            autoLoadDone.current = true;
+            resetModelData(); // Always start fresh when the step page mounts
+            const trainParams = {
+                ...stepParams,
+                dataset: (stepParams as any)?.dataset || dataset,
+            };
+            train(trainParams);
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps -- intentionally runs once on mount
 
     const handleApplyParams = async () => {
         // Applying parameters in Step mode resets the model and starts fresh

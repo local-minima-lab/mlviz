@@ -296,8 +296,28 @@ const Visualisation: React.FC<VisualisationProps> = () => {
         handleInitialLoad();
     }, [handleInitialLoad]);
 
-    if (!kmeansData)
-        return <div className="p-8 text-center">Initializing...</div>;
+    const isAutoLoading =
+        !kmeansData &&
+        !!lastVisualizationParams &&
+        Object.keys(lastVisualizationParams).length > 0;
+
+    if (!kmeansData) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-center p-8">
+                {isAutoLoading ? (
+                    <>
+                        <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+                        <p className="text-slate-500 text-sm">Loading visualization...</p>
+                    </>
+                ) : (
+                    <>
+                        <p className="text-slate-600 font-medium">No data loaded yet</p>
+                        <p className="text-slate-400 text-sm">Apply parameters in the sidebar to begin.</p>
+                    </>
+                )}
+            </div>
+        );
+    }
 
     return (
         <div className="relative h-full w-full">
