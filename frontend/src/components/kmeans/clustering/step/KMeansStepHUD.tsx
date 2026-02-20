@@ -21,6 +21,8 @@ const KMeansStepHUD: React.FC<KMeansStepHUDProps> = ({ mode, setMode }) => {
         isStepLoading,
         stepData,
         lastVisualizationParams,
+        clearIterationState,
+        loadVisualization,
     } = useKMeans();
 
     const handleRunStep = async () => {
@@ -43,6 +45,11 @@ const KMeansStepHUD: React.FC<KMeansStepHUDProps> = ({ mode, setMode }) => {
             setSelectedCentroids(stepData.new_centroids);
         }
         setMode("selecting");
+    };
+
+    const handleStartOver = async () => {
+        setMode("selecting");
+        await loadVisualization(lastVisualizationParams);
     };
 
     return (
@@ -126,10 +133,7 @@ const KMeansStepHUD: React.FC<KMeansStepHUDProps> = ({ mode, setMode }) => {
                                         fontSize: `${12 * scaleFactor}px`,
                                         height: `${32 * scaleFactor}px`,
                                     }}
-                                    onClick={() => {
-                                        setSelectedCentroids([]);
-                                        setMode("selecting");
-                                    }}
+                                    onClick={handleStartOver}
                                 >
                                     <RotateCcw
                                         style={{
@@ -225,7 +229,7 @@ const KMeansStepHUD: React.FC<KMeansStepHUDProps> = ({ mode, setMode }) => {
                                 fontSize: `${12 * scaleFactor}px`,
                                 height: `${32 * scaleFactor}px`,
                             }}
-                            onClick={() => setSelectedCentroids([])}
+                            onClick={() => clearIterationState()}
                         >
                             <RotateCcw
                                 style={{
